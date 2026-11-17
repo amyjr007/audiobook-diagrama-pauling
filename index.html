@@ -289,6 +289,33 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 #palco{position:relative;z-index:2;flex:1;min-height:0}
 #palco canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block}
 #palco canvas:active{cursor:grabbing}
+/* face do palco (canvas + textos) — pode virar como face de cubo */
+#palco{perspective:1200px}
+.face{position:absolute;inset:0}
+.face-velha{pointer-events:none}
+
+/* linhas de texto digitado, paradas na tela */
+.linhas{position:absolute;inset:0;z-index:2;pointer-events:none}
+.linha{
+  position:absolute;left:50%;transform:translate(-50%,-50%);white-space:nowrap;
+  font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(17px,4.6vw,26px);color:var(--ink);
+  text-shadow:0 0 14px rgba(0,0,0,.6);
+}
+.linha.linha-hnome{font-size:clamp(22px,6vw,32px)}
+.linha.digitando::after{content:"";display:inline-block;width:2px;height:.95em;margin-left:3px;vertical-align:-.1em;background:currentColor;animation:cursor .6s steps(1) infinite}
+
+/* nomes dos elementos ao redor do átomo */
+.nomes{position:absolute;inset:0;z-index:2;pointer-events:none}
+.nome{
+  position:absolute;white-space:nowrap;
+  font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(13px,3.6vw,19px);
+  opacity:0;transform:translate(-50%,-50%) scale(.3);
+  transition:transform .3s cubic-bezier(.2,.9,.3,1.4),opacity .3s;
+}
+.nome.entra{opacity:1;transform:translate(-50%,-50%) scale(1)}
+
+.btn-play.oculto{opacity:0;transform:scale(.5);pointer-events:none;transition:opacity .4s,transform .4s}
+
 /* rótulos digitados sobre a cena 3D */
 .rotulos{position:absolute;inset:0;z-index:2;pointer-events:none}
 .rotulos svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
@@ -517,7 +544,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   <main id="palco">
     <div class="dica-girar" id="dicaGirar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
-      arraste para girar
+      <span id="dicaTexto">arraste para girar</span>
     </div>
   </main>
 
@@ -574,16 +601,17 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.6';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.7';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
 const CAPITULOS = [
   { titulo: 'A Estrutura atômica básica', pagina: 'pagina1', audio: 'audio_distribuição_1', inicio: 0 },
+  { titulo: 'Número atômico (Z)',          pagina: 'pagina1', audio: 'audio_distribuição_2', inicio: 0, prepara: () => Atomo.estadoAudio2() },
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2'];
 
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
@@ -609,9 +637,30 @@ const EVENTOS = {
     { t: 21.0, acao: () => { Atomo.destaca('protons', true); Atomo.escreve('protons'); } },
     { t: 22.9, acao: () => Atomo.maisProtons() },
     { t: 24.0, acao: () => { Atomo.destaca('protons', false); Atomo.destaca('neutrons', true); Atomo.escreve('neutrons'); } },
-    { t: 'fim', acao: () => { Atomo.destaca('neutrons', false); Atomo.apaga('protons'); Atomo.apaga('neutrons'); Atomo.zoomInicial(); } },
+    /* fim: play some, câmera volta, molde aparece; encaixou → áudio 2 */
+    { t: 'fim', acao: () => {
+        Atomo.destaca('neutrons', false);
+        ['protons','neutrons','nucleo','eletrosfera'].forEach(id => Atomo.apaga(id));
+        Atomo.zoomInicial();
+        escondePlay(true);
+        Atomo.ativaSlot(() => { escondePlay(false); carrega('audio_distribuição_2'); audio.play().catch(() => {}); });
+    } },
+  ],
+  'audio_distribuição_2': [
+    { t: 4.9,  acao: () => Atomo.mostraNomes(2100) },                  // nomes em sequência até 7 s
+    { t: 8.0,  acao: () => Atomo.brilhaNomes(1000) },
+    { t: 12.0, acao: () => Atomo.apagaNomes() },                       // "TV desligando"
+    { t: 15.0, acao: () => { Atomo.eletrosferaFina(); Atomo.digita('eq', 'nº de prótons', { cor: '#6f9bff' }); } },
+    { t: 16.0, acao: () => Atomo.zoomDiscreto() },
+    { t: 19.0, acao: () => Atomo.digita('eq', ' = nº atômico', { cor: '#eef1ff' }) },
+    { t: 22.0, acao: () => Atomo.digita('eq', ' (Z)', { cor: '#ffc24a' }) },
+    { t: 22.6, acao: () => Atomo.viraParaHidrogenio() },               // face de cubo → hidrogênio
+    { t: 25.0, acao: () => Atomo.destacaH(true) },
+    { t: 27.7, acao: () => Atomo.digita('hz', 'número atômico (Z) = 1', { cor: '#eef1ff', dur: 1000 }) },
+    { t: 29.5, acao: () => Atomo.destacaH(false) },
   ],
 };
+function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
 
 /* ===================================================================== */
 
@@ -790,7 +839,7 @@ function abreSecao(id){
   audio.pause();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
   if (id === 'pagina1'){  // a página 1 sempre começa do início
-    Atomo.reset(); atual = null; $('#barra').style.width = '0'; btnPlay.classList.add('chama');
+    Atomo.reset(); atual = null; $('#barra').style.width = '0'; btnPlay.classList.add('chama'); escondePlay(false);
   }
   viraCubo('capa', id);
 }
@@ -924,7 +973,9 @@ $('#lista').addEventListener('click', e => {
   cancelaPausaRoteiro();
   fechaSumario();
   mostra(c.pagina);
+  escondePlay(false);
   carrega(c.audio, c.inicio);
+  if (c.prepara) c.prepara();
   audio.play().catch(() => {});
 });
 
@@ -938,36 +989,49 @@ function aviso(msg){
 /* =====================================================================
    CENA 3D DA PÁGINA 1
    · começa com um átomo de lítio (3 p⁺ + 3 n⁰, nuvens 1s e 2s)
-   · durante o áudio 1 vira um núcleo de 2 prótons (azuis) + 2 nêutrons
-     (dourados) com a eletrosfera de uma camada (esfera transparente)
+   · áudio 1: núcleo de 2 prótons (azuis) + 2 nêutrons (dourados) e a
+     eletrosfera de uma camada (esfera transparente)
+   · fim do áudio 1: encaixe do núcleo no molde → áudio 2
+   · áudio 2: nomes dos elementos, nº de prótons = nº atômico (Z),
+     a região vira como face de cubo e mostra o hidrogênio
    ===================================================================== */
 const Atomo = (() => {
-  let pronto = false, rodando = false, renderer, cena, camera, grupo, palco, t0 = 0, ultimo = 0;
+  let pronto = false, rodando = false, renderer, cena, camera, grupo, palco, face, t0 = 0, ultimo = 0;
   let rotX = .35, rotY = 0, velX = 0, velY = 0, zoomGesto = 1, ultimoToque = 0;
   let fatorCam = 1, fatorCamAlvo = 1;            // zoom do roteiro (1 = posição inicial)
   let taxaCam = 3.2;                             // velocidade do zoom (alto = "dash")
+  let giroAuto = true, giroNucleo = true, travaGesto = false;
   const R_VISTA = 7.5, R_ESF = 6;
+  const ESF_PADRAO = { pot: 2.4, rim: .85, base: .05 };   // eletrosfera "cheia"
+  const ESF_FINA   = { pot: 16,  rim: 1.1, base: 0   };   // só a linha da borda
   /* lítio inicial */
   let li, nuvem1s, nuvem2s, matsLi = [];
-  /* núcleo novo + eletrosfera */
-  let he, heNucleo, protons = [], neutrons = [], mais = [], esfera, matsHe = [];
+  /* núcleo 2p + 2n + eletrosfera */
+  let he, heNucleo, protons = [], neutrons = [], maisHe = [], esfera, matsHe = [], mP, mN;
+  /* hidrogênio */
+  let hAtomo, hProton, maisH = [], esferaH;
+  /* molde (slot) para encaixar o núcleo */
+  let molde, moldeMats = [], moldePos = [], slot = null;
   let tweens = [];
-  const rotulos = {};
+  const rotulos = {}, linhas = {};
+  let camadaNomes;
   const V = (x,y,z) => new THREE.Vector3(x,y,z);
   const ease = k => k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
   const easeBack = k => 1 + 2.4*Math.pow(k-1,3) + 1.4*Math.pow(k-1,2);
+  const reduz = a => a - Math.round(a / (2*Math.PI)) * 2*Math.PI;
 
-  /* animação numérica simples: fn(k) com k de 0 a 1 */
   function anima(dur, fn, fim, curva = ease){
     tweens.push({ ini: performance.now(), dur, fn, fim, curva });
   }
   function rodaTweens(agora){
-    tweens = tweens.filter(tw => {
+    const lista = tweens; tweens = [];
+    const ficam = lista.filter(tw => {
       const k = Math.min(1, (agora - tw.ini) / tw.dur);
       tw.fn(tw.curva(k));
       if (k >= 1){ tw.fim && tw.fim(); return false; }
       return true;
     });
+    tweens = ficam.concat(tweens);   // mantém tweens criados durante esta rodada
   }
 
   function texPonto(){
@@ -1009,8 +1073,21 @@ const Atomo = (() => {
   }
   const matBola = (cor, emis) => {
     const m = new THREE.MeshStandardMaterial({ color: cor, roughness: .35, metalness: .15, emissive: emis, emissiveIntensity: .6, transparent: true, opacity: 1 });
-    m.userData.base = 1; return m;
+    m.userData.base = 1; m.userData.emis = emis; return m;
   };
+  /* eletrosfera: esfera transparente com brilho na borda (efeito fresnel) */
+  function matEsfera(cfg, opac){
+    return new THREE.ShaderMaterial({
+      uniforms: { cor: { value: new THREE.Color(0x3ee0ff) }, opac: { value: opac },
+                  pot: { value: cfg.pot }, rim: { value: cfg.rim }, base: { value: cfg.base } },
+      vertexShader: `varying vec3 vN; varying vec3 vV;
+        void main(){ vec4 mv = modelViewMatrix * vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+      fragmentShader: `uniform vec3 cor; uniform float opac, pot, rim, base; varying vec3 vN; varying vec3 vV;
+        void main(){ float f = 1. - abs(dot(normalize(vN), normalize(vV))); float a = (pow(f, pot)*rim + base) * opac; gl_FragColor = vec4(cor, a); }`,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
+    });
+  }
+  const setEsf = (mesh, cfg) => { const u = mesh.material.uniforms; u.pot.value = cfg.pot; u.rim.value = cfg.rim; u.base.value = cfg.base; };
 
   function monta(){
     palco = $('#palco');
@@ -1021,7 +1098,10 @@ const Atomo = (() => {
       return false;
     }
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
-    palco.prepend(renderer.domElement);
+    /* "face": canvas + textos; é ela que vira como face de cubo */
+    face = document.createElement('div'); face.className = 'face';
+    face.appendChild(renderer.domElement);
+    palco.prepend(face);
     cena = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(40, 1, .1, 200);
     grupo = new THREE.Group(); cena.add(grupo);
@@ -1047,52 +1127,57 @@ const Atomo = (() => {
     li.add(nuvem1s, nuvem2s);
     matsLi = [mPLi, mNLi, nuvem1s.material, nuvem2s.material];
 
-    /* ---- núcleo novo: 2 prótons (azuis) + 2 nêutrons (dourados) ---- */
+    /* ---- núcleo: 2 prótons (azuis) + 2 nêutrons (dourados) ---- */
     he = new THREE.Group(); he.visible = false; grupo.add(he);
     heNucleo = new THREE.Group(); he.add(heNucleo);
-    const mP = matBola(0x3d74ff, 0x0b1d5c), mN = matBola(0xe0a21f, 0x3d2600);
+    mP = matBola(0x3d74ff, 0x0b1d5c); mN = matBola(0xe0a21f, 0x3d2600);
     mN.metalness = .55; mN.roughness = .3;   // dourado
-    const k = .5 / Math.sqrt(3);
-    const tetra = [[1,1,1],[-1,-1,1],[1,-1,-1],[-1,1,-1]];
+    const k = .5 / Math.sqrt(3) * 1.04;
+    const tetra = [[1,1,1],[-1,-1,1],[1,-1,-1],[-1,1,-1]];   // 2 primeiros = prótons
     const tMais = texMais();
+    const novoMais = (alvo, lista) => {
+      const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tMais, transparent: true, opacity: 0, depthWrite: false }));
+      sp.scale.setScalar(.42); sp.visible = false; cena.add(sp); lista.push({ sprite: sp, alvo });
+    };
     tetra.forEach(([x,y,z], i) => {
       const proton = i < 2;
       const m = new THREE.Mesh(geoN, proton ? mP : mN);
-      m.position.set(x*k*1.04, y*k*1.04, z*k*1.04);
+      m.position.set(x*k, y*k, z*k);
       m.userData.escala = 1; m.userData.escalaAlvo = 1;
       heNucleo.add(m);
       (proton ? protons : neutrons).push(m);
-      if (proton){
-        const sm = new THREE.SpriteMaterial({ map: tMais, transparent: true, opacity: 0, depthWrite: false });
-        const sp = new THREE.Sprite(sm); sp.scale.setScalar(.42); sp.visible = false;
-        cena.add(sp); mais.push({ sprite: sp, alvo: m });
-      }
+      if (proton) novoMais(m, maisHe);
     });
-    /* eletrosfera: esfera transparente com brilho na borda (efeito fresnel) */
-    const matEsf = new THREE.ShaderMaterial({
-      uniforms: { cor: { value: new THREE.Color(0x3ee0ff) }, opac: { value: 0 } },
-      vertexShader: `varying vec3 vN; varying vec3 vV;
-        void main(){ vec4 mv = modelViewMatrix * vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
-      fragmentShader: `uniform vec3 cor; uniform float opac; varying vec3 vN; varying vec3 vV;
-        void main(){ float f = 1. - abs(dot(normalize(vN), normalize(vV))); float a = (pow(f, 2.4)*.85 + .05) * opac; gl_FragColor = vec4(cor, a); }`,
-      transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
-    });
-    esfera = new THREE.Mesh(new THREE.SphereGeometry(R_ESF, 64, 40), matEsf);
+    esfera = new THREE.Mesh(new THREE.SphereGeometry(R_ESF, 64, 40), matEsfera(ESF_PADRAO, 0));
     esfera.visible = false; he.add(esfera);
     matsHe = [mP, mN];
 
-    /* ---- rótulos digitados (HTML por cima do 3D, presos a pontos da cena) ---- */
+    /* ---- molde (slot): 4 "encaixes" fixos na tela, na orientação certa ---- */
+    molde = new THREE.Group(); molde.visible = false; cena.add(molde);
+    const geoMolde = new THREE.SphereGeometry(.5 * 1.32, 32, 20);
+    tetra.forEach(([x,y,z], i) => {
+      const proton = i < 2;
+      const m = new THREE.MeshBasicMaterial({ color: proton ? 0x6f9bff : 0xffc24a, transparent: true, opacity: 0,
+        side: THREE.BackSide, depthWrite: false });
+      m.userData.op = 0; moldeMats.push(m);
+      const s = new THREE.Mesh(geoMolde, m); s.position.set(x*k, y*k, z*k); molde.add(s);
+      moldePos.push({ p: s.position.clone(), proton });
+    });
+
+    /* ---- hidrogênio: 1 próton + eletrosfera só com a linha da borda ---- */
+    hAtomo = new THREE.Group(); hAtomo.visible = false; grupo.add(hAtomo);
+    hProton = new THREE.Mesh(geoN, mP);
+    hProton.userData.escala = 1; hProton.userData.escalaAlvo = 1;
+    hAtomo.add(hProton); novoMais(hProton, maisH);
+    esferaH = new THREE.Mesh(esfera.geometry, matEsfera(ESF_FINA, 1)); hAtomo.add(esferaH);
+
+    /* ---- rótulos presos a pontos da cena ---- */
     const camada = document.createElement('div'); camada.className = 'rotulos';
-    camada.innerHTML = '<svg></svg>'; palco.appendChild(camada);
+    camada.innerHTML = '<svg></svg>'; face.appendChild(camada);
     const svg = camada.querySelector('svg');
-    const frontal = lista => {
-      let melhor = null, z = -1e9, p = new THREE.Vector3();
-      lista.forEach(m => { m.getWorldPosition(p); if (p.z > z){ z = p.z; melhor = p.clone(); } });
-      return melhor.add(V(0, 0, .5));
-    };
     const DEF = {
-      nucleo:      { texto: 'núcleo',      cor: '#eef1ff', ancora: () => V(.62, .55, .6),                 dx: 70,  dy: -56 },
-      eletrosfera: { texto: 'eletrosfera', cor: '#3ee0ff', ancora: () => V(-R_ESF*.34, R_ESF*.94, 0),     dx: 24,  dy: -36 },
+      nucleo:      { texto: 'núcleo',      cor: '#eef1ff', ancora: () => V(.62, .55, .6),             dx: 70, dy: -56 },
+      eletrosfera: { texto: 'eletrosfera', cor: '#3ee0ff', ancora: () => V(-R_ESF*.34, R_ESF*.94, 0), dx: 24, dy: -36 },
       /* prótons e nêutrons: texto parado na tela, sem linha, na cor das bolinhas */
       protons:     { texto: 'prótons',     cor: '#3f7bff', fixo: { x: .5, y: .17 } },
       neutrons:    { texto: 'nêutrons',    cor: '#e0a21f', fixo: { x: .5, y: .83 } },
@@ -1107,14 +1192,24 @@ const Atomo = (() => {
       rotulos[id] = { ...r, el, ln, pt, g, ativo: false, timer: null };
     });
 
+    /* ---- linhas de texto digitado (paradas na tela) ---- */
+    const camLinhas = document.createElement('div'); camLinhas.className = 'linhas'; face.appendChild(camLinhas);
+    Object.entries({ eq: .86, hnome: .8, hz: .9 }).forEach(([id, y]) => {
+      const el = document.createElement('div'); el.className = 'linha linha-' + id; el.style.top = (y * 100) + '%';
+      camLinhas.appendChild(el); linhas[id] = { el, timer: null };
+    });
+
+    /* ---- nomes dos elementos ---- */
+    camadaNomes = document.createElement('div'); camadaNomes.className = 'nomes'; face.appendChild(camadaNomes);
+
     /* gestos: arrastar gira, pinça/roda dá zoom */
     const toques = new Map(); let distPinca = 0;
     const cv = renderer.domElement;
-    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); toques.set(e.pointerId, {x:e.clientX, y:e.clientY}); ultimoToque = performance.now(); $('#dicaGirar').classList.add('some'); });
+    cv.addEventListener('pointerdown', e => { try { cv.setPointerCapture(e.pointerId); } catch(_){} toques.set(e.pointerId, {x:e.clientX, y:e.clientY}); ultimoToque = performance.now(); if (!slot) $('#dicaGirar').classList.add('some'); });
     cv.addEventListener('pointermove', e => {
       if (!toques.has(e.pointerId)) return;
       const p = toques.get(e.pointerId);
-      if (toques.size === 1){
+      if (toques.size === 1 && !travaGesto){
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         velY = dx * .008; velX = dy * .008;
         rotY += velY; rotX += velX;
@@ -1167,6 +1262,44 @@ const Atomo = (() => {
     });
   }
 
+  /* encaixe: compara a posição das 4 bolinhas com os 4 encaixes do molde (cor com cor) */
+  const pw = new THREE.Vector3();
+  function erroEncaixe(){
+    const dist = (bolas, alvos) => {
+      const P = bolas.map(m => m.getWorldPosition(pw).clone());
+      const A = alvos.map(a => a.p);
+      return Math.min(Math.max(P[0].distanceTo(A[0]), P[1].distanceTo(A[1])),
+                      Math.max(P[0].distanceTo(A[1]), P[1].distanceTo(A[0])));
+    };
+    return Math.max(dist(protons, moldePos.filter(a => a.proton)), dist(neutrons, moldePos.filter(a => !a.proton)));
+  }
+  function encaixa(){
+    slot.encaixado = true; travaGesto = true;
+    const g0 = { x: rotX, y: rotY }, yAlvo = Math.round(rotY / (2*Math.PI)) * 2*Math.PI;
+    anima(350, k => { rotX = g0.x * (1 - k); rotY = g0.y + (yAlvo - g0.y) * k; velX = velY = 0; });
+    sfx('right');
+    /* núcleo brilha pulsando */
+    anima(1700, k => {
+      const s = Math.abs(Math.sin(k * Math.PI * 3)), v = (.15 + 1.2 * s) * (1 - k * .4);
+      mP.emissive.setHex(0x3d74ff); mN.emissive.setHex(0xe0a21f);
+      mP.emissiveIntensity = mN.emissiveIntensity = v;
+      heNucleo.scale.setScalar(1 + .12 * s);
+    }, () => {
+      mP.emissive.setHex(mP.userData.emis); mN.emissive.setHex(mN.userData.emis);
+      mP.emissiveIntensity = mN.emissiveIntensity = .6; heNucleo.scale.setScalar(1);
+    }, k => k);
+    /* molde acende e some; eletrosfera volta ao normal */
+    anima(1100, k => moldeMats.forEach(m => m.userData.op = k < .25 ? 1 + k * 4 : 2 * (1 - k) / .75), () => { molde.visible = false; });
+    { const u = esfera.material.uniforms.opac, ini = u.value; anima(1200, k => u.value = ini + (1 - ini) * k); }
+    setTimeout(() => {
+      travaGesto = false; giroAuto = giroNucleo = true;
+      taxaCam = 2.2; fatorCamAlvo = 1;          // câmera volta à posição inicial
+      $('#dicaGirar').classList.add('some');
+      const cb = slot && slot.onEncaixe; slot = null;
+      cb && cb();
+    }, 1300);
+  }
+
   function quadro(agora){
     if (!rodando) return;
     requestAnimationFrame(quadro);
@@ -1182,20 +1315,18 @@ const Atomo = (() => {
       const s = 1 + Math.sin(t * 1.6) * .015; nuvem1s.scale.setScalar(s); nuvem2s.scale.setScalar(2 - s);
       li.userData.nucleo.rotation.y = t * .4; li.userData.nucleo.rotation.x = t * .25;
     }
-    /* núcleo novo: gira bem devagar; prótons/nêutrons crescem suavemente quando destacados */
-    if (he.visible){
-      heNucleo.rotation.y += dt * .22; heNucleo.rotation.x += dt * .08;
-      [...protons, ...neutrons].forEach(m => {
-        m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dt * 9));
-        m.scale.setScalar(m.userData.escala);
-      });
-    }
+    /* núcleo: gira bem devagar; bolinhas crescem suavemente quando destacadas */
+    if (he.visible && giroNucleo){ heNucleo.rotation.y += dt * .088; heNucleo.rotation.x += dt * .032; }
+    [...protons, ...neutrons, hProton].forEach(m => {
+      m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dt * 9));
+      m.scale.setScalar(m.userData.escala);
+    });
     /* inércia + giro automático quando ninguém está tocando */
-    if (agora - ultimoToque > 120){ velX *= .94; velY *= .94; rotX += velX; rotY += velY; }
-    if (agora - ultimoToque > 2500) rotY += .0025;
+    if (agora - ultimoToque > 120 && !travaGesto){ velX *= .94; velY *= .94; rotX += velX; rotY += velY; }
+    if (giroAuto && agora - ultimoToque > 2500) rotY += .001;
     rotX = Math.max(-1.3, Math.min(1.3, rotX));
     grupo.rotation.set(rotX, rotY, 0);
-    /* câmera: enquadra o átomo; o roteiro pode aproximar (zoom no núcleo) */
+    /* câmera: enquadra o átomo; o roteiro pode aproximar */
     fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dt * taxaCam));
     const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
     const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
@@ -1203,9 +1334,13 @@ const Atomo = (() => {
     camera.lookAt(0, 0, 0);
     camera.updateMatrixWorld();
     grupo.updateMatrixWorld();
+    /* molde pulsando */
+    if (molde.visible) moldeMats.forEach(m => m.opacity = Math.min(1, m.userData.op * (.6 + .3 * Math.sin(t * 4))));
+    /* verifica o encaixe */
+    if (slot && !slot.encaixado && !travaGesto && erroEncaixe() < .3) encaixa();
     /* sinal de + na frente de cada próton, virado para a câmera */
     const p = new THREE.Vector3(), dir = new THREE.Vector3();
-    mais.forEach(({ sprite, alvo }) => {
+    [...maisHe, ...maisH].forEach(({ sprite, alvo }) => {
       if (!sprite.visible) return;
       alvo.getWorldPosition(p);
       dir.copy(camera.position).sub(p).normalize();
@@ -1219,6 +1354,18 @@ const Atomo = (() => {
   /* som de digitação (pasta audio/vfx) */
   const somDigitar = new Audio('audio/vfx/' + encodeURIComponent('typing sound') + '.mp3');
   somDigitar.loop = true;
+  let digitando = 0;
+  const comecaSom = () => { if (digitando++ === 0){ try { somDigitar.currentTime = 0; somDigitar.play().catch(() => {}); } catch(e){} } };
+  const paraSom = () => { if (--digitando <= 0){ digitando = 0; somDigitar.pause(); } };
+
+  function limpaLinhas(){
+    Object.values(linhas).forEach(L => { if (L.timer){ clearInterval(L.timer); L.timer = null; paraSom(); } L.el.innerHTML = ''; L.el.classList.remove('digitando'); });
+  }
+  function dica(texto){ $('#dicaTexto').textContent = texto; }
+
+  const NOMES = ['Hidrogênio','Hélio','Lítio','Carbono','Nitrogênio','Oxigênio','Flúor','Neônio',
+                 'Sódio','Magnésio','Alumínio','Cloro','Potássio','Cálcio','Ferro','Ouro'];
+  const CORES_NOMES = ['#3ee0ff','#ff5fa8','#ffc24a','#8cff6a'];
 
   return {
     inicia(){
@@ -1228,7 +1375,7 @@ const Atomo = (() => {
       if (!t0) t0 = performance.now();
       requestAnimationFrame(quadro);
     },
-    pausa(){ rodando = false; somDigitar.pause(); },
+    pausa(){ rodando = false; somDigitar.pause(); digitando = 0; },
     /* volta tudo ao começo da página 1 */
     reset(){
       t0 = performance.now();
@@ -1236,14 +1383,29 @@ const Atomo = (() => {
       tweens = [];
       li.visible = true;
       matsLi.forEach(m => m.opacity = m.userData.base);
-      he.visible = false; he.scale.setScalar(1);
-      matsHe.forEach(m => m.opacity = 1);
-      esfera.visible = false; esfera.material.uniforms.opac.value = 0;
-      [...protons, ...neutrons].forEach(m => { m.userData.escala = m.userData.escalaAlvo = 1; m.scale.setScalar(1); });
-      mais.forEach(({sprite}) => { sprite.visible = false; sprite.material.opacity = 0; });
+      he.visible = false; heNucleo.scale.setScalar(1); heNucleo.rotation.set(0, 0, 0);
+      matsHe.forEach(m => { m.opacity = 1; m.emissive.setHex(m.userData.emis); m.emissiveIntensity = .6; });
+      esfera.visible = false; esfera.material.uniforms.opac.value = 0; setEsf(esfera, ESF_PADRAO);
+      hAtomo.visible = false;
+      [...protons, ...neutrons, hProton].forEach(m => { m.userData.escala = m.userData.escalaAlvo = 1; m.scale.setScalar(1); });
+      [...maisHe, ...maisH].forEach(({sprite}) => { sprite.visible = false; sprite.material.opacity = 0; });
       Object.values(rotulos).forEach(r => { clearInterval(r.timer); r.ativo = false; r.el.textContent = ''; r.el.classList.remove('digitando'); r.el.style.opacity = 0; r.g.style.opacity = 0; });
-      somDigitar.pause();
-      fatorCam = fatorCamAlvo = 1; taxaCam = 3.2;
+      limpaLinhas(); camadaNomes.innerHTML = '';
+      molde.visible = false; moldeMats.forEach(m => { m.userData.op = 0; m.opacity = 0; }); slot = null;
+      giroAuto = giroNucleo = true; travaGesto = false;
+      palco.querySelectorAll('.face-velha').forEach(e => e.remove());
+      face.getAnimations().forEach(a => a.cancel()); face.style.transformOrigin = '';
+      somDigitar.pause(); digitando = 0;
+      fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; rotX = .35;
+      dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
+    },
+    /* estado pronto para começar o áudio 2 direto (pelo Sumário) */
+    estadoAudio2(){
+      this.reset(); if (!pronto) return;
+      li.visible = false; he.visible = true;
+      esfera.visible = true; esfera.material.uniforms.opac.value = 1;
+      maisHe.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
+      $('#dicaGirar').classList.add('some');
     },
     someLitio(){
       if (!pronto) return;
@@ -1269,33 +1431,161 @@ const Atomo = (() => {
       taxaCam = 3.2; fatorCamAlvo = 1;
       if (pronto && esfera.visible){ const u = esfera.material.uniforms.opac, ini = u.value; anima(1200, k => u.value = ini + (1 - ini) * k); }
     },
+    zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
     destaca(qual, on){
       (qual === 'protons' ? protons : neutrons).forEach(m => m.userData.escalaAlvo = on ? 1.35 : 1);
     },
     maisProtons(){
       if (!pronto) return;
-      mais.forEach(({sprite}) => sprite.visible = true);
-      anima(700, k => mais.forEach(({sprite}) => sprite.material.opacity = k));
+      maisHe.forEach(({sprite}) => sprite.visible = true);
+      anima(700, k => maisHe.forEach(({sprite}) => sprite.material.opacity = k));
     },
     /* escreve o rótulo letra por letra, com som de digitação */
     escreve(id){
       const r = rotulos[id]; if (!r) return;
-      clearInterval(r.timer);
+      if (r.timer){ clearInterval(r.timer); paraSom(); }
       r.ativo = true; r.el.textContent = ''; r.el.classList.add('digitando');
-      let i = 0;
-      try { somDigitar.currentTime = 0; somDigitar.play().catch(() => {}); } catch(e){}
+      let i = 0; comecaSom();
       r.timer = setInterval(() => {
         r.el.textContent = r.texto.slice(0, ++i);
         if (i >= r.texto.length){
-          clearInterval(r.timer); somDigitar.pause();
+          clearInterval(r.timer); r.timer = null; paraSom();
           setTimeout(() => r.el.classList.remove('digitando'), 600);
         }
       }, 85);
     },
     apaga(id){
       const r = rotulos[id]; if (!r) return;
-      clearInterval(r.timer); r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0;
+      if (r.timer){ clearInterval(r.timer); r.timer = null; paraSom(); }
+      r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0;
     },
+    /* digita um trecho numa linha parada na tela (os trechos se somam na mesma linha) */
+    digita(id, texto, { cor = '', ms = 85, dur = 0 } = {}){
+      const L = linhas[id]; if (!L) return;
+      if (L.timer){ clearInterval(L.timer); L.timer = null; paraSom(); const ult = L.el.lastChild; if (ult && ult.dataset.txt) ult.textContent = ult.dataset.txt; }
+      const span = document.createElement('span'); span.style.color = cor; span.dataset.txt = texto;
+      L.el.appendChild(span); L.el.classList.add('digitando');
+      const passo = dur ? dur / texto.length : ms;
+      let i = 0; comecaSom();
+      L.timer = setInterval(() => {
+        span.textContent = texto.slice(0, ++i);
+        if (i >= texto.length){
+          clearInterval(L.timer); L.timer = null; paraSom();
+          setTimeout(() => { if (!L.timer) L.el.classList.remove('digitando'); }, 600);
+        }
+      }, passo);
+    },
+
+    /* ----- fim do áudio 1: molde aparece atrás do núcleo; o aluno gira até encaixar ----- */
+    ativaSlot(onEncaixe){
+      if (!pronto) return;
+      slot = { onEncaixe, encaixado: false };
+      giroAuto = false; giroNucleo = false; travaGesto = true;
+      taxaCam = 2.5; fatorCamAlvo = .5;          // zoom out, mas com o núcleo grande o bastante para encaixar
+      /* núcleo volta à orientação "de fábrica" e o átomo fica torto em relação ao molde */
+      const r0 = { x: reduz(heNucleo.rotation.x), y: reduz(heNucleo.rotation.y), z: reduz(heNucleo.rotation.z) };
+      const g0 = { x: rotX, y: rotY }, gAlvo = { x: .75, y: Math.round(rotY / (2*Math.PI)) * 2*Math.PI + 2.3 };
+      anima(1400, k => {
+        heNucleo.rotation.set(r0.x * (1 - k), r0.y * (1 - k), r0.z * (1 - k));
+        rotX = g0.x + (gAlvo.x - g0.x) * k; rotY = g0.y + (gAlvo.y - g0.y) * k; velX = velY = 0;
+      }, () => { travaGesto = false; });
+      molde.visible = true;
+      anima(1000, k => moldeMats.forEach(m => m.userData.op = k));
+      /* eletrosfera fica mais fraca para o molde aparecer bem */
+      if (esfera.visible){ const u = esfera.material.uniforms.opac, ini = u.value; anima(900, k => u.value = ini + (.3 - ini) * k); }
+      dica('gire o núcleo até encaixar'); $('#dicaGirar').classList.remove('some');
+    },
+
+    /* ----- áudio 2 ----- */
+    mostraNomes(dur){
+      if (!pronto) return;
+      camadaNomes.innerHTML = '';
+      const w = palco.clientWidth, h = palco.clientHeight, n = NOMES.length;
+      NOMES.forEach((nome, i) => {
+        const ang = -Math.PI / 2 + i * 2 * Math.PI / n, alt = i % 2 ? .74 : 1;
+        const el = document.createElement('div'); el.className = 'nome'; el.textContent = nome;
+        const cor = CORES_NOMES[i % 4]; el.dataset.c = cor; el.style.color = cor;
+        camadaNomes.appendChild(el);
+        const ow = el.offsetWidth;
+        const x = Math.max(ow / 2 + 6, Math.min(w - ow / 2 - 6, w / 2 + Math.cos(ang) * w * .37 * alt));
+        const y = h / 2 + Math.sin(ang) * h * .37 * alt;
+        el.style.left = x + 'px'; el.style.top = y + 'px';
+        setTimeout(() => el.classList.add('entra'), i * dur / n);
+      });
+    },
+    brilhaNomes(dur){
+      camadaNomes.querySelectorAll('.nome').forEach(el => el.animate([
+        { filter: 'brightness(1)',   textShadow: `0 0 8px ${el.dataset.c}66`, transform: 'translate(-50%,-50%) scale(1)' },
+        { filter: 'brightness(1.9)', textShadow: `0 0 14px ${el.dataset.c}, 0 0 32px ${el.dataset.c}`, transform: 'translate(-50%,-50%) scale(1.15)', offset: .45 },
+        { filter: 'brightness(1)',   textShadow: `0 0 8px ${el.dataset.c}66`, transform: 'translate(-50%,-50%) scale(1)' }
+      ], { duration: dur, easing: 'ease-in-out' }));
+    },
+    /* efeito "TV desligando": cada palavra vira uma linha, depois um ponto */
+    apagaNomes(){
+      const els = [...camadaNomes.querySelectorAll('.nome')];
+      els.forEach((el, i) => {
+        const a = el.animate([
+          { transform: 'translate(-50%,-50%) scale(1,1)',      filter: 'brightness(1)', opacity: 1 },
+          { transform: 'translate(-50%,-50%) scale(1.15,.06)', filter: 'brightness(2.6)', opacity: 1, offset: .45 },
+          { transform: 'translate(-50%,-50%) scale(.02,.05)',  filter: 'brightness(3)', opacity: 1, offset: .8 },
+          { transform: 'translate(-50%,-50%) scale(0,0)',      filter: 'brightness(3)', opacity: 0 }
+        ], { duration: 380, delay: i * 22, easing: 'ease-in', fill: 'forwards' });
+        a.finished.then(() => el.remove()).catch(() => {});
+      });
+    },
+    /* eletrosfera quase toda transparente: sobra só a linha da borda */
+    eletrosferaFina(){
+      if (!pronto) return;
+      const u = esfera.material.uniforms, ini = { pot: u.pot.value, rim: u.rim.value, base: u.base.value, opac: u.opac.value };
+      anima(1000, k => {
+        u.pot.value = ini.pot + (ESF_FINA.pot - ini.pot) * k;
+        u.rim.value = ini.rim + (ESF_FINA.rim - ini.rim) * k;
+        u.base.value = ini.base + (ESF_FINA.base - ini.base) * k;
+        u.opac.value = ini.opac + (1 - ini.opac) * k;
+      });
+    },
+    /* só a região do átomo vira como a face de um cubo → hidrogênio */
+    viraParaHidrogenio(){
+      if (!pronto) return;
+      const w = palco.clientWidth;
+      /* foto da face atual (canvas + textos) para girar para fora */
+      renderer.render(cena, camera);
+      const foto = document.createElement('canvas');
+      foto.width = renderer.domElement.width; foto.height = renderer.domElement.height;
+      foto.getContext('2d').drawImage(renderer.domElement, 0, 0);
+      const velha = face.cloneNode(true); velha.classList.add('face-velha');
+      velha.querySelector('canvas').replaceWith(foto);
+      palco.appendChild(velha);
+      /* a face "nova" (ao vivo) já mostra o hidrogênio */
+      he.visible = false; maisHe.forEach(({sprite}) => sprite.visible = false);
+      Object.keys(rotulos).forEach(id => { const r = rotulos[id]; clearInterval(r.timer); r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0; });
+      limpaLinhas(); camadaNomes.innerHTML = '';
+      hAtomo.visible = true;
+      maisH.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
+      fatorCam = fatorCamAlvo = 1.15; taxaCam = 3.2;
+      linhas.hnome.el.innerHTML = '<span>Hidrogênio</span>';
+      $('#dicaGirar').classList.add('some');
+      sfx('transition_cube');
+      const op = { duration: 900, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' };
+      const recuo = `translateZ(${-w * .3}px)`;
+      [velha, face].forEach(el => { el.style.transformOrigin = `50% 50% ${-w/2}px`; el.style.backfaceVisibility = el.style.webkitBackfaceVisibility = 'hidden'; });
+      const a1 = velha.animate([
+        { transform: 'translateZ(0) rotateY(0deg)', filter: 'brightness(1)' },
+        { transform: `${recuo} rotateY(-45deg)`, filter: 'brightness(.7)', offset: .5 },
+        { transform: 'translateZ(0) rotateY(-90deg)', filter: 'brightness(.3)' }
+      ], op);
+      const a2 = face.animate([
+        { transform: 'translateZ(0) rotateY(90deg)', filter: 'brightness(.3)' },
+        { transform: `${recuo} rotateY(45deg)`, filter: 'brightness(.7)', offset: .5 },
+        { transform: 'translateZ(0) rotateY(0deg)', filter: 'brightness(1)' }
+      ], op);
+      a2.finished.then(() => {
+        velha.remove(); a1.cancel(); a2.cancel();
+        face.style.transformOrigin = face.style.backfaceVisibility = face.style.webkitBackfaceVisibility = '';
+      }).catch(() => {});
+    },
+    destacaH(on){ if (pronto) hProton.userData.escalaAlvo = on ? 1.5 : 1; },
+    _erro(){ return pronto && slot ? erroEncaixe() : null; },   // usado nos testes
   };
 })();
 document.addEventListener('visibilitychange', () => {

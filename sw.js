@@ -1,6 +1,6 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v6';   // acompanhe APP_VERSAO do index.html (0.6 → v6)
+const CACHE = 'pauling-v7';   // acompanhe APP_VERSAO do index.html (0.7 → v7)
 const ARQUIVOS = [
   './',
   './index.html',
@@ -22,6 +22,8 @@ const ARQUIVOS = [
   './fontes/space-grotesk-700.woff2',
   './audio/' + encodeURIComponent('audio_distribuição_0') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_1') + '.mp3',
+  './audio/' + encodeURIComponent('audio_distribuição_2') + '.mp3',
+  './audio/vfx/right.mp3',
   './audio/vfx/flip.mp3',
   './audio/vfx/transition_cube.mp3',
   './audio/vfx/' + encodeURIComponent('typing sound') + '.mp3'
