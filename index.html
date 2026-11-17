@@ -643,7 +643,7 @@ body.editando, body.editando *{touch-action:pan-x pan-y}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.10';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.11';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -717,6 +717,15 @@ HTMLMediaElement.prototype.play = function(){
   return _playOriginal.apply(this, arguments);
 };
 function calaTudo(){ sonsTocados.forEach(m => { try { m.pause(); } catch(e){} }); }
+function mutaTudo(on){ [document.getElementById('narracao'), ...sonsTocados].forEach(m => { if (m) m.muted = on; }); }
+/* play vindo de fora do app (notificação de mídia, teclas de mídia) também é barrado */
+document.addEventListener('play', e => { if (window.__modoEdicao && e.target.pause) e.target.pause(); }, true);
+if ('mediaSession' in navigator){
+  try {
+    navigator.mediaSession.setActionHandler('play',  () => { if (!window.__modoEdicao) document.getElementById('narracao').play().catch(() => {}); });
+    navigator.mediaSession.setActionHandler('pause', () => document.getElementById('narracao').pause());
+  } catch(e){}
+}
 
 const $ = s => document.querySelector(s);
 const audio = $('#narracao');
@@ -1737,6 +1746,7 @@ const Edicao = (() => {
     audio.pause();
     window.__modoEdicao = true;  // bloqueia qualquer som
     calaTudo();                  // e cala o que estiver tocando (digitação, efeitos)
+    mutaTudo(true);              // e deixa tudo no mudo, por garantia
     document.body.classList.add('editando');
     const lista = candidatos();
     lista.forEach(el => {
@@ -1777,7 +1787,9 @@ const Edicao = (() => {
   async function sai(){
     if (!ativo) return;
     ativo = false;
+    calaTudo();                    // nada "escapa" tocando ao sair
     window.__modoEdicao = false;   // sons liberados de novo (a narração continua pausada até o play)
+    mutaTudo(false);
     document.activeElement && document.activeElement.blur && document.activeElement.blur();
     const txt = relatorio();
     itens.forEach((v, el) => { el.removeAttribute('contenteditable'); el.removeAttribute('data-editavel'); el.classList.remove('mudou'); });
