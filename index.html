@@ -315,6 +315,39 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 }
 .nome.entra{opacity:1;transform:translate(-50%,-50%) scale(1)}
 
+/* ===================== QUIZ ===================== */
+.quiz{position:absolute;left:0;right:0;top:6px;z-index:6;display:flex;justify-content:center;padding:0 12px;pointer-events:none}
+.quiz-cartao{
+  pointer-events:auto;width:min(540px,100%);text-align:center;
+  padding:14px 16px 16px;border-radius:20px;
+  background:rgba(17,23,51,.9);backdrop-filter:blur(10px);border:1px solid var(--line);
+  box-shadow:0 14px 40px rgba(0,0,0,.45);
+  animation:quizEntra .45s cubic-bezier(.2,.9,.3,1.2);
+}
+.quiz-cartao.sai{animation:quizSai .45s ease-in forwards}
+@keyframes quizEntra{from{opacity:0;transform:translateY(-16px) scale(.94)}}
+@keyframes quizSai{to{opacity:0;transform:translateY(-16px) scale(.94)}}
+.quiz-rotulo{font:500 11px "IBM Plex Mono",monospace;letter-spacing:.16em;text-transform:uppercase;color:var(--s)}
+.quiz-pergunta{margin-top:4px;font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(18px,4.8vw,24px);line-height:1.2}
+.quiz-opcoes{display:flex;gap:12px;justify-content:center;margin-top:12px;flex-wrap:wrap}
+.quiz-opcao{
+  min-width:76px;padding:12px 20px;border-radius:14px;
+  font:700 22px "Space Grotesk",sans-serif;color:var(--ink);
+  background:rgba(238,241,255,.08);border:1.5px solid rgba(170,180,255,.28);
+  transition:transform .3s cubic-bezier(.2,.9,.3,1.4),background .25s,border-color .25s,box-shadow .25s;
+}
+.quiz-opcao:hover{background:rgba(62,224,255,.12)}
+.quiz-opcao.certa{background:#2fbf71;border-color:#8cff6a;color:#04140a;transform:scale(1.2);box-shadow:0 0 0 4px rgba(140,255,106,.25),0 0 30px rgba(47,191,113,.7);position:relative;z-index:2}
+.quiz-opcao.errada{background:#d6304f;border-color:#ff7a90;animation:balanca .5s}
+.quiz-opcao.ambar{border-color:#ffc24a;animation:pulsoAmbar 1s ease-in-out infinite}
+@keyframes balanca{20%{transform:translateX(-8px) rotate(-3deg)}40%{transform:translateX(8px) rotate(3deg)}60%{transform:translateX(-6px)}80%{transform:translateX(5px)}}
+@keyframes pulsoAmbar{50%{transform:scale(1.12);background:rgba(255,194,74,.3);box-shadow:0 0 22px rgba(255,194,74,.7)}}
+@keyframes treme{20%{transform:translateX(-10px)}40%{transform:translateX(9px)}60%{transform:translateX(-6px)}80%{transform:translateX(4px)}}
+.treme{animation:treme .45s}
+.quiz-dica{margin-top:10px;color:#ffc24a;font-size:14px;line-height:1.35}
+.confetes{position:fixed;inset:0;z-index:55;pointer-events:none;overflow:hidden}
+.confete{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px}
+
 /* "toque na tela" — cobre a área do átomo; a pílula pulsa embaixo */
 .toque-tela{position:absolute;inset:0;z-index:5;display:flex;align-items:flex-end;justify-content:center;padding-bottom:14px;cursor:pointer}
 .tt-pilula{
@@ -587,6 +620,15 @@ body.editando #palco canvas{cursor:default}
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
       <span id="dicaTexto">arraste para girar</span>
     </div>
+    <!-- QUIZ (pergunta com opções; o mesmo para todas as perguntas do audiobook) -->
+    <div class="quiz" id="quiz" hidden>
+      <div class="quiz-cartao" id="quizCartao">
+        <small class="quiz-rotulo">Pergunta</small>
+        <p class="quiz-pergunta" id="quizPergunta"></p>
+        <div class="quiz-opcoes" id="quizOpcoes"></div>
+        <p class="quiz-dica" id="quizDica" hidden></p>
+      </div>
+    </div>
     <!-- fim do áudio 2: toque em qualquer lugar da tela para continuar -->
     <button class="toque-tela" id="toqueTela" hidden aria-label="Toque na tela para continuar">
       <span class="tt-pilula">
@@ -639,6 +681,7 @@ body.editando #palco canvas{cursor:default}
 </div>
 
 <div class="aviso" id="aviso" role="status"></div>
+<div class="confetes" id="confetes" aria-hidden="true"></div>
 <div class="versao" id="versao" aria-label="Versão do app"></div>
 
 <!-- MODO EDIÇÃO (G entra · Esc sai · ou segure o dedo na versão) -->
@@ -664,7 +707,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.17';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.18';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -732,7 +775,13 @@ const EVENTOS = {
     /* virada para o hidrogênio (Atomo.viraParaHidrogenio) fica guardada para depois */
   ],
   'audio_distribuição_3': [
-    // eventos do áudio 3 — a definir
+    { t: 1.0, acao: () => Atomo.viraParaHidrogenio('Hidrogênio - D', 'elem') },     // cubo vira → deutério (1 p⁺ + 1 n⁰)
+    { t: 4.0, acao: () => Quiz.pergunta({
+        pergunta: 'Qual o número atômico dele?',
+        opcoes: ['2', '1', '3'],
+        correta: '1',
+        dica: 'Dica: o número atômico (Z) é o número de prótons do núcleo. Conte só os prótons!',
+    }) },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -741,6 +790,87 @@ function mostraToque(on){
   $('#toqueTela').hidden = !on;
   if (on) $('#dicaGirar').classList.add('some');
 }
+/* =====================================================================
+   QUIZ — o mesmo ritual para todas as perguntas do audiobook
+   (padrão do app da Tabela Periódica)
+   · enquanto a pergunta está na tela, o play sai de cena
+   · acerto: a opção cresce e fica verde; confetes, funfare e applause;
+     depois a voz sorteada (exato!, muitobem, issomesmo!, excelente — sem repetir)
+   · erro: a opção balança em vermelho, a tela treme, toca error;
+     no 1º erro da pergunta, Calmanaproximaacerta; aparece a dica;
+     no 2º erro, a resposta certa pulsa em âmbar. Só passa com o acerto.
+   Uso: Quiz.pergunta({ pergunta, opcoes: [...], correta, dica, aoAcertar })
+   ===================================================================== */
+const Quiz = (() => {
+  const VOZES = ['exato!', 'muitobem', 'issomesmo!', 'excelente'];
+  let usadas = [], q = null, timers = [];
+  const vozDoAcerto = () => {
+    let livres = VOZES.filter(v => !usadas.includes(v));
+    if (!livres.length){ usadas = []; livres = VOZES.slice(); }
+    const v = livres[Math.floor(Math.random() * livres.length)];
+    usadas.push(v); return v;
+  };
+  const depois = (ms, fn) => timers.push(setTimeout(fn, ms));
+  function confetes(){
+    const camada = $('#confetes'), cores = ['#3ee0ff','#ff5fa8','#ffc24a','#8cff6a','#9b8cff','#ffffff'];
+    for (let i = 0; i < 90; i++){
+      const c = document.createElement('i'); c.className = 'confete';
+      c.style.left = (Math.random() * 100) + 'vw'; c.style.background = cores[i % cores.length];
+      camada.appendChild(c);
+      const dx = (Math.random() - .5) * 220, rot = (Math.random() - .5) * 1080, dur = 1800 + Math.random() * 1600;
+      c.animate([{ transform: 'translate(0,0) rotate(0deg)', opacity: 1 },
+                 { transform: `translate(${dx}px, ${innerHeight + 40}px) rotate(${rot}deg)`, opacity: .9 }],
+                { duration: dur, delay: Math.random() * 300, easing: 'cubic-bezier(.2,.6,.4,1)', fill: 'forwards' })
+        .finished.then(() => c.remove()).catch(() => c.remove());
+    }
+  }
+  function pergunta(cfg){
+    fecha(true);
+    q = { ...cfg, erros: 0, feito: false };
+    escondePlay(true);
+    $('#quizPergunta').textContent = cfg.pergunta;
+    $('#quizDica').hidden = true; $('#quizDica').textContent = cfg.dica || '';
+    const box = $('#quizOpcoes'); box.innerHTML = '';
+    cfg.opcoes.forEach(op => {
+      const b = document.createElement('button'); b.className = 'quiz-opcao'; b.textContent = op; b.dataset.valor = op;
+      b.addEventListener('click', () => responde(b));
+      box.appendChild(b);
+    });
+    $('#quizCartao').classList.remove('sai');
+    $('#quiz').hidden = false;
+  }
+  function responde(b){
+    if (!q || q.feito) return;
+    if (b.dataset.valor === String(q.correta)){
+      q.feito = true;
+      document.querySelectorAll('.quiz-opcao').forEach(o => o.classList.remove('ambar', 'errada'));
+      b.classList.add('certa');
+      confetes(); sfx('funfare'); sfx('applause');
+      depois(1300, () => sfx(vozDoAcerto()));
+      depois(3200, () => {
+        $('#quizCartao').classList.add('sai');
+        depois(450, () => { const cb = q && q.aoAcertar; fecha(); escondePlay(false); btnPlay.classList.add('chama'); cb && cb(); });
+      });
+    } else {
+      q.erros++;
+      b.classList.remove('errada'); void b.offsetWidth; b.classList.add('errada');
+      const p = $('#palco'); p.classList.remove('treme'); void p.offsetWidth; p.classList.add('treme');
+      sfx('error');
+      if (q.erros === 1) depois(650, () => sfx('Calmanaproximaacerta'));
+      if (q.dica) $('#quizDica').hidden = false;
+      if (q.erros >= 2){
+        const certa = [...document.querySelectorAll('.quiz-opcao')].find(o => o.dataset.valor === String(q.correta));
+        if (certa) certa.classList.add('ambar');
+      }
+    }
+  }
+  function fecha(semAnimar){
+    timers.forEach(clearTimeout); timers = [];
+    $('#quiz').hidden = true; q = null;
+  }
+  return { pergunta, fecha, get ativo(){ return !!q; } };
+})();
+
 document.getElementById('toqueTela').addEventListener('click', () => {
   mostraToque(false);
   escondePlay(false);
@@ -778,7 +908,7 @@ let atual = null;            // nome do áudio carregado
 let disparados = new Set();  // eventos já executados no áudio atual
 const urlAudio = nome => 'audio/' + encodeURIComponent(nome) + '.mp3';
 $('#versao').textContent = 'v' + APP_VERSAO;
-const sfx = nome => { try { const a = new Audio('audio/vfx/' + nome + '.mp3'); a.play().catch(()=>{}); } catch(e){} };
+const sfx = nome => { try { const a = new Audio('audio/vfx/' + encodeURIComponent(nome) + '.mp3'); a.play().catch(()=>{}); return a; } catch(e){} };
 
 /* ---------- Diagrama de Pauling desenhado em SVG ---------- */
 const LINHAS = [
@@ -945,7 +1075,7 @@ function abreSecao(id){
   audio.pause();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
   if (id === 'pagina1'){  // a página 1 sempre começa do início
-    Atomo.reset(); atual = null; $('#barra').style.width = '0'; btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false);
+    Atomo.reset(); atual = null; $('#barra').style.width = '0'; btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha();
   }
   viraCubo('capa', id);
 }
@@ -1108,7 +1238,7 @@ $('#lista').addEventListener('click', e => {
   cancelaPausaRoteiro();
   fechaSumario();
   mostra(c.pagina);
-  escondePlay(false); mostraToque(false);
+  escondePlay(false); mostraToque(false); Quiz.fecha();
   carrega(c.audio, c.inicio);
   if (c.prepara) c.prepara();
   audio.play().catch(() => {});
@@ -1154,7 +1284,7 @@ const Atomo = (() => {
     halos.forEach(h => { h.visible = b > .01; h.material.opacity = .95 * b; });   // o brilho fica no halo
   }
   /* hidrogênio */
-  let hAtomo, hProton, maisH = [], esferaH;
+  let hAtomo, hNucleo, hProton, maisH = [], esferaH;
   /* molde (slot) para encaixar o núcleo */
   let molde, moldeMats = [], moldePos = [], slot = null;
   let tweens = [];
@@ -1321,10 +1451,13 @@ const Atomo = (() => {
     });
 
     /* ---- hidrogênio: 1 próton + eletrosfera só com a linha da borda ---- */
+    /* deutério (hidrogênio-2): 1 próton + 1 nêutron */
     hAtomo = new THREE.Group(); hAtomo.visible = false; grupo.add(hAtomo);
-    hProton = new THREE.Mesh(geoN, mP);
+    hNucleo = new THREE.Group(); hAtomo.add(hNucleo);
+    hProton = new THREE.Mesh(geoN, mP); hProton.position.set(-.42, 0, 0);
     hProton.userData.escala = 1; hProton.userData.escalaAlvo = 1;
-    hAtomo.add(hProton); novoMais(hProton, maisH);
+    const hNeutron = new THREE.Mesh(geoN, mN); hNeutron.position.set(.42, 0, 0);
+    hNucleo.add(hProton, hNeutron); novoMais(hProton, maisH);
     esferaH = new THREE.Mesh(esfera.geometry, matEsfera(ESF_FINA, 1)); hAtomo.add(esferaH);
 
     /* ---- rótulos presos a pontos da cena ---- */
@@ -1483,6 +1616,7 @@ const Atomo = (() => {
     }
     /* núcleo: gira bem devagar; bolinhas crescem suavemente quando destacadas */
     if (he.visible && giroNucleo){ heNucleo.rotation.y += dtR * .088; heNucleo.rotation.x += dtR * .032; }
+    if (hAtomo.visible){ hNucleo.rotation.y += dtR * .088; hNucleo.rotation.x += dtR * .032; }
     [...protons, ...neutrons, hProton].forEach(m => {
       m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dtR * 9));
       m.scale.setScalar(m.userData.escala);
@@ -1738,7 +1872,7 @@ const Atomo = (() => {
       });
     },
     /* só a região do átomo vira como a face de um cubo → hidrogênio */
-    viraParaHidrogenio(){
+    viraParaHidrogenio(nome = 'Hidrogênio', linha = 'hnome'){
       if (!pronto) return;
       const w = palco.clientWidth;
       /* foto da face atual (canvas + textos) para girar para fora */
@@ -1755,8 +1889,9 @@ const Atomo = (() => {
       limpaLinhas(); camadaNomes.innerHTML = '';
       hAtomo.visible = true;
       maisH.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
-      fatorCam = fatorCamAlvo = 1.15; taxaCam = 3.2;
-      linhas.hnome.el.innerHTML = '<span>Hidrogênio</span>';
+      fatorCamAlvo = fatorCam; camTween = false;   // mesmo enquadramento da cena anterior
+      linhas[linha].el.innerHTML = '';
+      const sp = document.createElement('span'); sp.textContent = nome; linhas[linha].el.appendChild(sp);
       $('#dicaGirar').classList.add('some');
       sfx('transition_cube');
       const op = { duration: 900, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' };
