@@ -48,7 +48,8 @@
 *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
 html,body{height:100%;overflow:hidden}
 body{
-  background:var(--bg);
+  perspective:1600px;   /* profundidade da transição em cubo */
+  background:#04060d;
   color:var(--ink);
   font-family:"IBM Plex Sans",system-ui,sans-serif;
   -webkit-font-smoothing:antialiased;
@@ -313,23 +314,34 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 /* barra de base */
 .base{
   position:relative;z-index:6;
-  padding:18px 16px calc(14px + var(--safe-b));
+  padding:16px 16px 0;
   display:flex;align-items:flex-end;justify-content:center;
 }
 .progresso{
-  position:absolute;left:16px;right:96px;top:6px;height:3px;border-radius:3px;
+  position:absolute;left:16px;right:96px;top:4px;height:3px;border-radius:3px;
   background:rgba(238,241,255,.1);overflow:hidden;
 }
 .progresso i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--s),var(--p),var(--d),var(--f));transition:width .25s linear}
+
+/* Sumário: aba encostada na borda de baixo; as curvas da base se fundem com a borda */
 .btn-sumario{
+  --aba:#1a2149;--r:18px;
+  position:relative;
   display:inline-flex;align-items:center;gap:10px;
-  padding:12px 22px;border-radius:999px;
-  border:1px solid var(--line);background:rgba(17,23,51,.8);backdrop-filter:blur(10px);
-  font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:15px;letter-spacing:.04em;
-  transition:background .2s;
+  padding:13px 26px calc(13px + var(--safe-b));
+  border-radius:var(--r) var(--r) 0 0;
+  background:var(--aba);
+  font:500 13px "IBM Plex Mono",monospace;letter-spacing:.22em;text-transform:uppercase;color:var(--ink-2);
+  filter:drop-shadow(0 -4px 14px rgba(0,0,0,.35)) drop-shadow(0 -1px 0 rgba(170,180,255,.18));
+  transition:color .2s,padding .2s;
 }
-.btn-sumario:hover{background:rgba(62,224,255,.12)}
-.btn-sumario svg{width:18px;height:18px}
+.btn-sumario::before,.btn-sumario::after{
+  content:"";position:absolute;bottom:0;width:var(--r);height:var(--r);pointer-events:none;
+}
+.btn-sumario::before{left:calc(var(--r) * -1);background:radial-gradient(circle at 0 0,transparent calc(var(--r) - .5px),var(--aba) var(--r))}
+.btn-sumario::after{right:calc(var(--r) * -1);background:radial-gradient(circle at 100% 0,transparent calc(var(--r) - .5px),var(--aba) var(--r))}
+.btn-sumario:hover{color:var(--ink);padding-top:16px}
+.btn-sumario svg{width:14px;height:14px;color:var(--s)}
 
 .btn-play{
   position:absolute;right:16px;bottom:calc(10px + var(--safe-b));
@@ -367,7 +379,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   position:fixed;left:0;right:0;bottom:0;z-index:41;
   margin:0 auto;max-width:640px;max-height:78dvh;
   display:flex;flex-direction:column;
-  background:linear-gradient(180deg,#151c3d,#0e1430);
+  background:linear-gradient(180deg,#1a2149,#0e1430);
   border:1px solid var(--line);border-bottom:0;
   border-radius:24px 24px 0 0;
   box-shadow:0 -20px 60px rgba(0,0,0,.5);
@@ -478,13 +490,6 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
   <div class="cabeca">
     <h1>A Estrutura atômica básica</h1>
-    <p class="elemento">Lítio (Li) · Z = 3 · <b>1s² 2s¹</b></p>
-    <div class="legenda">
-      <span><i style="--c:var(--proton)"></i>3 prótons</span>
-      <span><i style="--c:var(--neutron)"></i>3 nêutrons</span>
-      <span><i class="nuvem" style="--c:var(--s)"></i>orbital 1s</span>
-      <span><i class="nuvem" style="--c:var(--s2)"></i>orbital 2s</span>
-    </div>
   </div>
 
   <!-- PALCO: átomo 3D (gira com o dedo) -->
@@ -498,7 +503,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   <footer class="base">
     <div class="progresso"><i id="barra"></i></div>
     <button class="btn-sumario" id="btnSumario" aria-haspopup="dialog">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M8 6h12M8 12h12M8 18h12"/><circle cx="4" cy="6" r="1" fill="currentColor"/><circle cx="4" cy="12" r="1" fill="currentColor"/><circle cx="4" cy="18" r="1" fill="currentColor"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 15l6-6 6 6"/></svg>
       Sumário
     </button>
     <button class="btn-play chama" id="btnPlay" aria-label="Tocar narração">
@@ -709,10 +714,48 @@ $('#btnIniciar').addEventListener('click', () => {
   carrega(AUDIO_CAPA);
   audio.play().catch(() => {});
 });
+/* Transição em cubo: a tela atual e a de destino viram duas faces vizinhas
+   de um cubo, que gira 90° para mostrar a nova página. */
+let girando = false;
+function viraCubo(deId, paraId, dir = 1){
+  if (girando) return;
+  const de = document.getElementById(deId), para = document.getElementById(paraId);
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches){ mostra(paraId); return; }
+  girando = true;
+  sfx('transition_cube');
+  const W = innerWidth;
+  [de, para].forEach(el => {
+    el.style.transition = 'none';
+    el.style.transformOrigin = `50% 50% ${-W/2}px`;
+    el.style.backfaceVisibility = 'hidden';
+    el.style.webkitBackfaceVisibility = 'hidden';
+  });
+  para.classList.add('ativa');
+  if (paraId === 'pagina1') Atomo.inicia();
+  const op = { duration: 1000, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' };
+  const recuo = `translateZ(${-W * .35}px)`;
+  const a1 = de.animate([
+    { transform: 'translateZ(0) rotateY(0deg)', filter: 'brightness(1)' },
+    { transform: `${recuo} rotateY(${-45*dir}deg)`, filter: 'brightness(.75)', offset: .5 },
+    { transform: `translateZ(0) rotateY(${-90*dir}deg)`, filter: 'brightness(.3)' }
+  ], op);
+  const a2 = para.animate([
+    { transform: `translateZ(0) rotateY(${90*dir}deg)`, filter: 'brightness(.3)' },
+    { transform: `${recuo} rotateY(${45*dir}deg)`, filter: 'brightness(.75)', offset: .5 },
+    { transform: 'translateZ(0) rotateY(0deg)', filter: 'brightness(1)' }
+  ], op);
+  a2.finished.then(() => {
+    mostra(paraId);
+    [a1, a2].forEach(a => a.cancel());
+    [de, para].forEach(el => { el.style.transformOrigin = el.style.backfaceVisibility = el.style.webkitBackfaceVisibility = ''; });
+    requestAnimationFrame(() => { de.style.transition = para.style.transition = ''; });
+    girando = false;
+  });
+}
 function abreSecao(id){
   audio.pause();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
-  mostra(id);
+  viraCubo('capa', id);
 }
 $('#btnAprender').addEventListener('click', () => abreSecao('pagina1'));
 $('#btnTreinar').addEventListener('click', () => abreSecao('treinar'));
