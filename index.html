@@ -289,6 +289,27 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 #palco{position:relative;z-index:2;flex:1;min-height:0}
 #palco canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block}
 #palco canvas:active{cursor:grabbing}
+/* rótulos digitados sobre a cena 3D */
+.rotulos{position:absolute;inset:0;z-index:2;pointer-events:none}
+.rotulos svg{position:absolute;inset:0;width:100%;height:100%;overflow:visible}
+.rotulos svg g{transition:opacity .4s}
+.rotulos line{stroke-width:1.5}
+.rotulo{
+  position:absolute;left:0;top:0;opacity:0;
+  font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(19px,4.8vw,28px);letter-spacing:.01em;
+  color:var(--c);white-space:nowrap;
+  text-shadow:0 0 16px color-mix(in srgb,var(--c) 55%,transparent);
+  transition:opacity .4s;
+}
+.rotulo.digitando::after{content:"";display:inline-block;width:2px;height:.95em;margin-left:3px;vertical-align:-.1em;background:currentColor;animation:cursor .6s steps(1) infinite}
+@keyframes cursor{50%{opacity:0}}
+
+/* versão do app (canto inferior esquerdo, em todas as telas) */
+.versao{
+  position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(8px + var(--safe-b));z-index:30;
+  font:500 10.5px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--ink-3);opacity:.8;pointer-events:none;
+}
+
 .dica-girar{
   position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;pointer-events:none;
   display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
@@ -543,6 +564,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 </div>
 
 <div class="aviso" id="aviso" role="status"></div>
+<div class="versao" id="versao" aria-label="Versão do app"></div>
 
 <audio id="narracao" preload="auto"></audio>
 
@@ -552,6 +574,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
+const APP_VERSAO = '0.5';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -577,7 +600,16 @@ const EVENTOS = {
     { t: 39.5, acao: () => destaque('#btnAprender', false) },
   ],
   'audio_distribuição_1': [
-    // { t: 2.5, acao: () => { ... } },
+    { t: 2.0,  acao: () => Atomo.someLitio() },                       // átomo inicial some (fade out)
+    { t: 6.7,  acao: () => Atomo.mostraNucleo() },                    // núcleo: 2 p⁺ (azuis) + 2 n⁰ (dourados)
+    { t: 8.0,  acao: () => Atomo.escreve('nucleo') },
+    { t: 11.0, acao: () => Atomo.mostraEletrosfera() },               // esfera transparente, 1 camada
+    { t: 12.9, acao: () => Atomo.escreve('eletrosfera') },
+    { t: 14.0, acao: () => pausaRoteiro(1500, [[500, () => Atomo.zoomNucleo()]]) },  // pausa 1,5 s; zoom 0,5 s depois
+    { t: 21.0, acao: () => { Atomo.destaca('protons', true); Atomo.escreve('protons'); } },
+    { t: 22.9, acao: () => Atomo.maisProtons() },
+    { t: 24.0, acao: () => { Atomo.destaca('protons', false); Atomo.destaca('neutrons', true); Atomo.escreve('neutrons'); } },
+    { t: 'fim', acao: () => { Atomo.destaca('neutrons', false); Atomo.apaga('protons'); Atomo.apaga('neutrons'); Atomo.zoomInicial(); } },
   ],
 };
 
@@ -590,6 +622,7 @@ const btnPlay = $('#btnPlay');
 let atual = null;            // nome do áudio carregado
 let disparados = new Set();  // eventos já executados no áudio atual
 const urlAudio = nome => 'audio/' + encodeURIComponent(nome) + '.mp3';
+$('#versao').textContent = 'v' + APP_VERSAO;
 const sfx = nome => { try { const a = new Audio('audio/vfx/' + nome + '.mp3'); a.play().catch(()=>{}); } catch(e){} };
 
 /* ---------- Diagrama de Pauling desenhado em SVG ---------- */
@@ -753,15 +786,40 @@ function viraCubo(deId, paraId, dir = 1){
   });
 }
 function abreSecao(id){
+  cancelaPausaRoteiro();
   audio.pause();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
+  if (id === 'pagina1'){  // a página 1 sempre começa do início
+    Atomo.reset(); atual = null; $('#barra').style.width = '0'; btnPlay.classList.add('chama');
+  }
   viraCubo('capa', id);
 }
 $('#btnAprender').addEventListener('click', () => abreSecao('pagina1'));
 $('#btnTreinar').addEventListener('click', () => abreSecao('treinar'));
 document.querySelectorAll('[data-home]').forEach(b => b.addEventListener('click', () => {
-  audio.pause(); fechaSumario(); limpaCapa(); mostra('capa');
+  cancelaPausaRoteiro(); audio.pause(); fechaSumario(); limpaCapa(); mostra('capa');
 }));
+
+/* Pausa do roteiro: o áudio para por alguns instantes e volta sozinho.
+   extras = [[ms, função], ...] → coisas que acontecem durante a pausa. */
+let pausaTimers = [], pausaPendentes = [], emPausaRoteiro = false;
+function pausaRoteiro(ms, extras = []){
+  emPausaRoteiro = true;
+  audio.pause();
+  pausaPendentes = extras.map(([, fn]) => fn);
+  pausaTimers = extras.map(([t, fn], i) => setTimeout(() => { pausaPendentes[i] = null; fn(); }, t));
+  pausaTimers.push(setTimeout(() => {
+    emPausaRoteiro = false; pausaPendentes = [];
+    audio.play().catch(() => {});
+  }, ms));
+}
+function cancelaPausaRoteiro(executarPendentes = false){
+  pausaTimers.forEach(clearTimeout); pausaTimers = [];
+  if (executarPendentes) pausaPendentes.forEach(fn => fn && fn());
+  pausaPendentes = [];
+  const estava = emPausaRoteiro; emPausaRoteiro = false;
+  return estava;
+}
 
 /* ---------- Áudio + linha do tempo de eventos ---------- */
 function carrega(nome, inicio = 0){
@@ -770,6 +828,7 @@ function carrega(nome, inicio = 0){
   audio.src = urlAudio(nome);
   audio.dataset.nome = nome;
   $('#barra').style.width = '0';
+  if (nome === 'audio_distribuição_1' && !inicio) Atomo.reset();
   if (inicio > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = inicio; marcaAte(inicio); }, {once:true});
   atualizaLista();
 }
@@ -790,6 +849,11 @@ function marcaAte(t){
 const ehDoAprender = () => SEQUENCIA.includes(atual);
 
 btnPlay.addEventListener('click', () => {
+  if (cancelaPausaRoteiro(true)){   // tocou durante a pausa do roteiro → vira pausa normal
+    pagina.classList.remove('tocando'); pagina.classList.add('pausado');
+    btnPlay.setAttribute('aria-label','Tocar narração');
+    return;
+  }
   if (!ehDoAprender() || audio.ended){
     const prox = ehDoAprender() ? SEQUENCIA.indexOf(atual) + 1 : 0;
     if (prox >= SEQUENCIA.length){ aviso('Fim desta parte! 🎉'); return; }
@@ -811,10 +875,12 @@ audio.addEventListener('play', () => {
   }
 });
 audio.addEventListener('pause', () => {
+  if (emPausaRoteiro) return;      // pausa do roteiro: o botão continua como "tocando"
   pagina.classList.remove('tocando'); pagina.classList.add('pausado');
   btnPlay.setAttribute('aria-label','Tocar narração');
 });
 audio.addEventListener('ended', () => {
+  (EVENTOS[atual] || []).forEach(ev => { if (ev.t === 'fim') try { ev.acao(); } catch(e){ console.error(e); } });
   if (atual === AUDIO_CAPA) limpaCapa();
   if (ehDoAprender()) btnPlay.classList.add('chama');
 });
@@ -855,6 +921,7 @@ document.addEventListener('keydown', e => { if (e.key === 'Escape') fechaSumario
 $('#lista').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const c = CAPITULOS[b.dataset.i];
+  cancelaPausaRoteiro();
   fechaSumario();
   mostra(c.pagina);
   carrega(c.audio, c.inicio);
@@ -869,14 +936,38 @@ function aviso(msg){
 }
 
 /* =====================================================================
-   ÁTOMO DE LÍTIO 3D — núcleo (3 p⁺ + 3 n⁰) e nuvem eletrônica (1s² 2s¹)
-   A nuvem é feita de pontos sorteados pela densidade de probabilidade
-   radial de cada orbital: onde há mais pontos, é mais provável achar o elétron.
+   CENA 3D DA PÁGINA 1
+   · começa com um átomo de lítio (3 p⁺ + 3 n⁰, nuvens 1s e 2s)
+   · durante o áudio 1 vira um núcleo de 2 prótons (azuis) + 2 nêutrons
+     (dourados) com a eletrosfera de uma camada (esfera transparente)
    ===================================================================== */
 const Atomo = (() => {
-  let pronto = false, rodando = false, renderer, cena, camera, grupo, nuvem1s, nuvem2s, palco, t0 = 0;
-  let rotX = .35, rotY = 0, velX = 0, velY = 0, zoom = 1, ultimoToque = 0;
-  const R_VISTA = 7.5;
+  let pronto = false, rodando = false, renderer, cena, camera, grupo, palco, t0 = 0, ultimo = 0;
+  let rotX = .35, rotY = 0, velX = 0, velY = 0, zoomGesto = 1, ultimoToque = 0;
+  let fatorCam = 1, fatorCamAlvo = 1;            // zoom do roteiro (1 = posição inicial)
+  const R_VISTA = 7.5, R_ESF = 6;
+  /* lítio inicial */
+  let li, nuvem1s, nuvem2s, matsLi = [];
+  /* núcleo novo + eletrosfera */
+  let he, heNucleo, protons = [], neutrons = [], mais = [], esfera, matsHe = [];
+  let tweens = [];
+  const rotulos = {};
+  const V = (x,y,z) => new THREE.Vector3(x,y,z);
+  const ease = k => k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
+  const easeBack = k => 1 + 2.4*Math.pow(k-1,3) + 1.4*Math.pow(k-1,2);
+
+  /* animação numérica simples: fn(k) com k de 0 a 1 */
+  function anima(dur, fn, fim, curva = ease){
+    tweens.push({ ini: performance.now(), dur, fn, fim, curva });
+  }
+  function rodaTweens(agora){
+    tweens = tweens.filter(tw => {
+      const k = Math.min(1, (agora - tw.ini) / tw.dur);
+      tw.fn(tw.curva(k));
+      if (k >= 1){ tw.fim && tw.fim(); return false; }
+      return true;
+    });
+  }
 
   function texPonto(){
     const c = document.createElement('canvas'); c.width = c.height = 64;
@@ -885,7 +976,14 @@ const Atomo = (() => {
     g.fillStyle = gr; g.fillRect(0,0,64,64);
     return new THREE.CanvasTexture(c);
   }
-  /* sorteia n pontos com densidade radial pdf(r) (método da rejeição) */
+  function texMais(){
+    const c = document.createElement('canvas'); c.width = c.height = 128;
+    const g = c.getContext('2d');
+    g.strokeStyle = '#fff'; g.lineWidth = 20; g.lineCap = 'round';
+    g.shadowColor = 'rgba(0,20,80,.6)'; g.shadowBlur = 8;
+    g.beginPath(); g.moveTo(64,28); g.lineTo(64,100); g.moveTo(28,64); g.lineTo(100,64); g.stroke();
+    return new THREE.CanvasTexture(c);
+  }
   function amostra(n, pdf, rMax){
     let pMax = 0; for (let i = 1; i <= 400; i++) pMax = Math.max(pMax, pdf(rMax * i / 400));
     pMax *= 1.05;
@@ -905,8 +1003,13 @@ const Atomo = (() => {
     geo.setDrawRange(0, 0);
     const mat = new THREE.PointsMaterial({ color: cor, size: tam, map: tex, transparent: true, opacity: opac,
       depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+    mat.userData.base = opac;
     return new THREE.Points(geo, mat);
   }
+  const matBola = (cor, emis) => {
+    const m = new THREE.MeshStandardMaterial({ color: cor, roughness: .35, metalness: .15, emissive: emis, emissiveIntensity: .6, transparent: true, opacity: 1 });
+    m.userData.base = 1; return m;
+  };
 
   function monta(){
     palco = $('#palco');
@@ -926,25 +1029,81 @@ const Atomo = (() => {
     const luz = new THREE.DirectionalLight(0xffffff, 1.1); luz.position.set(4, 6, 8); cena.add(luz);
     const luzCiano = new THREE.PointLight(0x3ee0ff, 1.2, 30); luzCiano.position.set(-5, -2, 4); cena.add(luzCiano);
 
-    /* núcleo: 3 prótons + 3 nêutrons bem juntinhos */
+    /* ---- lítio: 3 prótons + 3 nêutrons, nuvens 1s e 2s ---- */
+    li = new THREE.Group(); grupo.add(li);
     const geoN = new THREE.SphereGeometry(.5, 32, 20);
-    const matP = new THREE.MeshStandardMaterial({ color: 0xff5470, roughness: .35, metalness: .1, emissive: 0x4a0612, emissiveIntensity: .6 });
-    const matN = new THREE.MeshStandardMaterial({ color: 0xa7b0cf, roughness: .45, metalness: .1, emissive: 0x1a1f33, emissiveIntensity: .5 });
-    const nucleo = new THREE.Group();
+    const mPLi = matBola(0xff5470, 0x4a0612), mNLi = matBola(0xa7b0cf, 0x1a1f33);
+    const nucLi = new THREE.Group(); li.add(nucLi); li.userData.nucleo = nucLi;
     const d = .52;
     [[ d,0,0,1],[0, d,0,1],[0,0, d,1],[-d,0,0,0],[0,-d,0,0],[0,0,-d,0]].forEach(([x,y,z,p]) => {
-      const m = new THREE.Mesh(geoN, p ? matP : matN); m.position.set(x,y,z); nucleo.add(m);
+      const m = new THREE.Mesh(geoN, p ? mPLi : mNLi); m.position.set(x,y,z); nucLi.add(m);
     });
-    grupo.add(nucleo);
-    grupo.userData.nucleo = nucleo;
-
-    /* nuvens eletrônicas (escala visual, não real: o núcleo seria invisível) */
     const tex = texPonto();
     const a = .9;    // 1s: P(r) ∝ r² e^(−2r/a)
     nuvem1s = criaNuvem(amostra(3500, r => r*r*Math.exp(-2*r/a), 3.8), 0x3ee0ff, .3, .55, tex);
-    const b = .85;   // 2s: P(r) ∝ r² (2 − r/b)² e^(−r/b)  → nó radial em r = 2b
+    const b = .85;   // 2s: P(r) ∝ r² (2 − r/b)² e^(−r/b)
     nuvem2s = criaNuvem(amostra(8000, r => r*r*Math.pow(2 - r/b, 2)*Math.exp(-r/b), 11), 0x9b8cff, .36, .5, tex);
-    grupo.add(nuvem1s, nuvem2s);
+    li.add(nuvem1s, nuvem2s);
+    matsLi = [mPLi, mNLi, nuvem1s.material, nuvem2s.material];
+
+    /* ---- núcleo novo: 2 prótons (azuis) + 2 nêutrons (dourados) ---- */
+    he = new THREE.Group(); he.visible = false; grupo.add(he);
+    heNucleo = new THREE.Group(); he.add(heNucleo);
+    const mP = matBola(0x3d74ff, 0x0b1d5c), mN = matBola(0xe0a21f, 0x3d2600);
+    mN.metalness = .55; mN.roughness = .3;   // dourado
+    const k = .5 / Math.sqrt(3);
+    const tetra = [[1,1,1],[-1,-1,1],[1,-1,-1],[-1,1,-1]];
+    const tMais = texMais();
+    tetra.forEach(([x,y,z], i) => {
+      const proton = i < 2;
+      const m = new THREE.Mesh(geoN, proton ? mP : mN);
+      m.position.set(x*k*1.04, y*k*1.04, z*k*1.04);
+      m.userData.escala = 1; m.userData.escalaAlvo = 1;
+      heNucleo.add(m);
+      (proton ? protons : neutrons).push(m);
+      if (proton){
+        const sm = new THREE.SpriteMaterial({ map: tMais, transparent: true, opacity: 0, depthWrite: false });
+        const sp = new THREE.Sprite(sm); sp.scale.setScalar(.42); sp.visible = false;
+        cena.add(sp); mais.push({ sprite: sp, alvo: m });
+      }
+    });
+    /* eletrosfera: esfera transparente com brilho na borda (efeito fresnel) */
+    const matEsf = new THREE.ShaderMaterial({
+      uniforms: { cor: { value: new THREE.Color(0x3ee0ff) }, opac: { value: 0 } },
+      vertexShader: `varying vec3 vN; varying vec3 vV;
+        void main(){ vec4 mv = modelViewMatrix * vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
+      fragmentShader: `uniform vec3 cor; uniform float opac; varying vec3 vN; varying vec3 vV;
+        void main(){ float f = 1. - abs(dot(normalize(vN), normalize(vV))); float a = (pow(f, 2.4)*.85 + .05) * opac; gl_FragColor = vec4(cor, a); }`,
+      transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
+    });
+    esfera = new THREE.Mesh(new THREE.SphereGeometry(R_ESF, 64, 40), matEsf);
+    esfera.visible = false; he.add(esfera);
+    matsHe = [mP, mN];
+
+    /* ---- rótulos digitados (HTML por cima do 3D, presos a pontos da cena) ---- */
+    const camada = document.createElement('div'); camada.className = 'rotulos';
+    camada.innerHTML = '<svg></svg>'; palco.appendChild(camada);
+    const svg = camada.querySelector('svg');
+    const frontal = lista => {
+      let melhor = null, z = -1e9, p = new THREE.Vector3();
+      lista.forEach(m => { m.getWorldPosition(p); if (p.z > z){ z = p.z; melhor = p.clone(); } });
+      return melhor.add(V(0, 0, .5));
+    };
+    const DEF = {
+      nucleo:      { texto: 'núcleo',      cor: '#eef1ff', ancora: () => V(.62, .55, .6),                 dx: 70,  dy: -56 },
+      eletrosfera: { texto: 'eletrosfera', cor: '#3ee0ff', ancora: () => V(-R_ESF*.34, R_ESF*.94, 0),     dx: 24,  dy: -36 },
+      protons:     { texto: 'prótons',     cor: '#5b8cff', ancora: () => frontal(protons),                dx: -78, dy: -64 },
+      neutrons:    { texto: 'nêutrons',    cor: '#ffc24a', ancora: () => frontal(neutrons),               dx: 78,  dy: 64 },
+    };
+    Object.entries(DEF).forEach(([id, r]) => {
+      const el = document.createElement('div'); el.className = 'rotulo'; el.style.setProperty('--c', r.cor);
+      camada.appendChild(el);
+      const ns = 'http://www.w3.org/2000/svg';
+      const ln = document.createElementNS(ns, 'line'), pt = document.createElementNS(ns, 'circle');
+      ln.setAttribute('stroke', r.cor); pt.setAttribute('fill', r.cor); pt.setAttribute('r', 3.5);
+      const g = document.createElementNS(ns, 'g'); g.append(ln, pt); g.style.opacity = 0; svg.appendChild(g);
+      rotulos[id] = { ...r, el, ln, pt, g, ativo: false, timer: null };
+    });
 
     /* gestos: arrastar gira, pinça/roda dá zoom */
     const toques = new Map(); let distPinca = 0;
@@ -960,7 +1119,7 @@ const Atomo = (() => {
       } else if (toques.size === 2){
         const [A,B] = [...toques.values()];
         const dist = Math.hypot(A.x - B.x, A.y - B.y);
-        if (distPinca) zoom = Math.min(1.8, Math.max(.6, zoom * dist / distPinca));
+        if (distPinca) zoomGesto = Math.min(1.8, Math.max(.6, zoomGesto * dist / distPinca));
         distPinca = dist;
       }
       p.x = e.clientX; p.y = e.clientY;
@@ -968,7 +1127,7 @@ const Atomo = (() => {
     });
     const solta = e => { toques.delete(e.pointerId); distPinca = 0; };
     cv.addEventListener('pointerup', solta); cv.addEventListener('pointercancel', solta);
-    cv.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.min(1.8, Math.max(.6, zoom * (e.deltaY < 0 ? 1.08 : .93))); }, {passive:false});
+    cv.addEventListener('wheel', e => { e.preventDefault(); zoomGesto = Math.min(1.8, Math.max(.6, zoomGesto * (e.deltaY < 0 ? 1.08 : .93))); }, {passive:false});
 
     new ResizeObserver(ajusta).observe(palco);
     ajusta();
@@ -980,39 +1139,149 @@ const Atomo = (() => {
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
   }
+
+  const proj = new THREE.Vector3();
+  function posicionaRotulos(){
+    const w = palco.clientWidth, h = palco.clientHeight;
+    Object.values(rotulos).forEach(r => {
+      if (!r.ativo) return;
+      proj.copy(r.ancora()).project(camera);
+      const x = (proj.x + 1) / 2 * w, y = (1 - proj.y) / 2 * h;
+      const fora = proj.z > 1 || x < 0 || x > w || y < 0 || y > h;
+      const ex = x + r.dx, ey = y + r.dy;
+      r.ln.setAttribute('x1', x); r.ln.setAttribute('y1', y); r.ln.setAttribute('x2', ex); r.ln.setAttribute('y2', ey);
+      r.pt.setAttribute('cx', x); r.pt.setAttribute('cy', y);
+      const lw = r.el.offsetWidth;
+      let esq = r.dx < 0 ? ex - 6 - lw : ex + 6;
+      esq = Math.max(8, Math.min(w - lw - 8, esq));      // nunca sai da tela
+      r.el.style.transform = `translate(${esq}px, ${ey}px) translateY(-50%)`;
+      r.el.style.opacity = fora ? 0 : 1;
+      r.g.style.opacity = fora ? 0 : .85;
+    });
+  }
+
   function quadro(agora){
     if (!rodando) return;
     requestAnimationFrame(quadro);
+    const dt = Math.min(.05, (agora - (ultimo || agora)) / 1000); ultimo = agora;
     const t = (agora - t0) / 1000;
-    /* orbitais aparecendo: primeiro o 1s, depois o 2s */
-    const n1 = nuvem1s.geometry.attributes.position.count, n2 = nuvem2s.geometry.attributes.position.count;
-    nuvem1s.geometry.setDrawRange(0, Math.floor(n1 * Math.min(1, Math.max(0, (t - .3) / 1.4))));
-    nuvem2s.geometry.setDrawRange(0, Math.floor(n2 * Math.min(1, Math.max(0, (t - 1.6) / 2))));
+    rodaTweens(agora);
+    /* lítio: orbitais aparecendo (1s, depois 2s) */
+    if (li.visible){
+      const n1 = nuvem1s.geometry.attributes.position.count, n2 = nuvem2s.geometry.attributes.position.count;
+      nuvem1s.geometry.setDrawRange(0, Math.floor(n1 * Math.min(1, Math.max(0, (t - .3) / 1.4))));
+      nuvem2s.geometry.setDrawRange(0, Math.floor(n2 * Math.min(1, Math.max(0, (t - 1.6) / 2))));
+      nuvem1s.rotation.y = t * .25; nuvem2s.rotation.y = -t * .12;
+      const s = 1 + Math.sin(t * 1.6) * .015; nuvem1s.scale.setScalar(s); nuvem2s.scale.setScalar(2 - s);
+      li.userData.nucleo.rotation.y = t * .4; li.userData.nucleo.rotation.x = t * .25;
+    }
+    /* núcleo novo: gira bem devagar; prótons/nêutrons crescem suavemente quando destacados */
+    if (he.visible){
+      heNucleo.rotation.y += dt * .22; heNucleo.rotation.x += dt * .08;
+      [...protons, ...neutrons].forEach(m => {
+        m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dt * 9));
+        m.scale.setScalar(m.userData.escala);
+      });
+    }
     /* inércia + giro automático quando ninguém está tocando */
     if (agora - ultimoToque > 120){ velX *= .94; velY *= .94; rotX += velX; rotY += velY; }
     if (agora - ultimoToque > 2500) rotY += .0025;
     rotX = Math.max(-1.3, Math.min(1.3, rotX));
     grupo.rotation.set(rotX, rotY, 0);
-    /* a nuvem "respira" de leve; o núcleo gira devagar */
-    nuvem1s.rotation.y = t * .25; nuvem2s.rotation.y = -t * .12;
-    const s = 1 + Math.sin(t * 1.6) * .015; nuvem1s.scale.setScalar(s); nuvem2s.scale.setScalar(2 - s);
-    grupo.userData.nucleo.rotation.y = t * .4; grupo.userData.nucleo.rotation.x = t * .25;
-    /* câmera enquadra o átomo em retrato ou paisagem */
+    /* câmera: enquadra o átomo; o roteiro pode aproximar (zoom no núcleo) */
+    fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dt * 3.2));
     const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
     const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
-    camera.position.set(0, 0, R_VISTA / Math.sin(meia) / zoom);
+    camera.position.set(0, 0, R_VISTA / Math.sin(meia) / zoomGesto * fatorCam);
     camera.lookAt(0, 0, 0);
+    camera.updateMatrixWorld();
+    grupo.updateMatrixWorld();
+    /* sinal de + na frente de cada próton, virado para a câmera */
+    const p = new THREE.Vector3(), dir = new THREE.Vector3();
+    mais.forEach(({ sprite, alvo }) => {
+      if (!sprite.visible) return;
+      alvo.getWorldPosition(p);
+      dir.copy(camera.position).sub(p).normalize();
+      sprite.position.copy(p).addScaledVector(dir, .5 * alvo.userData.escala + .02);
+      sprite.scale.setScalar(.42 * alvo.userData.escala);
+    });
     renderer.render(cena, camera);
+    posicionaRotulos();
   }
+
+  /* som de digitação (pasta audio/vfx) */
+  const somDigitar = new Audio('audio/vfx/' + encodeURIComponent('typing sound') + '.mp3');
+  somDigitar.loop = true;
+
   return {
     inicia(){
       if (!pronto){ if (typeof THREE === 'undefined') return; pronto = monta(); if (!pronto) return; }
       if (rodando) return;
-      rodando = true; t0 = performance.now(); ajusta();
-      $('#dicaGirar').classList.remove('some');
+      rodando = true; ultimo = 0; ajusta();
+      if (!t0) t0 = performance.now();
       requestAnimationFrame(quadro);
     },
-    pausa(){ rodando = false; }
+    pausa(){ rodando = false; somDigitar.pause(); },
+    /* volta tudo ao começo da página 1 */
+    reset(){
+      t0 = performance.now();
+      if (!pronto) return;
+      tweens = [];
+      li.visible = true;
+      matsLi.forEach(m => m.opacity = m.userData.base);
+      he.visible = false; he.scale.setScalar(1);
+      matsHe.forEach(m => m.opacity = 1);
+      esfera.visible = false; esfera.material.uniforms.opac.value = 0;
+      [...protons, ...neutrons].forEach(m => { m.userData.escala = m.userData.escalaAlvo = 1; m.scale.setScalar(1); });
+      mais.forEach(({sprite}) => { sprite.visible = false; sprite.material.opacity = 0; });
+      Object.values(rotulos).forEach(r => { clearInterval(r.timer); r.ativo = false; r.el.textContent = ''; r.el.classList.remove('digitando'); r.el.style.opacity = 0; r.g.style.opacity = 0; });
+      somDigitar.pause();
+      fatorCam = fatorCamAlvo = 1;
+    },
+    someLitio(){
+      if (!pronto) return;
+      anima(900, k => matsLi.forEach(m => m.opacity = m.userData.base * (1 - k)), () => { li.visible = false; });
+    },
+    mostraNucleo(){
+      if (!pronto) return;
+      he.visible = true;
+      matsHe.forEach(m => m.opacity = 0);
+      anima(900, k => { matsHe.forEach(m => m.opacity = Math.min(1, k * 1.4)); heNucleo.scale.setScalar(.3 + .7 * k); }, null, easeBack);
+    },
+    mostraEletrosfera(){
+      if (!pronto) return;
+      esfera.visible = true;
+      anima(1300, k => { esfera.material.uniforms.opac.value = k; });
+    },
+    zoomNucleo(){ fatorCamAlvo = .26; },
+    zoomInicial(){ fatorCamAlvo = 1; },
+    destaca(qual, on){
+      (qual === 'protons' ? protons : neutrons).forEach(m => m.userData.escalaAlvo = on ? 1.35 : 1);
+    },
+    maisProtons(){
+      if (!pronto) return;
+      mais.forEach(({sprite}) => sprite.visible = true);
+      anima(700, k => mais.forEach(({sprite}) => sprite.material.opacity = k));
+    },
+    /* escreve o rótulo letra por letra, com som de digitação */
+    escreve(id){
+      const r = rotulos[id]; if (!r) return;
+      clearInterval(r.timer);
+      r.ativo = true; r.el.textContent = ''; r.el.classList.add('digitando');
+      let i = 0;
+      try { somDigitar.currentTime = 0; somDigitar.play().catch(() => {}); } catch(e){}
+      r.timer = setInterval(() => {
+        r.el.textContent = r.texto.slice(0, ++i);
+        if (i >= r.texto.length){
+          clearInterval(r.timer); somDigitar.pause();
+          setTimeout(() => r.el.classList.remove('digitando'), 600);
+        }
+      }, 85);
+    },
+    apaga(id){
+      const r = rotulos[id]; if (!r) return;
+      clearInterval(r.timer); r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0;
+    },
   };
 })();
 document.addEventListener('visibilitychange', () => {
