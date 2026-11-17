@@ -167,7 +167,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 }
 .orbita.o1{--c:var(--s)} .orbita.o2{--c:var(--p)} .orbita.o3{--c:var(--d)}
 @keyframes gira{to{transform:rotate(360deg)}}
-.orbita-incl{position:absolute;inset:-2%;transform:rotate(-28deg) scaleY(.38);z-index:3;pointer-events:none}
+/* órbita inclinada em 3D: a cópia de trás (z 1) fica atrás da foto; a da frente (z 3)
+   só mostra a metade de baixo da elipse → o elétron passa na frente e some atrás da foto */
+.orbita-incl{position:absolute;inset:-2%;transform:rotate(-28deg) scaleY(.38);pointer-events:none}
+.orbita-incl.tras{z-index:1}
+.orbita-incl.frente{z-index:3;clip-path:inset(50% -40% -40% -40%)}
 .orbita-incl .orbita{animation-duration:4.5s;border-color:rgba(62,224,255,.5)}
 .orbita-incl .orbita::before{transform:scaleY(2.6)}
 
@@ -448,8 +452,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
       <div class="atomo" aria-hidden="true">
         <div class="orbita o3"></div>
         <div class="orbita o2"></div>
+        <div class="orbita-incl tras"><div class="orbita o1"></div></div>
         <div class="foto"><img src="imagens/amauri_jr.jpg" alt=""></div>
-        <div class="orbita-incl"><div class="orbita o1"></div></div>
+        <div class="orbita-incl frente"><div class="orbita o1"></div></div>
       </div>
       <p class="credito">desenvolvido por <b id="nomeAutor">Amauri Junior</b></p>
     </div>
