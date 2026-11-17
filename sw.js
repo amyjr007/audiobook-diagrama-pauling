@@ -1,10 +1,11 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v1';
+const CACHE = 'pauling-v2';
 const ARQUIVOS = [
   './',
   './index.html',
   './manifest.webmanifest',
+  './three.min.js',
   './icones/icone.svg',
   './icones/icone-192.png',
   './icones/icone-512.png',
@@ -19,8 +20,8 @@ const ARQUIVOS = [
   './fontes/space-grotesk-500.woff2',
   './fontes/space-grotesk-600.woff2',
   './fontes/space-grotesk-700.woff2',
-  './audio/vfx/flip.mp3',
-  './audio/vfx/transition_cube.mp3'
+  './audio/' + encodeURIComponent('audio_distribuição_0') + '.mp3',
+  './audio/vfx/flip.mp3'
 ];
 
 self.addEventListener('install', e => {
@@ -35,11 +36,43 @@ self.addEventListener('activate', e => {
     .then(() => self.clients.claim()));
 });
 
+/* O player de áudio pede o arquivo em pedaços ("Range"). Aqui o arquivo inteiro
+   vem do cache (ou da rede, e é guardado) e devolvemos só o pedaço pedido. */
+async function respostaParcial(req){
+  const cache = await caches.open(CACHE);
+  let resp = await cache.match(req.url);
+  if (!resp){
+    try {
+      const rede = await fetch(req.url);
+      if (!rede.ok) return rede;
+      await cache.put(req.url, rede.clone());
+      resp = rede;
+    } catch(e){ return Response.error(); }
+  }
+  const buf = await resp.arrayBuffer();
+  const m = /bytes=(\d*)-(\d*)/.exec(req.headers.get('range') || '');
+  const total = buf.byteLength;
+  const ini = m && m[1] ? +m[1] : 0;
+  const fim = m && m[2] ? Math.min(+m[2], total - 1) : total - 1;
+  return new Response(buf.slice(ini, fim + 1), {
+    status: 206,
+    headers: {
+      'Content-Type': resp.headers.get('Content-Type') || 'audio/mpeg',
+      'Content-Range': `bytes ${ini}-${fim}/${total}`,
+      'Content-Length': String(fim - ini + 1),
+      'Accept-Ranges': 'bytes'
+    }
+  });
+}
+
 self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET') return;
-  // pedidos parciais de áudio (avançar/voltar na narração) vão direto pra rede
-  if (req.headers.has('range')) return;
+
+  if (req.headers.has('range')){
+    e.respondWith(respostaParcial(req));
+    return;
+  }
 
   // a página vem sempre da rede quando há internet → mudanças aparecem na hora
   if (req.mode === 'navigate'){

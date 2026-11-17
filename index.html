@@ -39,7 +39,9 @@
   --d:#ffc24a;
   --f:#8cff6a;
   --accent:#3ee0ff;
-  --radius:18px;
+  --proton:#ff5470;
+  --neutron:#a7b0cf;
+  --s2:#9b8cff;
   --safe-b:env(safe-area-inset-bottom,0px);
   --safe-t:env(safe-area-inset-top,0px);
 }
@@ -54,6 +56,7 @@ body{
 }
 button{font:inherit;color:inherit;background:none;border:0;cursor:pointer}
 button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+[hidden]{display:none!important}
 
 .tela{
   position:fixed;inset:0;
@@ -103,6 +106,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   width:min(96vw,560px);opacity:.32;
   mask-image:linear-gradient(to top,#000 40%,transparent 95%);
   -webkit-mask-image:linear-gradient(to top,#000 40%,transparent 95%);
+  transition:opacity .5s ease;
 }
 .capa-conteudo{
   position:relative;z-index:2;
@@ -127,16 +131,13 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   font-family:"Space Grotesk",sans-serif;font-weight:700;
   font-size:clamp(34px,8.4vw,76px);line-height:.98;letter-spacing:-.02em;
 }
-.titulo span{
-  display:block;
-  background:linear-gradient(90deg,var(--s),var(--p) 45%,var(--d) 80%,var(--f));
-  -webkit-background-clip:text;background-clip:text;color:transparent;
-}
+.titulo .w2{display:block}
+.l{display:inline-block;will-change:transform}
 .subtitulo{
   margin-top:10px;
   font-size:clamp(15px,3.6vw,21px);color:var(--ink-2);font-weight:400;
 }
-.subtitulo b{color:var(--ink);font-weight:600}
+.subtitulo b{color:var(--ink);font-weight:600;display:inline-block}
 
 /* foto com órbitas */
 .atomo{
@@ -148,14 +149,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   width:72%;height:72%;border-radius:50%;
   overflow:hidden;position:relative;z-index:2;
   box-shadow:0 0 0 3px var(--bg),0 0 0 5px rgba(62,224,255,.6),0 0 40px rgba(62,224,255,.35);
+  transition:transform .35s cubic-bezier(.2,.9,.3,1.3),box-shadow .35s;
 }
+.atomo.grande .foto{transform:scale(1.2);box-shadow:0 0 0 3px var(--bg),0 0 0 6px var(--s),0 0 70px rgba(62,224,255,.8)}
 .atomo .foto img{width:100%;height:100%;object-fit:cover;object-position:56% 16%;filter:saturate(1.05) contrast(1.03)}
 .orbita{
   position:absolute;inset:0;border-radius:50%;
   border:1.5px solid rgba(238,241,255,.18);
   animation:gira linear infinite;
 }
-.orbita.o1{transform:rotateX(68deg) rotateZ(0);animation-duration:7s;border-color:rgba(62,224,255,.45)}
 .orbita.o2{inset:-6%;animation-duration:11s;border-color:rgba(255,95,168,.4)}
 .orbita.o3{inset:-14%;animation-duration:16s;animation-direction:reverse;border-style:dashed;border-color:rgba(255,194,74,.3)}
 .orbita::before{
@@ -165,28 +167,59 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 }
 .orbita.o1{--c:var(--s)} .orbita.o2{--c:var(--p)} .orbita.o3{--c:var(--d)}
 @keyframes gira{to{transform:rotate(360deg)}}
-/* o1 é inclinada: gira dentro de um wrapper */
 .orbita-incl{position:absolute;inset:-2%;transform:rotate(-28deg) scaleY(.38);z-index:3;pointer-events:none}
 .orbita-incl .orbita{animation-duration:4.5s;border-color:rgba(62,224,255,.5)}
 .orbita-incl .orbita::before{transform:scaleY(2.6)}
 
 .credito{font-size:14px;color:var(--ink-2);letter-spacing:.02em}
-.credito b{display:block;margin-top:2px;font-family:"Space Grotesk",sans-serif;font-size:19px;color:var(--ink);font-weight:600;letter-spacing:0}
+.credito b{
+  display:block;margin-top:2px;font-family:"Space Grotesk",sans-serif;font-size:19px;color:var(--ink);font-weight:600;letter-spacing:0;
+  transition:transform .35s cubic-bezier(.2,.9,.3,1.3),text-shadow .35s,color .35s;
+}
+.credito b.grande{transform:scale(1.4);color:#fff;text-shadow:0 0 18px var(--s),0 0 36px rgba(62,224,255,.6)}
 
-.btn-iniciar{
+/* botões da capa */
+.acoes{display:grid;justify-items:inherit}
+.btn-iniciar,.btn-secao{
   position:relative;
   display:inline-flex;align-items:center;gap:12px;
   padding:16px 34px;border-radius:999px;
   font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:18px;letter-spacing:.04em;text-transform:uppercase;
   color:#061018;
+}
+.btn-iniciar{
   background:linear-gradient(90deg,var(--s),#7cf0ff);
   box-shadow:0 10px 30px rgba(62,224,255,.35),0 0 0 0 rgba(62,224,255,.5);
   animation:pulso 2.4s infinite;
-  transition:transform .15s;
+  transition:transform .3s,opacity .3s;
 }
 .btn-iniciar:active{transform:scale(.96)}
-.btn-iniciar svg{width:22px;height:22px}
+.btn-iniciar.sai{opacity:0;transform:scale(.7);pointer-events:none}
+.btn-iniciar svg,.btn-secao svg{width:22px;height:22px;flex:none}
 @keyframes pulso{0%{box-shadow:0 10px 30px rgba(62,224,255,.35),0 0 0 0 rgba(62,224,255,.5)}70%{box-shadow:0 10px 30px rgba(62,224,255,.35),0 0 0 18px rgba(62,224,255,0)}100%{box-shadow:0 10px 30px rgba(62,224,255,.35),0 0 0 0 rgba(62,224,255,0)}}
+
+.escolhas{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}
+@media (max-width:440px){ .btn-secao{padding:14px 20px;font-size:16px;gap:9px} .btn-secao svg{width:19px;height:19px} }
+.btn-secao{
+  padding:15px 28px;
+  opacity:0;transform:translateY(14px) scale(.9);
+  transition:transform .4s cubic-bezier(.2,.9,.3,1.3),opacity .4s,box-shadow .4s,filter .4s;
+}
+.escolhas.entra .btn-secao{opacity:1;transform:none}
+.escolhas.entra .btn-secao:nth-child(2){transition-delay:.12s}
+.btn-secao.aprender{background:linear-gradient(90deg,var(--s),#7cf0ff);box-shadow:0 10px 26px rgba(62,224,255,.3)}
+.btn-secao.treinar{background:linear-gradient(90deg,var(--p),var(--d));box-shadow:0 10px 26px rgba(255,95,168,.3)}
+.btn-secao:active{transform:scale(.95)!important}
+.escolhas.entra .btn-secao.destaque{transform:scale(1.18);filter:brightness(1.15);transition-delay:0s}
+.btn-secao.aprender.destaque{box-shadow:0 0 0 4px rgba(255,255,255,.35),0 0 40px var(--s),0 0 90px rgba(62,224,255,.7)}
+.btn-secao.treinar.destaque{box-shadow:0 0 0 4px rgba(255,255,255,.35),0 0 40px var(--p),0 0 90px rgba(255,194,74,.6)}
+
+/* modo "foco no diagrama": escurece tudo e destaca o diagrama de fundo */
+#capa .selo,#capa .titulo,#capa .atomo,#capa .credito,#capa .acoes,#capa .subtitulo .rotulo{transition:opacity .5s ease}
+#capa .fundo{transition:filter .5s ease}
+#capa.foco .selo,#capa.foco .titulo,#capa.foco .atomo,#capa.foco .credito,#capa.foco .acoes,#capa.foco .subtitulo .rotulo{opacity:.08;transition-duration:.3s}
+#capa.foco .fundo{filter:brightness(.35);transition-duration:.3s}
+#capa.foco .pauling-capa{opacity:1;z-index:3;-webkit-mask-image:none;mask-image:none;transition-duration:.3s}
 
 /* landscape (tablet deitado / chromebook) */
 @media (min-aspect-ratio:5/4) and (min-width:700px){
@@ -199,24 +232,26 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   .capa-texto{grid-area:texto;display:grid;gap:22px;justify-items:start}
   .capa-atomo{grid-area:atomo;justify-self:center;display:grid;justify-items:center;gap:18px;text-align:center}
   .atomo{--tam:clamp(220px,40vmin,340px)}
+  .titulo,.subtitulo b{transform-origin:left center}
+  .escolhas{justify-content:flex-start}
   #capa .pauling-capa{left:auto;right:3%;bottom:auto;top:50%;transform:translateY(-50%);width:min(48vw,620px);opacity:.3;
     mask-image:radial-gradient(circle at center,transparent 26%,#000 46%);-webkit-mask-image:radial-gradient(circle at center,transparent 26%,#000 46%)}
 }
 @media (max-aspect-ratio:5/4), (max-width:699px){
   .capa-texto,.capa-atomo{display:contents}
-  .capa-texto .btn-iniciar{order:10}
+  .capa-texto .acoes{order:10}
   .capa-atomo{order:5}
 }
-/* celular deitado (pouca altura) */
 @media (max-height:480px) and (min-aspect-ratio:5/4){
   .capa-conteudo{grid-template-columns:1.2fr .8fr;text-align:left;justify-items:start;gap:12px;column-gap:4vw}
   .capa-texto{display:grid;gap:12px;justify-items:start}
   .capa-atomo{display:grid;justify-items:center;gap:8px;justify-self:center}
   .atomo{--tam:52vh}
   .titulo{font-size:clamp(28px,6vw,48px)}
+  .escolhas{justify-content:flex-start}
 }
 
-/* ===================== PÁGINA DO AUDIOBOOK ===================== */
+/* ===================== PÁGINAS ===================== */
 .topo{
   position:relative;z-index:5;
   display:flex;align-items:center;justify-content:space-between;
@@ -235,26 +270,31 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .btn-home svg{width:22px;height:22px;color:var(--ink)}
 .btn-home:hover{background:rgba(62,224,255,.12);color:var(--ink)}
 
-/* palco: onde os eventos do áudio acontecem */
-#palco{
-  position:relative;z-index:2;flex:1;min-height:0;
-  display:grid;place-items:center;
-  padding:8px 16px;
+/* cabeçalho da página do Aprender */
+.cabeca{position:relative;z-index:4;text-align:center;padding:2px 16px 0;pointer-events:none}
+.cabeca h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(24px,6.2vw,42px);line-height:1.05;letter-spacing:-.01em}
+.cabeca .elemento{margin-top:6px;font:500 13px "IBM Plex Mono",monospace;color:var(--ink-2);letter-spacing:.06em}
+.cabeca .elemento b{color:var(--s);font-weight:500}
+.legenda{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
+.legenda span{display:inline-flex;align-items:center;gap:6px}
+.legenda i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
+.legenda i.nuvem{background:radial-gradient(circle,var(--c) 0 30%,transparent 72%);width:14px;height:14px;box-shadow:none}
+
+/* palco 3D */
+#palco{position:relative;z-index:2;flex:1;min-height:0}
+#palco canvas{position:absolute;inset:0;width:100%;height:100%;touch-action:none;cursor:grab;display:block}
+#palco canvas:active{cursor:grabbing}
+.dica-girar{
+  position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;pointer-events:none;
+  display:inline-flex;align-items:center;gap:8px;white-space:nowrap;
+  font:500 12px "IBM Plex Mono",monospace;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-2);
+  padding:7px 12px;border-radius:999px;background:rgba(17,23,51,.6);border:1px solid var(--line);
+  transition:opacity .6s;
 }
-#palco .pauling-palco{position:absolute;inset:6% 4%;width:92%;height:88%;opacity:.25;pointer-events:none}
-.aguardando{
-  position:relative;text-align:center;display:grid;gap:14px;justify-items:center;
-  transition:opacity .5s,transform .5s;
-}
-.aguardando.some{opacity:0;transform:translateY(-10px);pointer-events:none}
-.aguardando h2{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(26px,6vw,44px);line-height:1.05}
-.aguardando p{color:var(--ink-2);font-size:clamp(14px,3.4vw,17px);max-width:30ch}
-.aguardando .dica{
-  display:inline-flex;align-items:center;gap:8px;margin-top:6px;
-  font:500 12px "IBM Plex Mono",monospace;color:var(--s);letter-spacing:.08em;text-transform:uppercase;
-}
-.aguardando .dica svg{width:18px;height:18px;animation:aponta 1.4s ease-in-out infinite}
-@keyframes aponta{50%{transform:translate(4px,4px)}}
+.dica-girar svg{width:16px;height:16px;animation:arrasta 1.8s ease-in-out infinite}
+@keyframes arrasta{0%,100%{transform:translateX(-5px)}50%{transform:translateX(5px)}}
+.dica-girar.some{opacity:0}
+.sem-3d{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-2);padding:20px;text-align:center}
 
 /* equalizador quando está tocando */
 .eq{display:inline-flex;gap:3px;align-items:flex-end;height:14px;margin-left:8px;vertical-align:middle;opacity:0;transition:opacity .3s}
@@ -269,11 +309,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 /* barra de base */
 .base{
   position:relative;z-index:6;
-  padding:0 16px calc(14px + var(--safe-b));
+  padding:18px 16px calc(14px + var(--safe-b));
   display:flex;align-items:flex-end;justify-content:center;
 }
 .progresso{
-  position:absolute;left:16px;right:16px;top:-14px;height:3px;border-radius:3px;
+  position:absolute;left:16px;right:96px;top:6px;height:3px;border-radius:3px;
   background:rgba(238,241,255,.1);overflow:hidden;
 }
 .progresso i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--s),var(--p),var(--d),var(--f));transition:width .25s linear}
@@ -307,6 +347,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @keyframes giraborda{to{transform:rotate(360deg)}}
 .btn-play.chama{animation:pulsoPlay 2s infinite}
 @keyframes pulsoPlay{0%,100%{box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 0 rgba(62,224,255,.6)}60%{box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 16px rgba(62,224,255,0)}}
+
+/* Treinar (provisório) */
+.em-breve{position:relative;z-index:2;flex:1;display:grid;place-content:center;justify-items:center;gap:12px;text-align:center;padding:20px}
+.em-breve h1{font-family:"Space Grotesk",sans-serif;font-size:clamp(30px,8vw,52px);background:linear-gradient(90deg,var(--p),var(--d));-webkit-background-clip:text;background-clip:text;color:transparent}
+.em-breve p{color:var(--ink-2);max-width:32ch}
 
 /* ===================== SUMÁRIO (folha que sobe de baixo) ===================== */
 .veu{
@@ -378,13 +423,25 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     <div class="capa-texto">
       <span class="selo"><i></i>Audiobook interativo · Química</span>
       <div>
-        <h1 class="titulo">Distribuição <span>Eletrônica</span></h1>
-        <p class="subtitulo">Subtema: <b>O diagrama de Pauling</b></p>
+        <h1 class="titulo" id="tituloCapa"><span class="w1">Distribuição</span> <span class="w2">Eletrônica</span></h1>
+        <p class="subtitulo"><span class="rotulo">Subtema: </span><b id="subtituloCapa">O diagrama de Pauling</b></p>
       </div>
-      <button class="btn-iniciar" id="btnIniciar">
-        Iniciar
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
-      </button>
+      <div class="acoes">
+        <button class="btn-iniciar" id="btnIniciar">
+          Iniciar
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+        </button>
+        <div class="escolhas" id="escolhas" hidden>
+          <button class="btn-secao aprender" id="btnAprender">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M2 5.5C4.5 4 7.5 4 12 6c4.5-2 7.5-2 10-.5v13c-2.5-1.5-5.5-1.5-10 .5-4.5-2-7.5-2-10-.5z"/><path d="M12 6v13"/></svg>
+            Aprender
+          </button>
+          <button class="btn-secao treinar" id="btnTreinar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="5"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/></svg>
+            Treinar
+          </button>
+        </div>
+      </div>
     </div>
 
     <div class="capa-atomo">
@@ -394,35 +451,42 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
         <div class="foto"><img src="imagens/amauri_jr.jpg" alt=""></div>
         <div class="orbita-incl"><div class="orbita o1"></div></div>
       </div>
-      <p class="credito">desenvolvido por <b>Amauri Junior</b></p>
+      <p class="credito">desenvolvido por <b id="nomeAutor">Amauri Junior</b></p>
     </div>
   </div>
 </section>
 
-<!-- ======================= PÁGINA 1 DO AUDIOBOOK ======================= -->
-<section id="pagina1" class="tela pausado" aria-label="Audiobook — página 1">
+<!-- ======================= APRENDER · PÁGINA 1 ======================= -->
+<section id="pagina1" class="tela pausado" aria-label="Aprender — página 1">
   <div class="fundo"></div>
 
   <header class="topo">
     <div class="topo-info">
-      <small>Diagrama de Pauling</small>
-      <strong><span id="capAtual">1 · Introdução</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></strong>
+      <small>Aprender</small>
+      <strong><span id="capAtual">Página 1</span><span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span></strong>
     </div>
-    <button class="btn-home" id="btnHome" aria-label="Voltar para a capa">
+    <button class="btn-home" data-home aria-label="Voltar para a capa">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
       Home
     </button>
   </header>
 
-  <!-- PALCO: área onde os eventos dos diálogos vão acontecer -->
+  <div class="cabeca">
+    <h1>A Estrutura atômica básica</h1>
+    <p class="elemento">Lítio (Li) · Z = 3 · <b>1s² 2s¹</b></p>
+    <div class="legenda">
+      <span><i style="--c:var(--proton)"></i>3 prótons</span>
+      <span><i style="--c:var(--neutron)"></i>3 nêutrons</span>
+      <span><i class="nuvem" style="--c:var(--s)"></i>orbital 1s</span>
+      <span><i class="nuvem" style="--c:var(--s2)"></i>orbital 2s</span>
+    </div>
+  </div>
+
+  <!-- PALCO: átomo 3D (gira com o dedo) -->
   <main id="palco">
-    <svg class="pauling pauling-palco" data-pauling aria-hidden="true"></svg>
-    <div class="aguardando" id="aguardando">
-      <h2>Vamos começar?</h2>
-      <p>Coloque o fone, aumente o volume e toque no play para ouvir a narração.</p>
-      <span class="dica">toque no play
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M7 7l10 10M17 9v8H9"/></svg>
-      </span>
+    <div class="dica-girar" id="dicaGirar">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
+      arraste para girar
     </div>
   </main>
 
@@ -437,6 +501,22 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
       <svg class="ic-pause" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4.2" height="14" rx="1.2"/><rect x="13.8" y="5" width="4.2" height="14" rx="1.2"/></svg>
     </button>
   </footer>
+</section>
+
+<!-- ======================= TREINAR (provisório) ======================= -->
+<section id="treinar" class="tela" aria-label="Treinar">
+  <div class="fundo"></div>
+  <header class="topo">
+    <div class="topo-info"><small>Treinar</small><strong>Exercícios</strong></div>
+    <button class="btn-home" data-home aria-label="Voltar para a capa">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V9.5"/></svg>
+      Home
+    </button>
+  </header>
+  <div class="em-breve">
+    <h1>Treinar</h1>
+    <p>Esta seção está em construção. Em breve, exercícios de distribuição eletrônica com o diagrama de Pauling.</p>
+  </div>
 </section>
 
 <!-- ============================ SUMÁRIO ============================ -->
@@ -456,30 +536,37 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
 <audio id="narracao" preload="auto"></audio>
 
+<script src="three.min.js"></script>
 <script>
 /* =====================================================================
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
-   ---------------------------------------------------------------------
-   CAPITULOS: itens do Sumário. Cada um aponta para um áudio da pasta
-   audio/ (sem ".mp3") e um tempo de início em segundos.
+   Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
+const AUDIO_CAPA = 'audio_distribuição_0';
+
+/* Itens do Sumário (seção Aprender) */
 const CAPITULOS = [
-  { titulo: 'Introdução',                   audio: 'dialogo0', inicio: 0 },
-  { titulo: 'Quem foi Linus Pauling',       audio: 'dialogo1', inicio: 0 },
-  { titulo: 'Camadas e subníveis',          audio: 'dialogo2', inicio: 0 },
-  { titulo: 'Montando o diagrama',          audio: 'dialogo3', inicio: 0 },
-  { titulo: 'Seguindo as diagonais',        audio: 'dialogo4', inicio: 0 },
-  { titulo: 'Praticando a distribuição',    audio: 'dialogo5', inicio: 0 },
+  { titulo: 'A Estrutura atômica básica', pagina: 'pagina1', audio: 'audio_distribuição_1', inicio: 0 },
 ];
 
-/* Ordem em que os diálogos tocam, um após o outro, a cada toque no play */
-const SEQUENCIA = ['dialogo0','dialogo1','dialogo2','dialogo3','dialogo4','dialogo5'];
+/* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
+const SEQUENCIA = ['audio_distribuição_1'];
 
-/* EVENTOS: o que acontece durante cada diálogo.
-   { t: segundos, acao: () => { ... } }  — dispara quando o áudio passa por t.
-   Também existem os ganchos especiais 'inicio' e 'fim' por diálogo.        */
+/* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
-  dialogo0: [
+  [AUDIO_CAPA]: [
+    { t: 3.7,  acao: () => fotoGrande(true) },
+    { t: 4.0,  acao: () => { fotoGrande(false); nomeGrande(true); } },
+    { t: 6.0,  acao: () => nomeGrande(false) },
+    { t: 8.0,  acao: () => onda($('#tituloCapa'), 1800, 'rgba(62,224,255,.85)') },     // termina em 9.8s
+    { t: 16.7, acao: () => { onda($('#subtituloCapa'), 1000, 'rgba(255,194,74,.9)'); focoDiagrama(true); } },
+    { t: 17.7, acao: () => focoDiagrama(false) },
+    { t: 30.0, acao: () => destaque('#btnTreinar', true) },
+    { t: 32.0, acao: () => destaque('#btnTreinar', false) },
+    { t: 37.5, acao: () => destaque('#btnAprender', true) },
+    { t: 39.5, acao: () => destaque('#btnAprender', false) },
+  ],
+  'audio_distribuição_1': [
     // { t: 2.5, acao: () => { ... } },
   ],
 };
@@ -490,8 +577,9 @@ const $ = s => document.querySelector(s);
 const audio = $('#narracao');
 const pagina = $('#pagina1');
 const btnPlay = $('#btnPlay');
-let indiceSeq = -1;          // qual diálogo da SEQUENCIA está carregado
-let disparados = new Set();  // eventos já executados no diálogo atual
+let atual = null;            // nome do áudio carregado
+let disparados = new Set();  // eventos já executados no áudio atual
+const urlAudio = nome => 'audio/' + encodeURIComponent(nome) + '.mp3';
 const sfx = nome => { try { const a = new Audio('audio/vfx/' + nome + '.mp3'); a.play().catch(()=>{}); } catch(e){} };
 
 /* ---------- Diagrama de Pauling desenhado em SVG ---------- */
@@ -501,12 +589,9 @@ const LINHAS = [
 ];
 const MAX = {s:2,p:6,d:10,f:14};
 const L_NUM = {s:0,p:1,d:2,f:3};
-// ordem energética (regra das diagonais)
-const ORDEM = [];
+const ORDEM = [];   // 1s 2s 2p 3s 3p 4s 3d 4p 5s 4d 5p 6s 4f 5d 6p 7s 5f 6d 7p
 for (let k = 1; k <= 9; k++)
   LINHAS.forEach(([,n,subs]) => subs.forEach(l => { if (n + L_NUM[l] === k) ORDEM.push(n + l); }));
-// dentro de cada diagonal, n menor primeiro (já está), resultado:
-// 1s 2s 2p 3s 3p 4s 3d 4p 5s 4d 5p 6s 4f 5d 6p 7s 5f 6d 7p
 
 function desenhaPauling(svg){
   const W = 92, H = 56, X0 = 70, Y0 = 46;
@@ -522,106 +607,179 @@ function desenhaPauling(svg){
       html += `<text class="sub ${l}" data-sub="${n+l}" x="${x}" y="${y}" font-size="26">${n}${l}<tspan dy="-11" font-size="15">${MAX[l]}</tspan></text>`;
     });
   });
-  // setas diagonais (de cima-direita para baixo-esquerda)
   for (let k = 1; k <= 9; k++){
     const grupo = ORDEM.filter(c => +c[0] + L_NUM[c[1]] === k);
     if (!grupo.length) continue;
-    // grupo[0] = n menor (canto de cima à direita); último = n maior (embaixo à esquerda)
     const ini = pos[grupo[0]], fim = pos[grupo[grupo.length-1]];
     const x1 = ini.x + 58, y1 = ini.y - 26, x2 = fim.x - 18, y2 = fim.y + 14;
     html += `<line class="seta" data-k="${k}" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" marker-end="url(#pt${svg.dataset.id})"/>`;
   }
   svg.innerHTML = html;
 }
-document.querySelectorAll('[data-pauling]').forEach((svg,i) => { svg.dataset.id = i; desenhaPauling(svg); });
-
-/* animação: acende os subníveis na ordem do diagrama, em loop */
 function animaPauling(svg){
-  let i = 0, timer;
+  let i = 0;
   const passo = () => {
     if (i === 0) svg.querySelectorAll('.on').forEach(e => e.classList.remove('on'));
     const sub = ORDEM[i];
-    const k = +sub[0] + L_NUM[sub[1]];
     svg.querySelector(`[data-sub="${sub}"]`)?.classList.add('on');
-    svg.querySelector(`.seta[data-k="${k}"]`)?.classList.add('on');
+    svg.querySelector(`.seta[data-k="${+sub[0] + L_NUM[sub[1]]}"]`)?.classList.add('on');
     i++;
-    timer = setTimeout(passo, i >= ORDEM.length ? (i = 0, 2600) : 420);
+    setTimeout(passo, i >= ORDEM.length ? (i = 0, 2600) : 420);
   };
   passo();
 }
-document.querySelectorAll('[data-pauling]').forEach(animaPauling);
+document.querySelectorAll('[data-pauling]').forEach((svg,i) => { svg.dataset.id = i; desenhaPauling(svg); animaPauling(svg); });
 
-/* ---------- Navegação entre telas ---------- */
+/* ---------- Letras separadas (para o efeito de onda) ---------- */
+const hex = h => [1,3,5].map(i => parseInt(h.slice(i,i+2),16));
+function corGradiente(t){
+  const st = [[0,'#3ee0ff'],[.45,'#ff5fa8'],[.8,'#ffc24a'],[1,'#8cff6a']];
+  let a = st[0], b = st[st.length-1];
+  for (let i = 0; i < st.length-1; i++) if (t >= st[i][0] && t <= st[i+1][0]){ a = st[i]; b = st[i+1]; break; }
+  const k = (t - a[0]) / ((b[0] - a[0]) || 1), A = hex(a[1]), B = hex(b[1]);
+  return `rgb(${A.map((v,i) => Math.round(v + (B[i]-v)*k)).join(',')})`;
+}
+function separaLetras(el, colorir){
+  const txt = el.textContent, n = txt.replace(/\s/g,'').length;
+  let i = 0;
+  el.innerHTML = [...txt].map(ch => {
+    if (ch === ' ') return ' ';
+    const cor = colorir ? ` style="color:${corGradiente(n > 1 ? i/(n-1) : 0)}"` : '';
+    i++;
+    return `<span class="l"${cor}>${ch}</span>`;
+  }).join('');
+}
+separaLetras($('#tituloCapa .w1'));
+separaLetras($('#tituloCapa .w2'), true);
+separaLetras($('#subtituloCapa'));
+
+/* ---------- Efeitos da capa ---------- */
+let animsCapa = [];
+function fotoGrande(on){
+  $('.atomo').classList.toggle('grande', on);
+  document.querySelectorAll('.atomo .orbita').forEach(o => o.getAnimations().forEach(a => {
+    a.updatePlaybackRate ? a.updatePlaybackRate(on ? 4 : 1) : (a.playbackRate = on ? 4 : 1);
+  }));
+}
+function nomeGrande(on){ $('#nomeAutor').classList.toggle('grande', on); }
+function focoDiagrama(on){ $('#capa').classList.toggle('foco', on); }
+function destaque(sel, on){ $(sel).classList.toggle('destaque', on); }
+/* onda: as letras sobem e descem em sequência; no fim todas crescem e brilham */
+function onda(alvo, total, cor){
+  const letras = [...alvo.querySelectorAll('.l')], n = letras.length;
+  const fase = total * .66;
+  const cada = Math.min(420, fase * .45);
+  const passo = (fase - cada) / Math.max(1, n - 1);
+  letras.forEach((l,i) => animsCapa.push(l.animate([
+    { transform:'translateY(0)' },
+    { transform:'translateY(-.32em)', offset:.4 },
+    { transform:'translateY(.07em)', offset:.75 },
+    { transform:'translateY(0)' }
+  ], { duration: cada, delay: i * passo, easing: 'ease-in-out' })));
+  animsCapa.push(alvo.animate([
+    { transform:'scale(1)',    filter:'brightness(1) drop-shadow(0 0 0 rgba(0,0,0,0))' },
+    { transform:'scale(1.1)',  filter:`brightness(1.35) drop-shadow(0 0 16px ${cor})` },
+    { transform:'scale(1)',    filter:'brightness(1) drop-shadow(0 0 0 rgba(0,0,0,0))' }
+  ], { duration: total - fase, delay: fase, easing: 'ease-in-out' }));
+}
+function limpaCapa(){
+  animsCapa.forEach(a => a.cancel()); animsCapa = [];
+  fotoGrande(false); nomeGrande(false); focoDiagrama(false);
+  destaque('#btnTreinar', false); destaque('#btnAprender', false);
+}
+
+/* ---------- Navegação ---------- */
 function mostra(id){
   document.querySelectorAll('.tela').forEach(t => t.classList.toggle('ativa', t.id === id));
+  if (id === 'pagina1') Atomo.inicia(); else Atomo.pausa();
 }
-$('#btnIniciar').addEventListener('click', () => { sfx('transition_cube'); mostra('pagina1'); });
-if (location.hash === '#p1') mostra('pagina1');   // atalho de teste: index.html#p1
-$('#btnHome').addEventListener('click', () => { audio.pause(); fechaSumario(); mostra('capa'); });
+function mostraEscolhas(){
+  $('#btnIniciar').classList.add('sai');
+  setTimeout(() => { $('#btnIniciar').hidden = true; }, 300);
+  const e = $('#escolhas'); e.hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => e.classList.add('entra')));
+}
+$('#btnIniciar').addEventListener('click', () => {
+  mostraEscolhas();
+  carrega(AUDIO_CAPA);
+  audio.play().catch(() => {});
+});
+function abreSecao(id){
+  audio.pause();          // corta o áudio da capa, se estiver tocando
+  limpaCapa();
+  mostra(id);
+}
+$('#btnAprender').addEventListener('click', () => abreSecao('pagina1'));
+$('#btnTreinar').addEventListener('click', () => abreSecao('treinar'));
+document.querySelectorAll('[data-home]').forEach(b => b.addEventListener('click', () => {
+  audio.pause(); fechaSumario(); limpaCapa(); mostra('capa');
+}));
 
-/* ---------- Áudio ---------- */
+/* ---------- Áudio + linha do tempo de eventos ---------- */
 function carrega(nome, inicio = 0){
-  indiceSeq = SEQUENCIA.indexOf(nome);
+  atual = nome;
   disparados = new Set();
-  audio.src = 'audio/' + nome + '.mp3';
+  audio.src = urlAudio(nome);
   audio.dataset.nome = nome;
-  audio.currentTime = 0;
-  const cap = CAPITULOS.findIndex(c => c.audio === nome);
-  if (cap >= 0) $('#capAtual').textContent = (cap+1) + ' · ' + CAPITULOS[cap].titulo;
+  $('#barra').style.width = '0';
   if (inicio > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = inicio; marcaAte(inicio); }, {once:true});
   atualizaLista();
 }
-function toca(){
-  $('#aguardando').classList.add('some');
-  btnPlay.classList.remove('chama');
-  audio.play().catch(() => {});
+function verificaEventos(){
+  const t = audio.currentTime;
+  (EVENTOS[atual] || []).forEach((ev,i) => {
+    if (typeof ev.t === 'number' && !disparados.has(i) && t >= ev.t){
+      disparados.add(i);
+      try { ev.acao(); } catch(e){ console.error(e); }
+    }
+  });
 }
+let raf = null;
+function laco(){ verificaEventos(); if (!audio.paused) raf = requestAnimationFrame(laco); }
+function marcaAte(t){
+  (EVENTOS[atual] || []).forEach((ev,i) => { if (typeof ev.t === 'number' && ev.t < t) disparados.add(i); });
+}
+const ehDoAprender = () => SEQUENCIA.includes(atual);
 
 btnPlay.addEventListener('click', () => {
-  if (!audio.src || audio.ended){
-    // primeiro clique → dialogo0; depois que um termina → o próximo
-    const prox = indiceSeq + 1;
-    if (prox >= SEQUENCIA.length){ aviso('Fim do audiobook! 🎉'); return; }
+  if (!ehDoAprender() || audio.ended){
+    const prox = ehDoAprender() ? SEQUENCIA.indexOf(atual) + 1 : 0;
+    if (prox >= SEQUENCIA.length){ aviso('Fim desta parte! 🎉'); return; }
     carrega(SEQUENCIA[prox]);
-    toca();
+    audio.play().catch(() => {});
   } else if (audio.paused){
-    toca();
+    audio.play().catch(() => {});
   } else {
     audio.pause();
   }
 });
 
-audio.addEventListener('play',  () => { pagina.classList.add('tocando'); pagina.classList.remove('pausado'); btnPlay.setAttribute('aria-label','Pausar narração'); roda('inicio'); });
-audio.addEventListener('pause', () => { pagina.classList.remove('tocando'); pagina.classList.add('pausado'); btnPlay.setAttribute('aria-label','Tocar narração'); });
+audio.addEventListener('play', () => {
+  cancelAnimationFrame(raf); raf = requestAnimationFrame(laco);
+  if (ehDoAprender()){
+    btnPlay.classList.remove('chama');
+    pagina.classList.add('tocando'); pagina.classList.remove('pausado');
+    btnPlay.setAttribute('aria-label','Pausar narração');
+  }
+});
+audio.addEventListener('pause', () => {
+  pagina.classList.remove('tocando'); pagina.classList.add('pausado');
+  btnPlay.setAttribute('aria-label','Tocar narração');
+});
 audio.addEventListener('ended', () => {
-  roda('fim');
-  btnPlay.classList.add('chama');
+  if (atual === AUDIO_CAPA) limpaCapa();
+  if (ehDoAprender()) btnPlay.classList.add('chama');
 });
 audio.addEventListener('error', () => {
+  if (!audio.dataset.nome) return;
   pagina.classList.remove('tocando');
   aviso(`Áudio "${audio.dataset.nome}.mp3" ainda não está na pasta audio/.`);
-  $('#aguardando').classList.remove('some');
 });
 audio.addEventListener('timeupdate', () => {
+  if (!ehDoAprender()) return;
   const d = audio.duration || 0;
   $('#barra').style.width = d ? (audio.currentTime / d * 100) + '%' : '0';
-  const lista = EVENTOS[audio.dataset.nome] || [];
-  lista.forEach((ev,i) => {
-    if (typeof ev.t === 'number' && !disparados.has(i) && audio.currentTime >= ev.t){
-      disparados.add(i);
-      try { ev.acao(); } catch(e){ console.error(e); }
-    }
-  });
 });
-// ao pular para um ponto, eventos anteriores contam como já disparados
-function marcaAte(t){
-  (EVENTOS[audio.dataset.nome] || []).forEach((ev,i) => { if (typeof ev.t === 'number' && ev.t < t) disparados.add(i); });
-}
-function roda(gancho){
-  (EVENTOS[audio.dataset.nome] || []).forEach((ev,i) => {
-    if (ev.t === gancho && !disparados.has(gancho+i)){ disparados.add(gancho+i); try{ ev.acao(); }catch(e){ console.error(e); } }
-  });
-}
 
 /* ---------- Sumário ---------- */
 const CORES = ['var(--s)','var(--p)','var(--d)','var(--f)'];
@@ -629,13 +787,12 @@ function montaLista(){
   $('#lista').innerHTML = CAPITULOS.map((c,i) => `
     <li><button data-i="${i}">
       <span class="num" style="--c:${CORES[i % 4]}">${i+1}</span>
-      <span class="txt"><b>${c.titulo}</b><span>${c.audio}${c.inicio ? ' · ' + formata(c.inicio) : ''}</span></span>
+      <span class="txt"><b>${c.titulo}</b><span>Página ${c.pagina.replace('pagina','')}${c.inicio ? ' · ' + formata(c.inicio) : ''}</span></span>
     </button></li>`).join('');
 }
 function atualizaLista(){
   document.querySelectorAll('#lista button').forEach(b => {
-    const c = CAPITULOS[b.dataset.i];
-    b.classList.toggle('atual', c.audio === audio.dataset.nome);
+    b.classList.toggle('atual', CAPITULOS[b.dataset.i].audio === atual);
   });
 }
 const formata = s => Math.floor(s/60) + ':' + String(Math.floor(s%60)).padStart(2,'0');
@@ -651,9 +808,9 @@ $('#lista').addEventListener('click', e => {
   const b = e.target.closest('button'); if (!b) return;
   const c = CAPITULOS[b.dataset.i];
   fechaSumario();
-  mostra('pagina1');
+  mostra(c.pagina);
   carrega(c.audio, c.inicio);
-  toca();
+  audio.play().catch(() => {});
 });
 
 /* ---------- Aviso ---------- */
@@ -662,6 +819,159 @@ function aviso(msg){
   const el = $('#aviso'); el.textContent = msg; el.classList.add('mostra');
   clearTimeout(tAviso); tAviso = setTimeout(() => el.classList.remove('mostra'), 3200);
 }
+
+/* =====================================================================
+   ÁTOMO DE LÍTIO 3D — núcleo (3 p⁺ + 3 n⁰) e nuvem eletrônica (1s² 2s¹)
+   A nuvem é feita de pontos sorteados pela densidade de probabilidade
+   radial de cada orbital: onde há mais pontos, é mais provável achar o elétron.
+   ===================================================================== */
+const Atomo = (() => {
+  let pronto = false, rodando = false, renderer, cena, camera, grupo, nuvem1s, nuvem2s, palco, t0 = 0;
+  let rotX = .35, rotY = 0, velX = 0, velY = 0, zoom = 1, ultimoToque = 0;
+  const R_VISTA = 7.5;
+
+  function texPonto(){
+    const c = document.createElement('canvas'); c.width = c.height = 64;
+    const g = c.getContext('2d'), gr = g.createRadialGradient(32,32,0,32,32,32);
+    gr.addColorStop(0,'rgba(255,255,255,1)'); gr.addColorStop(.25,'rgba(255,255,255,.7)'); gr.addColorStop(1,'rgba(255,255,255,0)');
+    g.fillStyle = gr; g.fillRect(0,0,64,64);
+    return new THREE.CanvasTexture(c);
+  }
+  /* sorteia n pontos com densidade radial pdf(r) (método da rejeição) */
+  function amostra(n, pdf, rMax){
+    let pMax = 0; for (let i = 1; i <= 400; i++) pMax = Math.max(pMax, pdf(rMax * i / 400));
+    pMax *= 1.05;
+    const pos = new Float32Array(n * 3);
+    for (let i = 0; i < n;){
+      const r = Math.random() * rMax;
+      if (Math.random() * pMax > pdf(r)) continue;
+      const u = Math.random() * 2 - 1, th = Math.random() * Math.PI * 2, s = Math.sqrt(1 - u*u);
+      pos[i*3] = r * s * Math.cos(th); pos[i*3+1] = r * u; pos[i*3+2] = r * s * Math.sin(th);
+      i++;
+    }
+    return pos;
+  }
+  function criaNuvem(pos, cor, tam, opac, tex){
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    geo.setDrawRange(0, 0);
+    const mat = new THREE.PointsMaterial({ color: cor, size: tam, map: tex, transparent: true, opacity: opac,
+      depthWrite: false, blending: THREE.AdditiveBlending, sizeAttenuation: true });
+    return new THREE.Points(geo, mat);
+  }
+
+  function monta(){
+    palco = $('#palco');
+    try {
+      renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    } catch(e){
+      palco.insertAdjacentHTML('beforeend','<div class="sem-3d">Este aparelho não conseguiu abrir o modo 3D.</div>');
+      return false;
+    }
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+    palco.prepend(renderer.domElement);
+    cena = new THREE.Scene();
+    camera = new THREE.PerspectiveCamera(40, 1, .1, 200);
+    grupo = new THREE.Group(); cena.add(grupo);
+
+    cena.add(new THREE.AmbientLight(0xffffff, .55));
+    const luz = new THREE.DirectionalLight(0xffffff, 1.1); luz.position.set(4, 6, 8); cena.add(luz);
+    const luzCiano = new THREE.PointLight(0x3ee0ff, 1.2, 30); luzCiano.position.set(-5, -2, 4); cena.add(luzCiano);
+
+    /* núcleo: 3 prótons + 3 nêutrons bem juntinhos */
+    const geoN = new THREE.SphereGeometry(.5, 32, 20);
+    const matP = new THREE.MeshStandardMaterial({ color: 0xff5470, roughness: .35, metalness: .1, emissive: 0x4a0612, emissiveIntensity: .6 });
+    const matN = new THREE.MeshStandardMaterial({ color: 0xa7b0cf, roughness: .45, metalness: .1, emissive: 0x1a1f33, emissiveIntensity: .5 });
+    const nucleo = new THREE.Group();
+    const d = .52;
+    [[ d,0,0,1],[0, d,0,1],[0,0, d,1],[-d,0,0,0],[0,-d,0,0],[0,0,-d,0]].forEach(([x,y,z,p]) => {
+      const m = new THREE.Mesh(geoN, p ? matP : matN); m.position.set(x,y,z); nucleo.add(m);
+    });
+    grupo.add(nucleo);
+    grupo.userData.nucleo = nucleo;
+
+    /* nuvens eletrônicas (escala visual, não real: o núcleo seria invisível) */
+    const tex = texPonto();
+    const a = .9;    // 1s: P(r) ∝ r² e^(−2r/a)
+    nuvem1s = criaNuvem(amostra(3500, r => r*r*Math.exp(-2*r/a), 3.8), 0x3ee0ff, .3, .55, tex);
+    const b = .85;   // 2s: P(r) ∝ r² (2 − r/b)² e^(−r/b)  → nó radial em r = 2b
+    nuvem2s = criaNuvem(amostra(8000, r => r*r*Math.pow(2 - r/b, 2)*Math.exp(-r/b), 11), 0x9b8cff, .36, .5, tex);
+    grupo.add(nuvem1s, nuvem2s);
+
+    /* gestos: arrastar gira, pinça/roda dá zoom */
+    const toques = new Map(); let distPinca = 0;
+    const cv = renderer.domElement;
+    cv.addEventListener('pointerdown', e => { cv.setPointerCapture(e.pointerId); toques.set(e.pointerId, {x:e.clientX, y:e.clientY}); ultimoToque = performance.now(); $('#dicaGirar').classList.add('some'); });
+    cv.addEventListener('pointermove', e => {
+      if (!toques.has(e.pointerId)) return;
+      const p = toques.get(e.pointerId);
+      if (toques.size === 1){
+        const dx = e.clientX - p.x, dy = e.clientY - p.y;
+        velY = dx * .008; velX = dy * .008;
+        rotY += velY; rotX += velX;
+      } else if (toques.size === 2){
+        const [A,B] = [...toques.values()];
+        const dist = Math.hypot(A.x - B.x, A.y - B.y);
+        if (distPinca) zoom = Math.min(1.8, Math.max(.6, zoom * dist / distPinca));
+        distPinca = dist;
+      }
+      p.x = e.clientX; p.y = e.clientY;
+      ultimoToque = performance.now();
+    });
+    const solta = e => { toques.delete(e.pointerId); distPinca = 0; };
+    cv.addEventListener('pointerup', solta); cv.addEventListener('pointercancel', solta);
+    cv.addEventListener('wheel', e => { e.preventDefault(); zoom = Math.min(1.8, Math.max(.6, zoom * (e.deltaY < 0 ? 1.08 : .93))); }, {passive:false});
+
+    new ResizeObserver(ajusta).observe(palco);
+    ajusta();
+    return true;
+  }
+  function ajusta(){
+    const w = palco.clientWidth, h = palco.clientHeight;
+    if (!w || !h) return;
+    renderer.setSize(w, h, false);
+    camera.aspect = w / h; camera.updateProjectionMatrix();
+  }
+  function quadro(agora){
+    if (!rodando) return;
+    requestAnimationFrame(quadro);
+    const t = (agora - t0) / 1000;
+    /* orbitais aparecendo: primeiro o 1s, depois o 2s */
+    const n1 = nuvem1s.geometry.attributes.position.count, n2 = nuvem2s.geometry.attributes.position.count;
+    nuvem1s.geometry.setDrawRange(0, Math.floor(n1 * Math.min(1, Math.max(0, (t - .3) / 1.4))));
+    nuvem2s.geometry.setDrawRange(0, Math.floor(n2 * Math.min(1, Math.max(0, (t - 1.6) / 2))));
+    /* inércia + giro automático quando ninguém está tocando */
+    if (agora - ultimoToque > 120){ velX *= .94; velY *= .94; rotX += velX; rotY += velY; }
+    if (agora - ultimoToque > 2500) rotY += .0025;
+    rotX = Math.max(-1.3, Math.min(1.3, rotX));
+    grupo.rotation.set(rotX, rotY, 0);
+    /* a nuvem "respira" de leve; o núcleo gira devagar */
+    nuvem1s.rotation.y = t * .25; nuvem2s.rotation.y = -t * .12;
+    const s = 1 + Math.sin(t * 1.6) * .015; nuvem1s.scale.setScalar(s); nuvem2s.scale.setScalar(2 - s);
+    grupo.userData.nucleo.rotation.y = t * .4; grupo.userData.nucleo.rotation.x = t * .25;
+    /* câmera enquadra o átomo em retrato ou paisagem */
+    const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
+    const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
+    camera.position.set(0, 0, R_VISTA / Math.sin(meia) / zoom);
+    camera.lookAt(0, 0, 0);
+    renderer.render(cena, camera);
+  }
+  return {
+    inicia(){
+      if (!pronto){ if (typeof THREE === 'undefined') return; pronto = monta(); if (!pronto) return; }
+      if (rodando) return;
+      rodando = true; t0 = performance.now(); ajusta();
+      $('#dicaGirar').classList.remove('some');
+      requestAnimationFrame(quadro);
+    },
+    pausa(){ rodando = false; }
+  };
+})();
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) Atomo.pausa(); else if ($('#pagina1').classList.contains('ativa')) Atomo.inicia();
+});
+
+if (location.hash === '#p1') mostra('pagina1');   // atalho de teste: index.html#p1
 
 /* ---------- PWA: funciona offline e pode ser instalado ---------- */
 if ('serviceWorker' in navigator && location.protocol !== 'file:'){
