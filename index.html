@@ -308,7 +308,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .nomes{position:absolute;inset:0;z-index:2;pointer-events:none}
 .nome{
   position:absolute;white-space:nowrap;
-  font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(13px,3.6vw,19px);
+  font-family:"Space Grotesk",sans-serif;font-weight:600;font-size:clamp(15px,calc(3.6vw + 2px),21px);
   opacity:0;transform:translate(-50%,-50%) scale(.3);
   transition:transform .3s cubic-bezier(.2,.9,.3,1.4),opacity .3s;
 }
@@ -646,7 +646,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.13';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.14';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -679,7 +679,7 @@ const EVENTOS = {
     { t: 11.0, acao: () => Atomo.mostraEletrosfera() },               // esfera transparente, 1 camada
     { t: 12.9, acao: () => Atomo.escreve('eletrosfera') },
     { t: 14.0, acao: () => pausaRoteiro(1500) },                       // pausa 1,5 s
-    { t: 14.5, acao: () => Atomo.zoomLento(.26, 4500) },               // zoom lento no núcleo: 14,5 s → 19 s
+    { t: 14.5, acao: () => Atomo.zoomLento(.464, 4500) },              // zoom lento no núcleo: 14,5 s → 19 s (alvo do modo edição: .26 ÷ .56)
     { t: 21.0, acao: () => { Atomo.destaca('protons', true); Atomo.escreve('protons'); } },
     { t: 22.9, acao: () => Atomo.maisProtons() },
     { t: 24.0, acao: () => { Atomo.destaca('protons', false); Atomo.destaca('neutrons', true); Atomo.escreve('neutrons'); } },
@@ -1104,6 +1104,15 @@ const Atomo = (() => {
   let li, nuvem1s, nuvem2s, matsLi = [];
   /* núcleo 2p + 2n + eletrosfera */
   let he, heNucleo, protons = [], neutrons = [], maisHe = [], esfera, matsHe = [], mP, mN;
+  /* destaque por brilho (em vez de aumentar) */
+  const halosP = [], halosN = [];
+  const brilho = { p: { v: 0, alvo: 0, ult: -1 }, n: { v: 0, alvo: 0, ult: -1 } };
+  let corBolaP, corBolaN;
+  function aplicaBrilho(mat, cor, halos, b){
+    mat.emissive.setHex(mat.userData.emis).lerp(cor, b * .7);   // a bolinha acende sem perder a cor
+    mat.emissiveIntensity = .6 + .25 * b;
+    halos.forEach(h => { h.visible = b > .01; h.material.opacity = .95 * b; });   // o brilho fica no halo
+  }
   /* hidrogênio */
   let hAtomo, hProton, maisH = [], esferaH;
   /* molde (slot) para encaixar o núcleo */
@@ -1231,6 +1240,7 @@ const Atomo = (() => {
     he = new THREE.Group(); he.visible = false; grupo.add(he);
     heNucleo = new THREE.Group(); he.add(heNucleo);
     mP = matBola(0x3d74ff, 0x0b1d5c); mN = matBola(0xe0a21f, 0x3d2600);
+    corBolaP = new THREE.Color(0x3d74ff); corBolaN = new THREE.Color(0xe0a21f);
     mN.metalness = .55; mN.roughness = .3;   // dourado
     const k = .5 / Math.sqrt(3) * 1.04;
     const tetra = [[1,1,1],[-1,-1,1],[1,-1,-1],[-1,1,-1]];   // 2 primeiros = prótons
@@ -1239,6 +1249,7 @@ const Atomo = (() => {
       const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tMais, transparent: true, opacity: 0, depthWrite: false }));
       sp.scale.setScalar(.42); sp.visible = false; cena.add(sp); lista.push({ sprite: sp, alvo });
     };
+    const texHalo = texPonto();
     tetra.forEach(([x,y,z], i) => {
       const proton = i < 2;
       const m = new THREE.Mesh(geoN, proton ? mP : mN);
@@ -1247,6 +1258,11 @@ const Atomo = (() => {
       heNucleo.add(m);
       (proton ? protons : neutrons).push(m);
       if (proton) novoMais(m, maisHe);
+      /* halo de brilho (destaque) na cor da bolinha */
+      const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: proton ? 0x3d74ff : 0xe0a21f,
+        transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      halo.scale.setScalar(2.3); halo.visible = false; m.add(halo);
+      (proton ? halosP : halosN).push(halo);
     });
     esfera = new THREE.Mesh(new THREE.SphereGeometry(R_ESF, 64, 40), matEsfera(ESF_PADRAO, 0));
     esfera.visible = false; he.add(esfera);
@@ -1424,6 +1440,12 @@ const Atomo = (() => {
       m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dtR * 9));
       m.scale.setScalar(m.userData.escala);
     });
+    /* brilho de destaque dos prótons / nêutrons (suave, segue o relógio do roteiro) */
+    [['p', mP, corBolaP, halosP], ['n', mN, corBolaN, halosN]].forEach(([k, mat, cor, halos]) => {
+      const B = brilho[k];
+      B.v += (B.alvo - B.v) * (1 - Math.exp(-dtR * 7));
+      if (Math.abs(B.v - B.ult) > .002){ B.ult = B.v; aplicaBrilho(mat, cor, halos, B.v); }
+    });
     /* inércia + giro automático quando ninguém está tocando */
     if (agora - ultimoToque > 120 && !travaGesto){ velX *= .94; velY *= .94; rotX += velX; rotY += velY; }
     if (giroAuto && !parado && agora - ultimoToque > 2500) rotY += .001;
@@ -1432,7 +1454,7 @@ const Atomo = (() => {
     /* câmera: enquadra o átomo; o roteiro pode aproximar */
     if (!camTween) fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dtR * taxaCam));
     /* quanto mais perto do núcleo, mais a eletrosfera some (ela cobriria a tela toda) */
-    const vis = Math.min(1, Math.max(0, (fatorCam - .3) / .35));
+    const vis = Math.min(1, Math.max(0, (fatorCam - .5) / .3));
     esfera.material.uniforms.vis.value = vis; esferaH.material.uniforms.vis.value = vis;
     const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
     const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
@@ -1499,6 +1521,8 @@ const Atomo = (() => {
       matsLi.forEach(m => m.opacity = m.userData.base);
       he.visible = false; heNucleo.scale.setScalar(1); heNucleo.rotation.set(0, 0, 0);
       matsHe.forEach(m => { m.opacity = 1; m.emissive.setHex(m.userData.emis); m.emissiveIntensity = .6; });
+      ['p', 'n'].forEach(k => { brilho[k].v = brilho[k].alvo = 0; brilho[k].ult = -1; });
+      [...halosP, ...halosN].forEach(h => { h.visible = false; h.material.opacity = 0; });
       esfera.visible = false; esfera.material.uniforms.opac.value = 0; setEsf(esfera, ESF_PADRAO);
       hAtomo.visible = false;
       [...protons, ...neutrons, hProton].forEach(m => { m.userData.escala = m.userData.escalaAlvo = 1; m.scale.setScalar(1); });
@@ -1546,9 +1570,8 @@ const Atomo = (() => {
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
     zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
-    destaca(qual, on){
-      (qual === 'protons' ? protons : neutrons).forEach(m => m.userData.escalaAlvo = on ? 1.35 : 1);
-    },
+    /* destaque = brilho na cor da bolinha (não aumenta mais) */
+    destaca(qual, on){ brilho[qual === 'protons' ? 'p' : 'n'].alvo = on ? 1 : 0; },
     maisProtons(){
       if (!pronto) return;
       maisHe.forEach(({sprite}) => sprite.visible = true);
