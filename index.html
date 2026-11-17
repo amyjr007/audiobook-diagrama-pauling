@@ -643,7 +643,7 @@ body.editando, body.editando *{touch-action:pan-x pan-y}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.8';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.9';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -706,6 +706,17 @@ const EVENTOS = {
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
 
 /* ===================================================================== */
+
+/* Nenhum som toca durante o modo edição; guardamos quem tocou para poder calar tudo */
+window.__modoEdicao = false;
+const sonsTocados = new Set();
+const _playOriginal = HTMLMediaElement.prototype.play;
+HTMLMediaElement.prototype.play = function(){
+  if (window.__modoEdicao) return Promise.resolve();
+  sonsTocados.add(this);
+  return _playOriginal.apply(this, arguments);
+};
+function calaTudo(){ sonsTocados.forEach(m => { try { m.pause(); } catch(e){} }); }
 
 const $ = s => document.querySelector(s);
 const audio = $('#narracao');
@@ -905,6 +916,35 @@ function pausaRoteiro(ms, extras = []){
     audio.play().catch(() => {});
   }, ms));
 }
+/* Todos os eventos estão atrelados ao áudio: com o áudio pausado (pelo usuário ou
+   pelo modo edição), tudo o que o roteiro começou fica parado e continua de onde
+   estava quando o áudio volta. A pausa automática do roteiro NÃO congela. */
+function roteiroCongelado(){
+  if (window.__modoEdicao) return true;          // editando: tudo parado
+  return !!atual && audio.paused && !audio.ended && !emPausaRoteiro && audio.currentTime > 0;
+}
+/* animações de interface que não são eventos do roteiro (continuam sempre) */
+const AMBIENTE = '.orbita, .eq, .selo, .btn-iniciar, .btn-play, .dica-girar, .versao';
+const congeladas = new Set();
+let estavaCongelado = false;
+(function vigiaCongelamento(){
+  const c = roteiroCongelado();
+  if (c !== estavaCongelado){
+    estavaCongelado = c;
+    const tela = document.querySelector('.tela.ativa');
+    if (c && tela){
+      tela.getAnimations({ subtree: true }).forEach(a => {
+        const alvo = a.effect && a.effect.target;
+        if (alvo && alvo.closest && alvo.closest(AMBIENTE)) return;
+        if (a.playState === 'running'){ a.pause(); congeladas.add(a); }
+      });
+    } else {
+      congeladas.forEach(a => { if (a.playState === 'paused') a.play(); });
+      congeladas.clear();
+    }
+  }
+  requestAnimationFrame(vigiaCongelamento);
+})();
 function cancelaPausaRoteiro(executarPendentes = false){
   pausaTimers.forEach(clearTimeout); pausaTimers = [];
   if (executarPendentes) pausaPendentes.forEach(fn => fn && fn());
@@ -1064,9 +1104,13 @@ const Atomo = (() => {
   const easeBack = k => 1 + 2.4*Math.pow(k-1,3) + 1.4*Math.pow(k-1,2);
   const reduz = a => a - Math.round(a / (2*Math.PI)) * 2*Math.PI;
 
+  /* relógio do roteiro: só anda enquanto o áudio toca (pausar o áudio pausa os eventos) */
+  let relogio = 0;
+  const congelado = () => typeof roteiroCongelado === 'function' && roteiroCongelado();
   function anima(dur, fn, fim, curva = ease){
-    tweens.push({ ini: performance.now(), dur, fn, fim, curva });
+    tweens.push({ ini: relogio, dur, fn, fim, curva });
   }
+  const agenda = (ms, fn) => anima(ms, () => {}, fn, k => k);   // "setTimeout" que respeita a pausa
   function rodaTweens(agora){
     const lista = tweens; tweens = [];
     const ficam = lista.filter(tw => {
@@ -1348,8 +1392,13 @@ const Atomo = (() => {
     if (!rodando) return;
     requestAnimationFrame(quadro);
     const dt = Math.min(.05, (agora - (ultimo || agora)) / 1000); ultimo = agora;
-    const t = (agora - t0) / 1000;
-    rodaTweens(agora);
+    const parado = congelado();
+    const dtR = parado ? 0 : dt;                 // tempo do roteiro neste quadro
+    relogio += dtR * 1000;
+    const t = (relogio - t0) / 1000;
+    rodaTweens(relogio);
+    /* som de digitação acompanha a pausa */
+    if (digitando > 0){ if (parado) somDigitar.pause(); else if (somDigitar.paused) somDigitar.play().catch(() => {}); }
     /* lítio: orbitais aparecendo (1s, depois 2s) */
     if (li.visible){
       const n1 = nuvem1s.geometry.attributes.position.count, n2 = nuvem2s.geometry.attributes.position.count;
@@ -1360,18 +1409,18 @@ const Atomo = (() => {
       li.userData.nucleo.rotation.y = t * .4; li.userData.nucleo.rotation.x = t * .25;
     }
     /* núcleo: gira bem devagar; bolinhas crescem suavemente quando destacadas */
-    if (he.visible && giroNucleo){ heNucleo.rotation.y += dt * .088; heNucleo.rotation.x += dt * .032; }
+    if (he.visible && giroNucleo){ heNucleo.rotation.y += dtR * .088; heNucleo.rotation.x += dtR * .032; }
     [...protons, ...neutrons, hProton].forEach(m => {
-      m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dt * 9));
+      m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dtR * 9));
       m.scale.setScalar(m.userData.escala);
     });
     /* inércia + giro automático quando ninguém está tocando */
     if (agora - ultimoToque > 120 && !travaGesto){ velX *= .94; velY *= .94; rotX += velX; rotY += velY; }
-    if (giroAuto && agora - ultimoToque > 2500) rotY += .001;
+    if (giroAuto && !parado && agora - ultimoToque > 2500) rotY += .001;
     rotX = Math.max(-1.3, Math.min(1.3, rotX));
     grupo.rotation.set(rotX, rotY, 0);
     /* câmera: enquadra o átomo; o roteiro pode aproximar */
-    if (!camTween) fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dt * taxaCam));
+    if (!camTween) fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dtR * taxaCam));
     /* quanto mais perto do núcleo, mais a eletrosfera some (ela cobriria a tela toda) */
     const vis = Math.min(1, Math.max(0, (fatorCam - .3) / .35));
     esfera.material.uniforms.vis.value = vis; esferaH.material.uniforms.vis.value = vis;
@@ -1405,8 +1454,17 @@ const Atomo = (() => {
   const comecaSom = () => { if (digitando++ === 0){ try { somDigitar.currentTime = 0; somDigitar.play().catch(() => {}); } catch(e){} } };
   const paraSom = () => { if (--digitando <= 0){ digitando = 0; somDigitar.pause(); } };
 
+  /* digitação letra por letra no relógio do roteiro (pausa junto com o áudio) */
+  function digitaNoRelogio(texto, passo, mostra, fim){
+    const job = { vivo: true };
+    comecaSom();
+    anima(texto.length * passo, k => { if (job.vivo) mostra(texto.slice(0, Math.ceil(k * texto.length))); },
+      () => { if (!job.vivo) return; job.vivo = false; mostra(texto); paraSom(); fim && fim(); }, k => k);
+    job.cancela = () => { if (job.vivo){ job.vivo = false; paraSom(); } };
+    return job;
+  }
   function limpaLinhas(){
-    Object.values(linhas).forEach(L => { if (L.timer){ clearInterval(L.timer); L.timer = null; paraSom(); } L.el.innerHTML = ''; L.el.classList.remove('digitando'); });
+    Object.values(linhas).forEach(L => { if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.innerHTML = ''; L.el.classList.remove('digitando'); });
   }
   function dica(texto){ $('#dicaTexto').textContent = texto; }
 
@@ -1419,13 +1477,12 @@ const Atomo = (() => {
       if (!pronto){ if (typeof THREE === 'undefined') return; pronto = monta(); if (!pronto) return; }
       if (rodando) return;
       rodando = true; ultimo = 0; ajusta();
-      if (!t0) t0 = performance.now();
       requestAnimationFrame(quadro);
     },
-    pausa(){ rodando = false; somDigitar.pause(); digitando = 0; },
+    pausa(){ rodando = false; somDigitar.pause(); },
     /* volta tudo ao começo da página 1 */
     reset(){
-      t0 = performance.now();
+      t0 = relogio;
       if (!pronto) return;
       tweens = [];
       li.visible = true;
@@ -1436,7 +1493,7 @@ const Atomo = (() => {
       hAtomo.visible = false;
       [...protons, ...neutrons, hProton].forEach(m => { m.userData.escala = m.userData.escalaAlvo = 1; m.scale.setScalar(1); });
       [...maisHe, ...maisH].forEach(({sprite}) => { sprite.visible = false; sprite.material.opacity = 0; });
-      Object.values(rotulos).forEach(r => { clearInterval(r.timer); r.ativo = false; r.el.textContent = ''; r.el.classList.remove('digitando'); r.el.style.opacity = 0; r.g.style.opacity = 0; });
+      Object.values(rotulos).forEach(r => { if (r.timer){ r.timer.cancela(); r.timer = null; } r.ativo = false; r.el.textContent = ''; r.el.classList.remove('digitando'); r.el.style.opacity = 0; r.g.style.opacity = 0; });
       limpaLinhas(); camadaNomes.innerHTML = '';
       molde.visible = false; moldeMats.forEach(m => { m.userData.op = 0; m.opacity = 0; }); slot = null;
       giroAuto = giroNucleo = true; travaGesto = false;
@@ -1490,37 +1547,23 @@ const Atomo = (() => {
     /* escreve o rótulo letra por letra, com som de digitação */
     escreve(id){
       const r = rotulos[id]; if (!r) return;
-      if (r.timer){ clearInterval(r.timer); paraSom(); }
+      if (r.timer){ r.timer.cancela(); }
       r.ativo = true; r.el.textContent = ''; r.el.classList.add('digitando');
-      let i = 0; comecaSom();
-      r.timer = setInterval(() => {
-        r.el.textContent = r.texto.slice(0, ++i);
-        if (i >= r.texto.length){
-          clearInterval(r.timer); r.timer = null; paraSom();
-          setTimeout(() => r.el.classList.remove('digitando'), 600);
-        }
-      }, 85);
+      r.timer = digitaNoRelogio(r.texto, 85, s => r.el.textContent = s, () => { r.timer = null; agenda(600, () => { if (!r.timer) r.el.classList.remove('digitando'); }); });
     },
     apaga(id){
       const r = rotulos[id]; if (!r) return;
-      if (r.timer){ clearInterval(r.timer); r.timer = null; paraSom(); }
+      if (r.timer){ r.timer.cancela(); r.timer = null; }
       r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0;
     },
     /* digita um trecho numa linha parada na tela (os trechos se somam na mesma linha) */
     digita(id, texto, { cor = '', ms = 85, dur = 0 } = {}){
       const L = linhas[id]; if (!L) return;
-      if (L.timer){ clearInterval(L.timer); L.timer = null; paraSom(); const ult = L.el.lastChild; if (ult && ult.dataset.txt) ult.textContent = ult.dataset.txt; }
+      if (L.timer){ L.timer.cancela(); L.timer = null; const ult = L.el.lastChild; if (ult && ult.dataset.txt) ult.textContent = ult.dataset.txt; }
       const span = document.createElement('span'); span.style.color = cor; span.dataset.txt = texto;
       L.el.appendChild(span); L.el.classList.add('digitando');
-      const passo = dur ? dur / texto.length : ms;
-      let i = 0; comecaSom();
-      L.timer = setInterval(() => {
-        span.textContent = texto.slice(0, ++i);
-        if (i >= texto.length){
-          clearInterval(L.timer); L.timer = null; paraSom();
-          setTimeout(() => { if (!L.timer) L.el.classList.remove('digitando'); }, 600);
-        }
-      }, passo);
+      L.timer = digitaNoRelogio(texto, dur ? dur / texto.length : ms, s => span.textContent = s,
+        () => { L.timer = null; agenda(600, () => { if (!L.timer) L.el.classList.remove('digitando'); }); });
     },
 
     /* ----- fim do áudio 1: molde aparece atrás do núcleo; o aluno gira até encaixar ----- */
@@ -1557,7 +1600,7 @@ const Atomo = (() => {
         const x = Math.max(ow / 2 + 6, Math.min(w - ow / 2 - 6, w / 2 + Math.cos(ang) * w * .37 * alt));
         const y = h / 2 + Math.sin(ang) * h * .37 * alt;
         el.style.left = x + 'px'; el.style.top = y + 'px';
-        setTimeout(() => el.classList.add('entra'), i * dur / n);
+        agenda(i * dur / n, () => el.classList.add('entra'));
       });
     },
     brilhaNomes(dur){
@@ -1605,7 +1648,7 @@ const Atomo = (() => {
       palco.appendChild(velha);
       /* a face "nova" (ao vivo) já mostra o hidrogênio */
       he.visible = false; maisHe.forEach(({sprite}) => sprite.visible = false);
-      Object.keys(rotulos).forEach(id => { const r = rotulos[id]; clearInterval(r.timer); r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0; });
+      Object.keys(rotulos).forEach(id => { const r = rotulos[id]; if (r.timer){ r.timer.cancela(); r.timer = null; } r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0; });
       limpaLinhas(); camadaNomes.innerHTML = '';
       hAtomo.visible = true;
       maisH.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
@@ -1690,7 +1733,10 @@ const Edicao = (() => {
   function entra(){
     if (ativo) return;
     ativo = true;
+    cancelaPausaRoteiro();       // a pausa automática não pode soltar o áudio no meio da edição
     audio.pause();
+    window.__modoEdicao = true;  // bloqueia qualquer som
+    calaTudo();                  // e cala o que estiver tocando (digitação, efeitos)
     document.body.classList.add('editando');
     const lista = candidatos();
     lista.forEach(el => {
@@ -1731,6 +1777,7 @@ const Edicao = (() => {
   async function sai(){
     if (!ativo) return;
     ativo = false;
+    window.__modoEdicao = false;   // sons liberados de novo (a narração continua pausada até o play)
     document.activeElement && document.activeElement.blur && document.activeElement.blur();
     const txt = relatorio();
     itens.forEach((v, el) => { el.removeAttribute('contenteditable'); el.removeAttribute('data-editavel'); el.classList.remove('mudou'); });
