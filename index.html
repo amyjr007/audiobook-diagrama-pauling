@@ -331,11 +331,38 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .rotulo.digitando::after{content:"";display:inline-block;width:2px;height:.95em;margin-left:3px;vertical-align:-.1em;background:currentColor;animation:cursor .6s steps(1) infinite}
 @keyframes cursor{50%{opacity:0}}
 
-/* versão do app (canto inferior esquerdo, em todas as telas) */
+/* versão do app (canto inferior esquerdo, em todas as telas) — segurar o dedo nela abre o modo edição */
 .versao{
   position:fixed;left:calc(12px + env(safe-area-inset-left,0px));bottom:calc(8px + var(--safe-b));z-index:30;
-  font:500 10.5px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--ink-3);opacity:.8;pointer-events:none;
+  font:500 10.5px "IBM Plex Mono",monospace;letter-spacing:.1em;color:var(--ink-3);opacity:.8;
+  padding:6px;margin:-6px;-webkit-touch-callout:none;
 }
+
+/* ===================== MODO EDIÇÃO ===================== */
+.barra-edicao{
+  position:fixed;left:50%;top:calc(8px + var(--safe-t));transform:translateX(-50%);z-index:80;
+  display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:center;
+  max-width:calc(100vw - 16px);padding:8px 10px 8px 14px;border-radius:14px;
+  background:#ffc24a;color:#1a1200;font-size:12px;box-shadow:0 8px 24px rgba(0,0,0,.5);
+}
+.be-titulo{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:14px}
+.be-dica{opacity:.8}
+.barra-edicao button{padding:7px 12px;border-radius:10px;background:#1a1200;color:#ffc24a;font-weight:600;font-size:13px}
+body.editando [data-editavel]{
+  outline:1.5px dashed rgba(255,194,74,.65);outline-offset:3px;cursor:text;
+  user-select:text;-webkit-user-select:text;pointer-events:auto!important;
+}
+body.editando [data-editavel]:focus{outline:2px solid #ffc24a;background:rgba(255,194,74,.08)}
+body.editando [data-editavel].mudou{outline-color:#8cff6a}
+body.editando, body.editando *{touch-action:pan-x pan-y}
+.painel-edicao{position:fixed;inset:0;z-index:90;display:grid;place-items:center;background:rgba(4,6,14,.7);padding:16px}
+.pe-caixa{width:min(560px,100%);background:#151c3d;border:1px solid var(--line);border-radius:18px;padding:18px;display:grid;gap:10px}
+.pe-caixa h3{font-family:"Space Grotesk",sans-serif;font-size:20px}
+.pe-caixa p{font-size:13px;color:var(--ink-2)}
+.pe-caixa textarea{width:100%;height:min(46vh,340px);resize:vertical;background:#0a0e1c;color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px;font:500 12px/1.5 "IBM Plex Mono",monospace;user-select:text;-webkit-user-select:text}
+.pe-botoes{display:flex;gap:10px;justify-content:flex-end}
+.pe-botoes button{padding:9px 16px;border-radius:10px;background:rgba(238,241,255,.1);font-weight:600}
+.pe-botoes button:first-child{background:#ffc24a;color:#1a1200}
 
 .dica-girar{
   position:absolute;left:50%;bottom:12px;transform:translateX(-50%);z-index:3;pointer-events:none;
@@ -593,6 +620,21 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 <div class="aviso" id="aviso" role="status"></div>
 <div class="versao" id="versao" aria-label="Versão do app"></div>
 
+<!-- MODO EDIÇÃO (G entra · Esc sai · ou segure o dedo na versão) -->
+<div class="barra-edicao" id="barraEdicao" hidden>
+  <span class="be-titulo">✎ Modo edição</span>
+  <span class="be-dica">toque num texto para editar · pinça muda o tamanho · Enter quebra a linha</span>
+  <button id="btnSairEdicao">Sair e copiar</button>
+</div>
+<div class="painel-edicao" id="painelEdicao" hidden>
+  <div class="pe-caixa">
+    <h3>Alterações</h3>
+    <p id="peStatus">Copiado! Cole na conversa com o Claude.</p>
+    <textarea id="peTexto" readonly></textarea>
+    <div class="pe-botoes"><button id="peCopiar">Copiar de novo</button><button id="peFechar">Fechar</button></div>
+  </div>
+</div>
+
 <audio id="narracao" preload="auto"></audio>
 
 <script src="three.min.js"></script>
@@ -601,7 +643,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.7';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.8';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -633,7 +675,8 @@ const EVENTOS = {
     { t: 8.0,  acao: () => Atomo.escreve('nucleo') },
     { t: 11.0, acao: () => Atomo.mostraEletrosfera() },               // esfera transparente, 1 camada
     { t: 12.9, acao: () => Atomo.escreve('eletrosfera') },
-    { t: 14.0, acao: () => pausaRoteiro(1500, [[500, () => Atomo.zoomNucleo()]]) },  // pausa 1,5 s; zoom 0,5 s depois
+    { t: 10.0, acao: () => Atomo.zoomLento(.26, 2500) },               // zoom lento no núcleo: 10 s → 12,5 s
+    { t: 14.0, acao: () => pausaRoteiro(1500) },                       // pausa 1,5 s
     { t: 21.0, acao: () => { Atomo.destaca('protons', true); Atomo.escreve('protons'); } },
     { t: 22.9, acao: () => Atomo.maisProtons() },
     { t: 24.0, acao: () => { Atomo.destaca('protons', false); Atomo.destaca('neutrons', true); Atomo.escreve('neutrons'); } },
@@ -1000,6 +1043,7 @@ const Atomo = (() => {
   let rotX = .35, rotY = 0, velX = 0, velY = 0, zoomGesto = 1, ultimoToque = 0;
   let fatorCam = 1, fatorCamAlvo = 1;            // zoom do roteiro (1 = posição inicial)
   let taxaCam = 3.2;                             // velocidade do zoom (alto = "dash")
+  let camTween = false;                          // zoom com duração exata (zoomLento)
   let giroAuto = true, giroNucleo = true, travaGesto = false;
   const R_VISTA = 7.5, R_ESF = 6;
   const ESF_PADRAO = { pot: 2.4, rim: .85, base: .05 };   // eletrosfera "cheia"
@@ -1078,12 +1122,12 @@ const Atomo = (() => {
   /* eletrosfera: esfera transparente com brilho na borda (efeito fresnel) */
   function matEsfera(cfg, opac){
     return new THREE.ShaderMaterial({
-      uniforms: { cor: { value: new THREE.Color(0x3ee0ff) }, opac: { value: opac },
+      uniforms: { cor: { value: new THREE.Color(0x3ee0ff) }, opac: { value: opac }, vis: { value: 1 },
                   pot: { value: cfg.pot }, rim: { value: cfg.rim }, base: { value: cfg.base } },
       vertexShader: `varying vec3 vN; varying vec3 vV;
         void main(){ vec4 mv = modelViewMatrix * vec4(position,1.); vN = normalize(normalMatrix*normal); vV = normalize(-mv.xyz); gl_Position = projectionMatrix*mv; }`,
-      fragmentShader: `uniform vec3 cor; uniform float opac, pot, rim, base; varying vec3 vN; varying vec3 vV;
-        void main(){ float f = 1. - abs(dot(normalize(vN), normalize(vV))); float a = (pow(f, pot)*rim + base) * opac; gl_FragColor = vec4(cor, a); }`,
+      fragmentShader: `uniform vec3 cor; uniform float opac, vis, pot, rim, base; varying vec3 vN; varying vec3 vV;
+        void main(){ float f = 1. - abs(dot(normalize(vN), normalize(vV))); float a = (pow(f, pot)*rim + base) * opac * vis; gl_FragColor = vec4(cor, a); }`,
       transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending
     });
   }
@@ -1327,7 +1371,10 @@ const Atomo = (() => {
     rotX = Math.max(-1.3, Math.min(1.3, rotX));
     grupo.rotation.set(rotX, rotY, 0);
     /* câmera: enquadra o átomo; o roteiro pode aproximar */
-    fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dt * taxaCam));
+    if (!camTween) fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dt * taxaCam));
+    /* quanto mais perto do núcleo, mais a eletrosfera some (ela cobriria a tela toda) */
+    const vis = Math.min(1, Math.max(0, (fatorCam - .3) / .35));
+    esfera.material.uniforms.vis.value = vis; esferaH.material.uniforms.vis.value = vis;
     const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
     const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
     camera.position.set(0, 0, R_VISTA / Math.sin(meia) / zoomGesto * fatorCam);
@@ -1396,7 +1443,7 @@ const Atomo = (() => {
       palco.querySelectorAll('.face-velha').forEach(e => e.remove());
       face.getAnimations().forEach(a => a.cancel()); face.style.transformOrigin = '';
       somDigitar.pause(); digitando = 0;
-      fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; rotX = .35;
+      fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; camTween = false; rotX = .35;
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
     /* estado pronto para começar o áudio 2 direto (pelo Sumário) */
@@ -1422,15 +1469,15 @@ const Atomo = (() => {
       esfera.visible = true;
       anima(1300, k => { esfera.material.uniforms.opac.value = k; });
     },
-    /* dash: chega em ~0,1 s; a eletrosfera (que passaria a cobrir a tela) se apaga */
-    zoomNucleo(){
-      taxaCam = 45; fatorCamAlvo = .26;
-      if (pronto && esfera.visible){ const u = esfera.material.uniforms.opac, ini = u.value; anima(250, k => u.value = ini * (1 - k)); }
+    /* zoom com duração exata (ex.: 10 s → 12,5 s = 2500 ms) */
+    zoomLento(alvo, dur){
+      if (!pronto) return;
+      camTween = true; fatorCamAlvo = alvo;
+      const ini = fatorCam;
+      anima(dur, k => { fatorCam = ini + (alvo - ini) * k; }, () => { camTween = false; });
     },
-    zoomInicial(){                                       // volta suave, eletrosfera reaparece
-      taxaCam = 3.2; fatorCamAlvo = 1;
-      if (pronto && esfera.visible){ const u = esfera.material.uniforms.opac, ini = u.value; anima(1200, k => u.value = ini + (1 - ini) * k); }
-    },
+    zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
+    zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
     zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
     destaca(qual, on){
       (qual === 'protons' ? protons : neutrons).forEach(m => m.userData.escalaAlvo = on ? 1.35 : 1);
@@ -1593,6 +1640,177 @@ document.addEventListener('visibilitychange', () => {
 });
 
 if (location.hash === '#p1') mostra('pagina1');   // atalho de teste: index.html#p1
+
+/* =====================================================================
+   MODO EDIÇÃO
+   · entra: tecla G  — ou segurar o dedo ~1 s sobre a versão (canto inferior esquerdo)
+   · sai:   Esc      — ou o botão "Sair e copiar"
+   · todos os textos da tela ficam editáveis; pinça (ou Ctrl + roda / pinça do
+     touchpad) muda o tamanho; Enter quebra a linha.
+   · ao sair, as mudanças são copiadas como texto para colar na conversa.
+   ===================================================================== */
+const Edicao = (() => {
+  let ativo = false;
+  const itens = new Map();   // elemento → { antes, fonteAntes, desc }
+  const PULAR = 'script,style,svg,canvas,textarea,#barraEdicao,#painelEdicao,.eq,.orbita';
+
+  const textoDe = el => el.innerText.replace(/ /g, ' ');
+  function descreve(el){
+    const onde = el.closest('.tela, .folha, .versao');
+    const lugar = onde ? (onde.id || onde.classList[0]) : 'página';
+    let s = el.tagName.toLowerCase();
+    if (el.id) s += '#' + el.id;
+    else {
+      const cls = [...el.classList].filter(c => !['entra','digitando','destaque','grande','mudou','some','sai','ativa'].includes(c));
+      if (cls.length) s += '.' + cls.join('.');
+      else if (el.parentElement && (el.parentElement.id || el.parentElement.classList[0]))
+        s = (el.parentElement.id ? '#' + el.parentElement.id : '.' + el.parentElement.classList[0]) + ' › ' + s;
+    }
+    return `${lugar} › ${s}`;
+  }
+  /* texto "próprio" (sem o dos filhos rastreados) — ex.: "desenvolvido por" sem o nome */
+  const textoProprio = el => [...el.childNodes].filter(n => n.nodeType === 3 || n.nodeName === 'BR').map(n => n.nodeName === 'BR' ? '\n' : n.textContent).join('').trim();
+  /* textos visíveis: elementos com texto próprio; letras separadas (.l) contam como a palavra inteira */
+  function candidatos(){
+    const raizes = [document.querySelector('.tela.ativa')];
+    if ($('#folha').classList.contains('aberta')) raizes.push($('#folha'));
+    const achados = new Set();
+    raizes.filter(Boolean).forEach(raiz => {
+      [raiz, ...raiz.querySelectorAll('*')].forEach(el => {
+        if (el.closest(PULAR)) return;
+        const temTexto = [...el.childNodes].some(n => n.nodeType === 3 && n.textContent.trim());
+        if (!temTexto) return;
+        achados.add(el.classList.contains('l') ? el.parentElement : el);
+      });
+    });
+    return [...achados];
+  }
+  /* sobe até o texto rastreado mais "fundo" (ex.: o nome, e não a frase inteira) */
+  const itemDe = alvo => { let el = alvo; while (el && !itens.has(el)) el = el.parentElement; return el; };
+  function entra(){
+    if (ativo) return;
+    ativo = true;
+    audio.pause();
+    document.body.classList.add('editando');
+    const lista = candidatos();
+    lista.forEach(el => {
+      if (!itens.has(el)) itens.set(el, { antes: textoDe(el), proprioAntes: textoProprio(el), fonteAntes: parseFloat(getComputedStyle(el).fontSize), desc: descreve(el) });
+    });
+    /* só o texto de fora vira "contenteditable" (os de dentro herdam); todos ficam marcados */
+    lista.forEach(el => {
+      el.setAttribute('data-editavel', '');
+      if (!lista.some(o => o !== el && o.contains(el))){ el.contentEditable = 'true'; el.spellcheck = false; }
+    });
+    $('#barraEdicao').hidden = false;
+  }
+  function relatorio(){
+    const linhas = [];
+    itens.forEach((v, el) => {
+      const temFilhos = [...itens.keys()].some(o => o !== el && el.contains(o));
+      const agora = textoDe(el);
+      const fonte = parseFloat(getComputedStyle(el).fontSize);
+      /* quem tem textos rastreados dentro só conta a mudança do próprio texto (evita repetir) */
+      const mudouTexto = temFilhos ? textoProprio(el) !== v.proprioAntes : agora !== v.antes;
+      const mudouFonte = Math.abs(fonte - v.fonteAntes) > .5;
+      if (!mudouTexto && !mudouFonte) return;
+      linhas.push(`• ${v.desc}`);
+      if (mudouTexto){ linhas.push(`  antes: ${JSON.stringify(v.antes)}`); linhas.push(`  agora: ${JSON.stringify(agora)}`); }
+      else linhas.push(`  texto: ${JSON.stringify(agora)}`);
+      if (mudouFonte) linhas.push(`  fonte: ${Math.round(v.fonteAntes)}px → ${Math.round(fonte)}px`);
+    });
+    if (!linhas.length) return '';
+    return `ALTERAÇÕES DO MODO EDIÇÃO · v${APP_VERSAO} · tela ${innerWidth}×${innerHeight}\n\n` + linhas.join('\n');
+  }
+  async function copia(txt){
+    try { await navigator.clipboard.writeText(txt); return true; }
+    catch(e){
+      const ta = $('#peTexto'); ta.focus(); ta.select();
+      try { return document.execCommand('copy'); } catch(_){ return false; }
+    }
+  }
+  async function sai(){
+    if (!ativo) return;
+    ativo = false;
+    document.activeElement && document.activeElement.blur && document.activeElement.blur();
+    const txt = relatorio();
+    itens.forEach((v, el) => { el.removeAttribute('contenteditable'); el.removeAttribute('data-editavel'); el.classList.remove('mudou'); });
+    itens.clear();
+    document.body.classList.remove('editando');
+    $('#barraEdicao').hidden = true;
+    if (!txt){ aviso('Modo edição: nada foi alterado.'); return; }
+    $('#peTexto').value = txt;
+    $('#painelEdicao').hidden = false;
+    const ok = await copia(txt);
+    $('#peStatus').textContent = ok ? 'Copiado! Cole na conversa com o Claude.' : 'Selecione o texto abaixo e copie.';
+  }
+
+  /* teclado: G entra, Esc sai, Enter = quebra de linha */
+  document.addEventListener('keydown', e => {
+    const editando = e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName);
+    if (!ativo && (e.key === 'g' || e.key === 'G') && !editando && !e.ctrlKey && !e.metaKey && !e.altKey){ e.preventDefault(); entra(); return; }
+    if (!ativo) return;
+    if (e.key === 'Escape'){ e.preventDefault(); e.stopImmediatePropagation(); sai(); return; }
+    if (e.key === 'Enter' && e.target.isContentEditable){ e.preventDefault(); document.execCommand('insertLineBreak'); }
+  }, true);
+  /* marca o que mudou */
+  document.addEventListener('input', e => {
+    if (!ativo) return;
+    const sel = getSelection(), no = sel && sel.anchorNode;
+    const el = itemDe(no && no.nodeType === 3 ? no.parentElement : (no || e.target));
+    if (el) el.classList.toggle('mudou', textoDe(el) !== itens.get(el).antes);
+  });
+  /* no modo edição, toques não acionam botões nem navegação */
+  document.addEventListener('click', e => {
+    if (ativo && !e.target.closest('#barraEdicao, #painelEdicao')){ e.preventDefault(); e.stopPropagation(); }
+  }, true);
+
+  /* pinça (dois dedos sobre o mesmo texto) muda o tamanho da fonte */
+  const dedos = new Map(); let pinca = null;
+  document.addEventListener('pointerdown', e => {
+    if (!ativo || e.pointerType !== 'touch') return;
+    dedos.set(e.pointerId, { x: e.clientX, y: e.clientY, el: itemDe(e.target) });
+    if (dedos.size === 2){
+      const [a, b] = [...dedos.values()];
+      const el = a.el || b.el;
+      if (el) pinca = { el, d0: Math.hypot(a.x - b.x, a.y - b.y), f0: parseFloat(getComputedStyle(el).fontSize) };
+    }
+  }, true);
+  document.addEventListener('pointermove', e => {
+    if (!ativo || !dedos.has(e.pointerId)) return;
+    const p = dedos.get(e.pointerId); p.x = e.clientX; p.y = e.clientY;
+    if (pinca && dedos.size === 2){
+      const [a, b] = [...dedos.values()];
+      const f = Math.max(6, Math.min(220, pinca.f0 * Math.hypot(a.x - b.x, a.y - b.y) / pinca.d0));
+      pinca.el.style.fontSize = f + 'px';
+      pinca.el.classList.add('mudou');
+      e.preventDefault(); e.stopPropagation();
+    }
+  }, { capture: true, passive: false });
+  const soltaDedo = e => { dedos.delete(e.pointerId); if (dedos.size < 2) pinca = null; };
+  document.addEventListener('pointerup', soltaDedo, true);
+  document.addEventListener('pointercancel', soltaDedo, true);
+  /* Chromebook/notebook: pinça no touchpad (ou Ctrl + roda) sobre o texto */
+  document.addEventListener('wheel', e => {
+    if (!ativo || !e.ctrlKey) return;
+    const el = itemDe(e.target); if (!el) return;
+    e.preventDefault(); e.stopPropagation();
+    const f = parseFloat(getComputedStyle(el).fontSize) * (e.deltaY < 0 ? 1.04 : .96);
+    el.style.fontSize = Math.max(6, Math.min(220, f)) + 'px';
+    el.classList.add('mudou');
+  }, { capture: true, passive: false });
+
+  /* segurar o dedo na versão abre/fecha o modo edição */
+  let tSegura = null;
+  $('#versao').addEventListener('pointerdown', () => { tSegura = setTimeout(() => { ativo ? sai() : entra(); if (navigator.vibrate) navigator.vibrate(30); }, 900); });
+  ['pointerup','pointerleave','pointercancel'].forEach(ev => $('#versao').addEventListener(ev, () => clearTimeout(tSegura)));
+  $('#versao').addEventListener('contextmenu', e => e.preventDefault());
+
+  $('#btnSairEdicao').addEventListener('click', sai);
+  $('#peCopiar').addEventListener('click', async () => { const ok = await copia($('#peTexto').value); $('#peStatus').textContent = ok ? 'Copiado de novo!' : 'Selecione o texto e copie.'; });
+  $('#peFechar').addEventListener('click', () => { $('#painelEdicao').hidden = true; });
+
+  return { entra, sai, get ativo(){ return ativo; } };
+})();
 
 /* ---------- PWA: funciona offline e pode ser instalado ---------- */
 if ('serviceWorker' in navigator && location.protocol !== 'file:'){
