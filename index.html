@@ -463,6 +463,12 @@ body.editando #palco canvas{cursor:default}
 .dica-girar svg{width:16px;height:16px;animation:arrasta 1.8s ease-in-out infinite}
 @keyframes arrasta{0%,100%{transform:translateX(-5px)}50%{transform:translateX(5px)}}
 .dica-girar.some{opacity:0}
+/* instrução em destaque (ex.: carbono): amarelo, com brilho piscando discretamente */
+.dica-girar.amarela{color:#ffc24a;border-color:rgba(255,194,74,.45);animation:brilhoDica 2s ease-in-out infinite}
+@keyframes brilhoDica{
+  0%,100%{text-shadow:0 0 4px rgba(255,194,74,.35);box-shadow:0 0 0 rgba(255,194,74,0)}
+  50%    {text-shadow:0 0 12px rgba(255,194,74,.95);box-shadow:0 0 16px rgba(255,194,74,.3)}
+}
 .sem-3d{position:absolute;inset:0;display:grid;place-items:center;color:var(--ink-2);padding:20px;text-align:center}
 
 /* equalizador quando está tocando */
@@ -749,7 +755,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.24';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.25';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -830,7 +836,7 @@ const EVENTOS = {
     }) },
   ],
   'audio_distribuição_4': [
-    { t: 1.0, acao: () => Atomo.viraPara('C', 'Carbono', 'elem', { inteiroAntes: true, dica: 'toque para girar o núcleo' }) },   // cubo vira → carbono inteiro (6 p⁺ + 6 n⁰)
+    { t: 1.0, acao: () => Atomo.viraPara('C', 'Carbono', 'elem', { inteiroAntes: true, dica: 'toque e arraste para girar o núcleo' }) },   // cubo vira → carbono inteiro (6 p⁺ + 6 n⁰)
     { t: 3.5, acao: () => Atomo.zoomLento(.464, 2200) },               // zoom no núcleo
     { t: 2.0, acao: () => Quiz.pergunta({                              // assim que o carbono aparece, as respostas
         pergunta: 'Qual o número atômico dele?',
@@ -1832,7 +1838,7 @@ const Atomo = (() => {
   function limpaLinhas(){
     Object.values(linhas).forEach(L => { if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.innerHTML = ''; L.el.classList.remove('digitando'); });
   }
-  function dica(texto){ $('#dicaTexto').textContent = texto; }
+  function dica(texto, amarela = false){ $('#dicaTexto').textContent = texto; $('#dicaGirar').classList.toggle('amarela', amarela); }
 
   const NOMES = ['Hidrogênio','Hélio','Lítio','Carbono','Nitrogênio','Oxigênio','Flúor','Neônio',
                  'Sódio','Magnésio','Alumínio','Cloro','Potássio','Cálcio','Ferro','Ouro'];
@@ -2075,7 +2081,7 @@ const Atomo = (() => {
       linhas[linha].el.innerHTML = '';
       const sp = document.createElement('span'); sp.textContent = nome; linhas[linha].el.appendChild(sp);
       $('#dicaGirar').classList.add('some');
-      if (opts.dica){ dica(opts.dica); $('#dicaGirar').classList.remove('some'); }
+      if (opts.dica){ dica(opts.dica, true); $('#dicaGirar').classList.remove('some'); }
       sfx('transition_cube');
       const op = { duration: 900, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' };
       const recuo = `translateZ(${-w * .3}px)`;
