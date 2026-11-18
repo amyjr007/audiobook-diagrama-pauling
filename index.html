@@ -785,7 +785,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.33';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.34';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -909,7 +909,8 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_6'); } },
   ],
   'audio_distribuição_6': [
-    // coreografia do áudio 6 — a definir
+    /* 10 s → 13 s: a câmera voa até a posição do modo câmera (de costas para os átomos, olhando a parede da frente) */
+    { t: 10.0, acao: () => Atomo.voaCamera([13.64, -2.36, 24.93], [13.62, -2.02, 34.92], 3000) },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -1449,6 +1450,8 @@ const Atomo = (() => {
   /* câmera: alvo do roteiro e modo câmera livre (F) */
   let alvoCam, alvoCamAtual;
   const livre = { on: false, pos: null, yaw: 0, pitch: 0, teclas: new Set(), ultHud: 0, arrastando: false };
+  /* câmera do roteiro em posição fixa (voos programados com coordenadas do modo câmera) */
+  const camRot = { on: false, pos: null, yaw: 0, pitch: 0 };
   /* molde (slot) para encaixar o núcleo */
   let molde, moldeMats = [], moldePos = [], slot = null;
   let tweens = [];
@@ -1755,7 +1758,7 @@ const Atomo = (() => {
     cena = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(40, 1, .1, 300);
     grupo = new THREE.Group(); cena.add(grupo);
-    alvoCam = new THREE.Vector3(); alvoCamAtual = new THREE.Vector3(); livre.pos = new THREE.Vector3();
+    alvoCam = new THREE.Vector3(); alvoCamAtual = new THREE.Vector3(); livre.pos = new THREE.Vector3(); camRot.pos = new THREE.Vector3();
 
     cena.add(new THREE.AmbientLight(0xffffff, .55));
     const luz = new THREE.DirectionalLight(0xffffff, 1.1); luz.position.set(4, 6, 8); cena.add(luz);
@@ -2135,7 +2138,12 @@ const Atomo = (() => {
     const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
     const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
     alvoCamAtual.lerp(alvoCam, 1 - Math.exp(-dt * 6));
-    if (!livre.on){
+    if (!livre.on && camRot.on){
+      /* câmera do roteiro numa posição programada (voo) */
+      const cp = Math.cos(camRot.pitch);
+      camera.position.copy(camRot.pos);
+      camera.lookAt(camRot.pos.clone().add(new THREE.Vector3(Math.sin(camRot.yaw) * cp, Math.sin(camRot.pitch), -Math.cos(camRot.yaw) * cp)));
+    } else if (!livre.on){
       /* câmera do roteiro: de frente para o átomo da vez */
       camera.position.set(alvoCamAtual.x, alvoCamAtual.y, alvoCamAtual.z + R_VISTA / Math.sin(meia) / zoomGesto * fatorCam);
       camera.lookAt(alvoCamAtual);
@@ -2231,7 +2239,7 @@ const Atomo = (() => {
       face.getAnimations().forEach(a => a.cancel()); face.style.transformOrigin = '';
       somDigitar.pause(); digitando = 0;
       fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; camTween = false; rotX = .35; zoomGesto = 1;
-      alvoCam.set(0, 0, 0); alvoCamAtual.set(0, 0, 0);
+      alvoCam.set(0, 0, 0); alvoCamAtual.set(0, 0, 0); camRot.on = false;
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
@@ -2282,6 +2290,34 @@ const Atomo = (() => {
     },
     /* zoom com duração exata (ex.: 10 s → 12,5 s = 2500 ms) */
     zoomLento(alvo, dur){ if (pronto) zoomLentoF(alvo, dur); },
+    /* voo da câmera até uma posição e um ponto de mira (coordenadas do relatório do modo câmera).
+       Posição em linha reta e direção girando pelo menor caminho, suave, em "dur" ms. */
+    voaCamera(pos, olha, dur = 3000){
+      if (!pronto) return;
+      const p0 = camera.position.clone();
+      const d0 = new THREE.Vector3(); camera.getWorldDirection(d0);
+      const y0 = Math.atan2(d0.x, -d0.z), pi0 = Math.asin(d0.y);
+      const p1 = new THREE.Vector3(...pos);
+      const d1 = new THREE.Vector3(...olha).sub(p1).normalize();
+      let y1 = Math.atan2(d1.x, -d1.z); const pi1 = Math.asin(d1.y);
+      while (y1 - y0 > Math.PI) y1 -= 2 * Math.PI;              // gira pelo menor caminho
+      while (y1 - y0 < -Math.PI) y1 += 2 * Math.PI;
+      camRot.on = true; camRot.pos.copy(p0); camRot.yaw = y0; camRot.pitch = pi0;
+      /* os textos da cena do átomo (nome, "Átomo neutro…", rótulos, dica) saem em fade */
+      Object.values(linhas).forEach(L => {
+        if (!L.el.textContent) return;
+        if (L.timer){ L.timer.cancela(); L.timer = null; }
+        const a = L.el.animate([{ opacity: 1 }, { opacity: 0 }], { duration: 500, fill: 'forwards' });
+        a.finished.then(() => { L.el.innerHTML = ''; L.el.classList.remove('digitando'); a.cancel(); }).catch(() => {});
+      });
+      Object.values(rotulos).forEach(r => { r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0; });
+      $('#dicaGirar').classList.add('some');
+      anima(dur, k => {
+        camRot.pos.lerpVectors(p0, p1, k);
+        camRot.yaw = y0 + (y1 - y0) * k; camRot.pitch = pi0 + (pi1 - pi0) * k;
+      });
+    },
+    cameraNoAtomo(){ camRot.on = false; },                       // volta à câmera que segue o átomo
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
     zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
@@ -2435,6 +2471,7 @@ const Atomo = (() => {
       const ATOMOS = { H: [hAtomo, maisH], C: [cAtomo, maisC], He: [he, maisHe] };
       const [grupoNovo, maisNovo] = ATOMOS[qual] || ATOMOS.H;
       const anteriores = [['He', he], ['H', hAtomo], ['C', cAtomo]].filter(([, g]) => g.visible && g !== grupoNovo);
+      camRot.on = false;                                     // a câmera volta a seguir os átomos
       /* os textos da cena anterior saem */
       Object.keys(rotulos).forEach(id => { const r = rotulos[id]; if (r.timer){ r.timer.cancela(); r.timer = null; } r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0; });
       limpaLinhas(); camadaNomes.innerHTML = '';
