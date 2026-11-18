@@ -321,7 +321,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .linha.linha-z{font-size:clamp(19px,calc(4.6vw + 2px),28px)}   /* "Z = 2": 2px maior */
 /* "Átomo neutro: Z = número de elétrons": no celular pode quebrar em 2 linhas, centralizado */
 .linha.linha-neutro{white-space:normal;width:min(92%,560px);text-align:center;line-height:1.25}
-.linha.linha-neutro.ao-lado{width:auto;max-width:27%;text-align:left;transform:translate(0,-50%)}
+.linha.linha-neutro.ao-lado{width:auto;max-width:none;white-space:nowrap;text-align:left;transform:translate(0,-50%)}
 
 /* play no modo "Ok": verde, piscando, com "Ok" escrito dentro */
 .btn-play .ok-texto{display:none;position:relative;font:700 20px "Space Grotesk",sans-serif;color:#04140a}
@@ -785,13 +785,16 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.32';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.33';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
 const CAPITULOS = [
   { titulo: 'A Estrutura atômica básica', pagina: 'pagina1', audio: 'audio_distribuição_1', inicio: 0 },
   { titulo: 'Número atômico (Z)',          pagina: 'pagina1', audio: 'audio_distribuição_2', inicio: 0, prepara: () => Atomo.estadoAudio2() },
+  { titulo: 'Quiz do H',                   pagina: 'pagina1', audio: 'audio_distribuição_3', inicio: 0, prepara: () => Atomo.estado('He', .464, 'Hélio (2He)', [7]) },
+  { titulo: 'Quiz do C',                   pagina: 'pagina1', audio: 'audio_distribuição_4', inicio: 0, prepara: () => Atomo.estado('H', .464, 'Hidrogênio - D') },
+  { titulo: 'O princípio da neutralidade do átomo', pagina: 'pagina1', audio: 'audio_distribuição_5', inicio: 0, prepara: () => Atomo.estado('C', .464, 'Carbono') },
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
@@ -895,11 +898,11 @@ const EVENTOS = {
     { t: 1.0, acao: () => { Atomo.frenteC(1000); Atomo.brilhaProtons(1000); } },          // prótons de frente, brilham por 1 s
     { t: 3.0, acao: () => Atomo.zoomLento(1, 2200) },                                    // zoom out: aparecem os elétrons
     { t: 4.7, acao: () => pausaRoteiro(1500) },                                          // pausa o áudio por 1,5 s
-    { t: 8.5,  acao: () => Atomo.digita('neutro', 'Átomo neutro: ', { cor: '#eef1ff' }) },   // celular: embaixo · Chromebook: ao lado
-    { t: 11.3, acao: () => Atomo.digita('neutro', 'Z', { cor: '#6f9bff' }) },
-    { t: 11.4, acao: () => Atomo.digita('neutro', ' = número de elétrons', { cor: '#7ce7ff' }) },
+    { t: 8.5,  acao: () => Atomo.digita('neutro', 'Átomo neutro:', { cor: '#eef1ff' }) },    // celular: embaixo · Chromebook: ao lado
+    { t: 11.3, acao: () => { Atomo.quebraLinha('neutro'); Atomo.digita('neutro', 'Z', { cor: '#6f9bff' }); } },   // 2ª linha, alinhada com a 1ª
+    { t: 11.4, acao: () => Atomo.digita('neutro', ' = Nº de elétrons', { cor: '#7ce7ff' }) },   // Nº = número
     /* fim: tudo fica na tela e o áudio 5.3 começa sozinho, com o play escondido */
-    { t: 'fim', acao: () => { escondePlay(true); carrega('audio_distribuição_5.3'); audio.play().catch(() => {}); } },
+    { t: 'fim', acao: () => { escondePlay(true); tocaDepois(1500, 'audio_distribuição_5.3'); } },   // 1,5 s de silêncio e o 5.3 começa
   ],
   'audio_distribuição_5.3': [
     /* fim: o play volta como "Ok" verde piscando → áudio 6 */
@@ -1265,7 +1268,14 @@ let estavaCongelado = false;
   }
   requestAnimationFrame(vigiaCongelamento);
 })();
+/* toca um áudio depois de um intervalo (cancelado por Home, Sumário, modo edição/câmera) */
+let timerProximo = null;
+function tocaDepois(ms, nome){
+  clearTimeout(timerProximo);
+  timerProximo = setTimeout(() => { timerProximo = null; carrega(nome); audio.play().catch(() => {}); }, ms);
+}
 function cancelaPausaRoteiro(executarPendentes = false){
+  clearTimeout(timerProximo); timerProximo = null;
   pausaTimers.forEach(clearTimeout); pausaTimers = [];
   if (executarPendentes) pausaPendentes.forEach(fn => fn && fn());
   pausaPendentes = [];
@@ -2225,6 +2235,26 @@ const Atomo = (() => {
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
+    /* cena pronta para começar um áudio direto pelo Sumário: só o átomo escolhido, câmera nele, com o zoom dado */
+    estado(qual, fator = .464, nome = '', sub = null){
+      this.reset(); if (!pronto) return;
+      const G = { He: [he, maisHe], H: [hAtomo, maisH], C: [cAtomo, maisC] };
+      li.visible = false;
+      const [g, mais] = G[qual];
+      g.visible = true;
+      mais.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
+      if (qual === 'He'){ esfera.visible = true; esfera.material.uniforms.opac.value = 1; setEsf(esfera, ESF_FINA); }
+      alvoCam.copy(g.position); alvoCamAtual.copy(g.position);
+      fatorCam = fatorCamAlvo = fator;
+      if (nome){
+        const L = linhas.elem, sp = document.createElement('span');
+        if (sub) sp.innerHTML = [...nome].map((c, i) => sub.includes(i) ? `<sub>${c}</sub>` : c).join(''); else sp.textContent = nome;
+        L.el.appendChild(sp);
+      }
+      $('#dicaGirar').classList.add('some');
+    },
+    /* quebra a linha de um texto digitado (o próximo trecho começa embaixo, alinhado) */
+    quebraLinha(id){ const L = linhas[id]; if (L){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.appendChild(document.createElement('br')); } },
     /* estado pronto para começar o áudio 2 direto (pelo Sumário) */
     estadoAudio2(){
       this.reset(); if (!pronto) return;
