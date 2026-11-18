@@ -753,7 +753,7 @@ body.editando #palco canvas{cursor:default}
 <!-- MODO CÂMERA (F entra · F ou Esc salva e sai) -->
 <div class="hud-camera" id="hudCamera" hidden>
   <div class="hc-titulo">📷 Modo câmera</div>
-  <div class="hc-ajuda">W A S D mover · Q / E descer / subir · arrastar = olhar · roda = avançar · Shift = rápido · F ou Esc = salvar</div>
+  <div class="hc-ajuda" id="hcAjuda"></div>
   <pre class="hc-dados"></pre>
 </div>
 <div class="painel-edicao" id="painelEdicao" hidden>
@@ -773,7 +773,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.27';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.28';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -842,7 +842,7 @@ const EVENTOS = {
     /* virada para o hidrogênio (Atomo.viraParaHidrogenio) fica guardada para depois */
   ],
   'audio_distribuição_3': [
-    { t: 1.0, acao: () => Atomo.viraPara('H', 'Hidrogênio - D', 'elem', { inteiroAntes: true }) },   // cubo vira → deutério inteiro
+    { t: 1.0, acao: () => Atomo.viajaPara('H', 'Hidrogênio - D', 'elem', { inteiroAntes: true }) },  // câmera afasta, viaja até o deutério e aproxima (átomo inteiro)
     { t: 4.0, acao: () => Atomo.zoomLento(.464, 2200) },               // zoom no núcleo (a eletrosfera some)
     { t: 4.0, acao: () => Quiz.pergunta({
         pergunta: 'Qual o número atômico dele?',
@@ -854,7 +854,7 @@ const EVENTOS = {
     }) },
   ],
   'audio_distribuição_4': [
-    { t: 1.0, acao: () => Atomo.viraPara('C', 'Carbono', 'elem', { inteiroAntes: true, dica: 'toque e arraste para girar o núcleo' }) },   // cubo vira → carbono inteiro (6 p⁺ + 6 n⁰)
+    { t: 1.0, acao: () => Atomo.viajaPara('C', 'Carbono', 'elem', { inteiroAntes: true, dica: 'toque e arraste para girar o núcleo' }) },   // câmera viaja até o carbono (6 p⁺ + 6 n⁰)
     { t: 3.5, acao: () => Atomo.zoomLento(.464, 2200) },               // zoom no núcleo
     { t: 2.0, acao: () => Quiz.pergunta({                              // assim que o carbono aparece, as respostas
         pergunta: 'Qual o número atômico dele?',
@@ -1492,7 +1492,7 @@ const Atomo = (() => {
   }
   function montaLab(){
     const lab = new THREE.Group(); cena.add(lab);
-    cena.fog = new THREE.Fog(0x070a14, 45, 125);
+    cena.fog = new THREE.Fog(0x05070e, 38, 110);
     const fosco = (cor, r = .85, m = .1) => new THREE.MeshStandardMaterial({ color: cor, roughness: r, metalness: m });
     /* piso + rejunte */
     const piso = new THREE.Mesh(new THREE.PlaneGeometry(170, 120), fosco(0x0a0d16, .55, .3));
@@ -1555,9 +1555,21 @@ const Atomo = (() => {
     });
     /* tabela periódica na parede (apagada) */
     const tp = new THREE.Mesh(new THREE.PlaneGeometry(19, 11), new THREE.MeshBasicMaterial({ map: texTabela(), color: 0x4a5370 })); tp.position.set(2, 16, -41.9); lab.add(tp);
-    /* luar entrando pela janela */
-    const lua = new THREE.SpotLight(0x5f8cff, .9, 140, .55, .7); lua.position.set(-34, 26, -34); lua.target.position.set(-5, -11, 0);
+    /* luar entrando pela janela (bem fraco) */
+    const lua = new THREE.SpotLight(0x5f8cff, .35, 140, .55, .7); lua.position.set(-34, 26, -34); lua.target.position.set(-5, -11, 0);
     cena.add(lua, lua.target);
+    /* LUZES APAGADAS: o laboratório inteiro fica só ~10% visível; a bancada e as prateleiras
+       do centro (atrás do átomo) ficam ainda mais escuras */
+    lab.traverse(o => {
+      const mats = o.material ? (Array.isArray(o.material) ? o.material : [o.material]) : [];
+      const centro = Math.abs(o.position.x) < 22 && o.position.z < -30;
+      const k = centro ? .16 : .26;
+      mats.forEach(m => {
+        if (m.userData.escurecido) return; m.userData.escurecido = true;   // materiais compartilhados: uma vez só
+        if (m.color) m.color.multiplyScalar(k);
+        if (m.emissive) m.emissiveIntensity *= .35;
+      });
+    });
   }
 
   /* ---------- MODO CÂMERA (F) ---------- */
@@ -1789,6 +1801,18 @@ const Atomo = (() => {
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         livre.yaw += dx * .005;
         livre.pitch = Math.max(-1.5, Math.min(1.5, livre.pitch - dy * .005));
+      } else if (toques.size === 2 && livre.on){      // modo câmera: dois dedos = pan; pinça = avançar/recuar
+        p.x = e.clientX; p.y = e.clientY;
+        const [A, B] = [...toques.values()];
+        const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, d = Math.hypot(A.x - B.x, A.y - B.y);
+        if (livre.mid){
+          const lado = new THREE.Vector3(Math.cos(livre.yaw), 0, Math.sin(livre.yaw));
+          livre.pos.addScaledVector(lado, -(mx - livre.mid.x) * .04);
+          livre.pos.y += (my - livre.mid.y) * .04;
+          const fr = new THREE.Vector3(); camera.getWorldDirection(fr);
+          livre.pos.addScaledVector(fr, (d - livre.mid.d) * .06);
+        }
+        livre.mid = { x: mx, y: my, d };
       } else if (toques.size === 1 && !travaGesto){
         const dx = e.clientX - p.x, dy = e.clientY - p.y;
         velY = dx * .008; velX = dy * .008;
@@ -1797,7 +1821,7 @@ const Atomo = (() => {
       p.x = e.clientX; p.y = e.clientY;
       ultimoToque = performance.now();
     });
-    const solta = e => { toques.delete(e.pointerId); distPinca = 0; };
+    const solta = e => { toques.delete(e.pointerId); distPinca = 0; livre.mid = null; };
     cv.addEventListener('pointerup', solta); cv.addEventListener('pointercancel', solta);
     /* modo câmera: roda = avançar / recuar */
     cv.addEventListener('wheel', e => {
@@ -2055,6 +2079,7 @@ const Atomo = (() => {
       somDigitar.pause(); digitando = 0;
       fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; camTween = false; rotX = .35; zoomGesto = 1;
       alvoCam.set(0, 0, 0); alvoCamAtual.set(0, 0, 0);
+      [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
     /* estado pronto para começar o áudio 2 direto (pelo Sumário) */
@@ -2228,6 +2253,45 @@ const Atomo = (() => {
       });
     },
     viraParaHidrogenio(nome = 'Hidrogênio', linha = 'hnome'){ this.viraPara('H', nome, linha); },
+    /* troca de átomo pela câmera: afasta → viaja até o próximo átomo do laboratório → aproxima.
+       O átomo anterior encolhe e some na aproximação. (~2,4 s, no relógio do roteiro)
+       opts.inteiroAntes: chega mostrando o átomo inteiro (o zoom no núcleo vem por evento)
+       opts.dica: instrução amarela embaixo do nome */
+    viajaPara(qual, nome, linha = 'elem', opts = {}){
+      if (!pronto) return;
+      const ATOMOS = { H: [hAtomo, maisH], C: [cAtomo, maisC], He: [he, maisHe] };
+      const [grupoNovo, maisNovo] = ATOMOS[qual] || ATOMOS.H;
+      const anteriores = [['He', he], ['H', hAtomo], ['C', cAtomo]].filter(([, g]) => g.visible && g !== grupoNovo);
+      /* os textos da cena anterior saem */
+      Object.keys(rotulos).forEach(id => { const r = rotulos[id]; if (r.timer){ r.timer.cancela(); r.timer = null; } r.ativo = false; r.el.style.opacity = 0; r.g.style.opacity = 0; });
+      limpaLinhas(); camadaNomes.innerHTML = '';
+      $('#dicaGirar').classList.add('some');
+      /* o átomo novo já está lá, esperando a câmera */
+      li.visible = false;
+      grupoNovo.visible = true; grupoNovo.scale.setScalar(1);
+      maisNovo.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
+      giroAuto = giroNucleo = true;
+      camTween = true;
+      const f0 = fatorCam, fLonge = 1.7, fFim = opts.inteiroAntes ? 1 : .464;
+      const p0 = alvoCam.clone(), p1 = grupoNovo.position.clone();
+      const segue = (de, para, k) => { fatorCam = fatorCamAlvo = de + (para - de) * k; };
+      anima(700, k => segue(f0, fLonge, k), () => {                                   // 1) afasta
+        anima(900, k => { alvoCam.lerpVectors(p0, p1, k); alvoCamAtual.copy(alvoCam); }, () => {   // 2) viaja
+          const L = linhas[linha]; L.el.innerHTML = '';
+          const sp = document.createElement('span'); sp.textContent = nome; L.el.appendChild(sp);
+          L.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500 });
+          if (opts.dica){ dica(opts.dica, true); $('#dicaGirar').classList.remove('some'); }
+          anteriores.forEach(([q]) => ATOMOS[q][1].forEach(({sprite}) => sprite.visible = false));
+          anima(800, k => {                                                            // 3) aproxima
+            segue(fLonge, fFim, k);
+            anteriores.forEach(([, g]) => g.scale.setScalar(Math.max(.001, 1 - k)));   // o anterior encolhe e some
+          }, () => {
+            camTween = false;
+            anteriores.forEach(([, g]) => { g.visible = false; g.scale.setScalar(1); });
+          });
+        }, ease);
+      });
+    },
     /* só a região do átomo vira como a face de um cubo e mostra outro átomo
        qual: 'H' (deutério) ou 'C' (carbono) */
     /* opts.inteiroAntes: mostra o átomo inteiro (com eletrosfera) e depois dá o zoom no núcleo
@@ -2395,10 +2459,16 @@ const Intro = (() => {
    ===================================================================== */
 const ModoCamera = (() => {
   const TECLAS = ['w','a','s','d','q','e','c',' ','arrowup','arrowdown','arrowleft','arrowright','shift'];
-  function entra(){
+  const AJUDA = {
+    teclado: 'W A S D mover · Q / E descer / subir · arrastar = olhar · roda = avançar · Shift = rápido · F ou Esc = salvar',
+    toque:   '1 dedo = olhar em volta · 2 dedos = mover (pan) · pinça = avançar / recuar · 2 toques na versão = salvar',
+  };
+  function entra(modo = 'teclado'){
+    if (!$('#pagina1').classList.contains('ativa')){ aviso('O modo câmera funciona na página do átomo.'); return; }
     cancelaPausaRoteiro(); audio.pause();
     window.__modoCamera = true;
     Atomo.camLivre(true);
+    $('#hcAjuda').textContent = AJUDA[modo];
     $('#hudCamera').hidden = false;
   }
   async function sai(){
@@ -2423,11 +2493,22 @@ const ModoCamera = (() => {
     }
     const digitando = e.target.isContentEditable || /INPUT|TEXTAREA/.test(e.target.tagName);
     if (k === 'f' && !digitando && !Edicao.ativo && !e.ctrlKey && !e.metaKey && !e.altKey && $('#pagina1').classList.contains('ativa')){
-      e.preventDefault(); entra();
+      e.preventDefault(); entra('teclado');
     }
   }, true);
   document.addEventListener('keyup', e => { if (Atomo.camLivreAtiva) Atomo.teclaCam(e.key.toLowerCase(), false); }, true);
   window.addEventListener('blur', () => { if (Atomo.camLivreAtiva) TECLAS.forEach(t => Atomo.teclaCam(t, false)); });
+  /* celular: dois toques na versão liga; dois toques de novo salva e desliga
+     (segurar o dedo na versão continua sendo o modo edição) */
+  let ultimoToque = 0;
+  $('#versao').addEventListener('click', () => {
+    if (Edicao.ativo) return;
+    const agora = Date.now();
+    if (agora - ultimoToque < 450){
+      ultimoToque = 0;
+      if (Atomo.camLivreAtiva) sai(); else entra('toque');
+    } else ultimoToque = agora;
+  });
   return { entra, sai };
 })();
 
