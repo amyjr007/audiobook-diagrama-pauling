@@ -773,7 +773,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.28';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.29';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -783,7 +783,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1'];
 
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
@@ -838,7 +838,7 @@ const EVENTOS = {
     { t: 38.0, acao: () => Atomo.pulsaLinha('z') },
     { t: 39.5, acao: () => Atomo.digita('elem', 'Hélio (2He)', { cor: '#eef1ff', sub: [7] }) },   // ₂He
     /* fim: play some, aparece "toque na tela"; tocou → áudio 3 */
-    { t: 'fim', acao: () => { Atomo.voltaGirar(); escondePlay(true); mostraToque(true); } },
+    { t: 'fim', acao: () => { Atomo.voltaGirar(); escondePlay(true); mostraToque(true, 'audio_distribuição_3'); } },
     /* virada para o hidrogênio (Atomo.viraParaHidrogenio) fica guardada para depois */
   ],
   'audio_distribuição_3': [
@@ -865,13 +865,24 @@ const EVENTOS = {
     }) },
   ],
   'audio_distribuição_5': [
-    // eventos do áudio 5 — a definir
+    { t: 7.0,  acao: () => { Atomo.frenteC(1000); Atomo.brilhaProtons(1000); } },   // núcleo do C vira: prótons de frente, brilham em fade por 1 s
+    { t: 10.0, acao: () => Atomo.zoomLento(1, 2200) },                               // zoom out: átomo centralizado, com a eletrosfera
+    { t: 16.0, acao: () => Atomo.viajaPara('H', 'Hidrogênio - D', 'elem') },         // câmera volta ao H (chega com o zoom no núcleo)
+    { t: 17.5, acao: () => Atomo.brilhaProtons(1000) },                              // o próton brilha em fade por 1 s
+    { t: 19.0, acao: () => Atomo.zoomLento(1, 2200) },                               // zoom out: H inteiro, mostrando o elétron
+    { t: 'fim', acao: () => { Atomo.voltaGirar(); escondePlay(true); mostraToque(true, 'audio_distribuição_5.1'); } },
+  ],
+  'audio_distribuição_5.1': [
+    // coreografia do áudio 5.1 — a definir
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
 /* "toque na tela": aparece no fim do áudio 2; o toque começa o áudio 3 */
-function mostraToque(on){
+/* "toque na tela para continuar": o toque toca o áudio guardado em proximoAoTocar */
+let proximoAoTocar = 'audio_distribuição_3';
+function mostraToque(on, proximo){
   $('#toqueTela').hidden = !on;
+  if (proximo) proximoAoTocar = proximo;
   if (on) $('#dicaGirar').classList.add('some');
 }
 /* =====================================================================
@@ -958,7 +969,7 @@ const Quiz = (() => {
 document.getElementById('toqueTela').addEventListener('click', () => {
   mostraToque(false);
   escondePlay(false);
-  carrega('audio_distribuição_3');
+  carrega(proximoAoTocar);
   audio.play().catch(() => {});
 });
 
@@ -1656,6 +1667,11 @@ const Atomo = (() => {
       sp.scale.setScalar(.42); sp.visible = false; cena.add(sp); lista.push({ sprite: sp, alvo });
     };
     const texHalo = texPonto();
+    /* halo de brilho (destaque) para qualquer partícula — usado no He, no H e no C */
+    var haloPara = (m, lista, cor) => {
+      const h = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: cor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      h.scale.setScalar(2.3); h.visible = false; m.add(h); lista.push(h);
+    };
     tetra.forEach(([x,y,z], i) => {
       const proton = i < 2;
       const m = new THREE.Mesh(geoN, proton ? mP : mN);
@@ -1695,6 +1711,7 @@ const Atomo = (() => {
     hProton.userData.escala = 1; hProton.userData.escalaAlvo = 1;
     const hNeutron = new THREE.Mesh(geoN, mN); hNeutron.position.set(.42, 0, 0);
     hNucleo.add(hProton, hNeutron); novoMais(hProton, maisH);
+    haloPara(hProton, halosP, 0x3d74ff); haloPara(hNeutron, halosN, 0xe0a21f);
     esferaH = new THREE.Mesh(esfera.geometry, matEsfera(ESF_FINA, 1)); hAtomo.add(esferaH);
 
     /* ---- carbono: 6 prótons + 6 nêutrons; eletrosfera com 2 camadas (K e L), só a borda ---- */
@@ -1708,7 +1725,7 @@ const Atomo = (() => {
         const m = new THREE.Mesh(geoN, proton ? mP : mN);
         m.position.set(x*esc, y*esc, z*esc); m.userData.escala = 1;
         cNucleo.add(m);
-        if (proton) novoMais(m, maisC);
+        if (proton){ novoMais(m, maisC); haloPara(m, halosP, 0x3d74ff); }
       });
     cEsferas = [new THREE.Mesh(new THREE.SphereGeometry(R_ESF * .62, 64, 40), matEsfera(ESF_FINA, 1)),   // camada K
                 new THREE.Mesh(esfera.geometry, matEsfera(ESF_FINA, 1))];                               // camada L
@@ -1941,8 +1958,8 @@ const Atomo = (() => {
     }
     /* núcleo: gira bem devagar; bolinhas crescem suavemente quando destacadas */
     if (he.visible && giroNucleo){ heNucleo.rotation.y += dtR * .088; heNucleo.rotation.x += dtR * .032; }
-    if (hAtomo.visible){ hNucleo.rotation.y += dtR * .088; hNucleo.rotation.x += dtR * .032; }
-    if (cAtomo.visible){ cNucleo.rotation.y += dtR * .088; cNucleo.rotation.x += dtR * .032; }
+    if (hAtomo.visible && giroNucleo){ hNucleo.rotation.y += dtR * .088; hNucleo.rotation.x += dtR * .032; }
+    if (cAtomo.visible && giroNucleo){ cNucleo.rotation.y += dtR * .088; cNucleo.rotation.x += dtR * .032; }
     [...protons, ...neutrons, hProton].forEach(m => {
       m.userData.escala += (m.userData.escalaAlvo - m.userData.escala) * (1 - Math.exp(-dtR * 9));
       m.scale.setScalar(m.userData.escala);
@@ -2274,23 +2291,38 @@ const Atomo = (() => {
       camTween = true;
       const f0 = fatorCam, fLonge = 1.7, fFim = opts.inteiroAntes ? 1 : .464;
       const p0 = alvoCam.clone(), p1 = grupoNovo.position.clone();
-      const segue = (de, para, k) => { fatorCam = fatorCamAlvo = de + (para - de) * k; };
-      anima(700, k => segue(f0, fLonge, k), () => {                                   // 1) afasta
-        anima(900, k => { alvoCam.lerpVectors(p0, p1, k); alvoCamAtual.copy(alvoCam); }, () => {   // 2) viaja
+      /* tudo junto, num movimento só: enquanto desliza até o átomo novo, a câmera se afasta
+         (até a metade do caminho) e se aproxima (na segunda metade) */
+      let nomePosto = false;
+      anima(2400, k => {
+        alvoCam.lerpVectors(p0, p1, ease(k)); alvoCamAtual.copy(alvoCam);
+        fatorCam = fatorCamAlvo = f0 + (fFim - f0) * k + (fLonge - (f0 + fFim) / 2) * Math.sin(Math.PI * k);
+        if (k > .5) anteriores.forEach(([, g]) => g.scale.setScalar(Math.max(.001, 1 - (k - .5) * 2)));   // o anterior encolhe e some
+        if (k > .6 && !nomePosto){
+          nomePosto = true;
           const L = linhas[linha]; L.el.innerHTML = '';
           const sp = document.createElement('span'); sp.textContent = nome; L.el.appendChild(sp);
-          L.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 500 });
+          L.el.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 600 });
           if (opts.dica){ dica(opts.dica, true); $('#dicaGirar').classList.remove('some'); }
           anteriores.forEach(([q]) => ATOMOS[q][1].forEach(({sprite}) => sprite.visible = false));
-          anima(800, k => {                                                            // 3) aproxima
-            segue(fLonge, fFim, k);
-            anteriores.forEach(([, g]) => g.scale.setScalar(Math.max(.001, 1 - k)));   // o anterior encolhe e some
-          }, () => {
-            camTween = false;
-            anteriores.forEach(([, g]) => { g.visible = false; g.scale.setScalar(1); });
-          });
-        }, ease);
-      });
+        }
+      }, () => {
+        camTween = false;
+        anteriores.forEach(([, g]) => { g.visible = false; g.scale.setScalar(1); });
+      }, k => k);
+    },
+    /* gira o núcleo do carbono até os prótons ficarem de frente (o giro automático para) */
+    frenteC(dur = 1000){
+      if (!pronto) return;
+      giroNucleo = false; giroAuto = false;
+      const media = new THREE.Vector3();
+      cNucleo.children.forEach(m => { if (m.material === mP) media.add(m.position); });
+      media.normalize();
+      const qGrupo = new THREE.Quaternion().setFromEuler(cAtomo.rotation);
+      const qAlinha = new THREE.Quaternion().setFromUnitVectors(media, new THREE.Vector3(0, 0, 1));
+      const qAlvo = qGrupo.clone().invert().multiply(qAlinha);
+      const q0 = cNucleo.quaternion.clone();
+      anima(dur, k => cNucleo.quaternion.slerpQuaternions(q0, qAlvo, k));
     },
     /* só a região do átomo vira como a face de um cubo e mostra outro átomo
        qual: 'H' (deutério) ou 'C' (carbono) */

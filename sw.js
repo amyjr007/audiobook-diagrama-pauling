@@ -1,6 +1,6 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v28';  // acompanhe APP_VERSAO do index.html (0.28 → v28)
+const CACHE = 'pauling-v29';  // acompanhe APP_VERSAO do index.html (0.29 → v29)
 const ARQUIVOS = [
   './',
   './index.html',
@@ -25,6 +25,9 @@ const ARQUIVOS = [
   './audio/' + encodeURIComponent('audio_distribuição_2') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_3') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_4') + '.mp3',
+  './audio/' + encodeURIComponent('audio_distribuição_5') + '.mp3',
+  './audio/' + encodeURIComponent('audio_distribuição_5.1') + '.mp3',
+  './audio/' + encodeURIComponent('audio_distribuição_5.2') + '.mp3',
   /* sons do quiz */
   ...['funfare','applause','error','Calmanaproximaacerta','exato!','muitobem','issomesmo!','excelente']
       .map(n => './audio/vfx/' + encodeURIComponent(n) + '.mp3'),
