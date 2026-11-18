@@ -785,7 +785,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.31';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.32';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1554,13 +1554,17 @@ const Atomo = (() => {
     const fosco = (cor, r = .85, m = .1) => new THREE.MeshStandardMaterial({ color: cor, roughness: r, metalness: m });
     /* piso + rejunte */
     const piso = new THREE.Mesh(new THREE.PlaneGeometry(170, 120), fosco(0x0a0d16, .55, .3));
-    piso.rotation.x = -Math.PI / 2; piso.position.set(0, -11, -15); lab.add(piso);
-    const rejunte = new THREE.GridHelper(170, 68, 0x161d30, 0x10172a); rejunte.position.set(0, -10.97, -15); lab.add(rejunte);
+    piso.rotation.x = -Math.PI / 2; piso.position.set(0, -11, -10); lab.add(piso);   // vai da parede do fundo até a da frente
+    const rejunte = new THREE.GridHelper(170, 68, 0x161d30, 0x10172a); rejunte.position.set(0, -10.97, -10); lab.add(rejunte);
     /* parede do fundo (azulejos) e laterais */
     const az = texAzulejo(); az.repeat.set(26, 9);
     const parede = new THREE.Mesh(new THREE.PlaneGeometry(170, 56), new THREE.MeshStandardMaterial({ map: az, color: 0x48516a, roughness: .9 }));
     parede.position.set(0, 17, -42); lab.add(parede);
     [-85, 85].forEach(x => { const p = new THREE.Mesh(new THREE.PlaneGeometry(120, 56), fosco(0x0b0f1a)); p.position.set(x, 17, 18); p.rotation.y = x < 0 ? Math.PI / 2 : -Math.PI / 2; lab.add(p); });
+    /* parede da frente (onde fica a galeria dos cientistas) */
+    const frenteParede = new THREE.Mesh(new THREE.PlaneGeometry(170, 56), new THREE.MeshStandardMaterial({ map: az.clone(), color: 0x48516a, roughness: .9 }));
+    frenteParede.material.map.repeat.set(26, 9); frenteParede.material.map.needsUpdate = true;
+    frenteParede.position.set(0, 17, 50); frenteParede.rotation.y = Math.PI; lab.add(frenteParede);
     /* bancada com armários */
     const tampo = new THREE.Mesh(new THREE.BoxGeometry(96, .8, 9), fosco(0x1a2030, .45, .35)); tampo.position.set(0, -4.4, -36); lab.add(tampo);
     const corpo = new THREE.Mesh(new THREE.BoxGeometry(94, 6.2, 8.4), fosco(0x0f131e)); corpo.position.set(0, -7.9, -36); lab.add(corpo);
@@ -1630,6 +1634,72 @@ const Atomo = (() => {
     });
   }
 
+  /* ---------- GALERIA DOS CIENTISTAS ----------
+     Na parede da FRENTE do laboratório (atrás da câmera do roteiro), enquadrada pela câmera
+     do modo F: posição (0, 0, 21.93) olhando para (−0.08, −1.21, 31.85). */
+  const GALERIA = { x: 0, y: 0, z: 49.6 };       // base do painel na parede da frente (virado para o centro da sala)
+  function texPlaca(nome, anos){
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128;
+    const g = c.getContext('2d');
+    const gr = g.createLinearGradient(0, 0, 0, 128); gr.addColorStop(0, '#e9cf8a'); gr.addColorStop(.5, '#c79a3e'); gr.addColorStop(1, '#8f6a22');
+    g.fillStyle = gr; g.fillRect(0, 0, 512, 128);
+    g.strokeStyle = 'rgba(60,40,10,.6)'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
+    g.fillStyle = '#2a1c05'; g.textAlign = 'center';
+    g.font = '700 46px "Space Grotesk", sans-serif'; g.fillText(nome, 256, 62);
+    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillText(anos, 256, 104);
+    return new THREE.CanvasTexture(c);
+  }
+  function texTituloGaleria(){
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 82;
+    const g = c.getContext('2d');
+    g.fillStyle = '#3a2a18'; g.textAlign = 'center';
+    g.font = '600 50px "Space Grotesk", sans-serif';
+    g.fillText('OS CIENTISTAS DO ÁTOMO', 512, 60);
+    return new THREE.CanvasTexture(c);
+  }
+  function montaGaleria(){
+    const gal = new THREE.Group(); cena.add(gal);
+    gal.position.set(GALERIA.x, GALERIA.y, GALERIA.z);
+    gal.rotation.y = Math.PI;                       // virada para o centro da sala
+    /* painel claro (não é escurecido como o resto do laboratório), do piso para cima */
+    const painel = new THREE.Mesh(new THREE.PlaneGeometry(46, 24), new THREE.MeshStandardMaterial({ color: 0xd8d0bf, roughness: .85 }));
+    painel.position.set(0, 1, 0); gal.add(painel);
+    const rodape = new THREE.Mesh(new THREE.BoxGeometry(46, .8, .5), new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: .6 }));
+    rodape.position.set(0, -10.6, .25); gal.add(rodape);
+    const titulo = new THREE.Mesh(new THREE.PlaneGeometry(20, 1.6), new THREE.MeshBasicMaterial({ map: texTituloGaleria(), transparent: true }));
+    titulo.position.set(0, 10.6, .3); gal.add(titulo);
+    const loader = new THREE.TextureLoader();
+    const CIENTISTAS = [
+      { img: 'imagens/rutherford_free.jpg',    nome: 'Ernest Rutherford', anos: '1871 – 1937', prop: 960 / 1300 },
+      { img: 'imagens/Niels_Bohr_free.jpg',    nome: 'Niels Bohr',        anos: '1885 – 1962', prop: 960 / 1350 },
+      { img: 'imagens/Linus_Pauling_Free.png', nome: 'Linus Pauling',     anos: '1901 – 1994', prop: 711 / 806 },
+    ];
+    const altura = 10;
+    CIENTISTAS.forEach((c, i) => {
+      const x = (i - 1) * 12.5, y = -1.6;
+      const largura = altura * c.prop;
+      /* moldura de madeira escura */
+      const moldura = new THREE.Mesh(new THREE.BoxGeometry(largura + 1.6, altura + 1.6, .5), new THREE.MeshStandardMaterial({ color: 0x2b1a0c, roughness: .45, metalness: .1 }));
+      moldura.position.set(x, y, .25); gal.add(moldura);
+      const passe = new THREE.Mesh(new THREE.PlaneGeometry(largura + .6, altura + .6), new THREE.MeshBasicMaterial({ color: 0xf2ece0 }));
+      passe.position.set(x, y, .52); gal.add(passe);
+      const foto = new THREE.Mesh(new THREE.PlaneGeometry(largura, altura), new THREE.MeshBasicMaterial({ map: loader.load(c.img) }));
+      foto.position.set(x, y, .54); gal.add(foto);
+      /* plaquinha com o nome */
+      const placa = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 2.1), new THREE.MeshBasicMaterial({ map: texPlaca(c.nome, c.anos) }));
+      placa.position.set(x, y - altura / 2 - 2.3, .3); gal.add(placa);
+      /* luminária de galeria + luz quente sobre o quadro */
+      const lum = new THREE.Mesh(new THREE.BoxGeometry(4.6, .4, .9), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, emissive: 0xffe2b0, emissiveIntensity: .9 }));
+      lum.position.set(x, y + altura / 2 + 1.7, 1.1); gal.add(lum);
+      /* a galeria está virada (rotação de 180°): x local → −x no mundo, e "à frente" é −z */
+      const wx = GALERIA.x - x;
+      const spot = new THREE.SpotLight(0xffe2b0, 2.6, 40, .5, .65);
+      spot.position.set(wx, GALERIA.y + y + 11, GALERIA.z - 10);
+      spot.target.position.set(wx, GALERIA.y + y - 1, GALERIA.z);
+      cena.add(spot, spot.target);
+    });
+  }
+
   /* ---------- MODO CÂMERA (F) ---------- */
   const fx = n => n.toFixed(2);
   function infoCamera(){
@@ -1655,7 +1725,8 @@ const Atomo = (() => {
       `• olhando para: (${fx(i.alvo.x)}, ${fx(i.alvo.y)}, ${fx(i.alvo.z)})  ← ponto 10 unidades à frente\n` +
       `• direção: yaw ${i.yaw.toFixed(1)}° · pitch ${i.pitch.toFixed(1)}°\n` +
       `• campo de visão: ${camera.fov}°\n` +
-      `• átomos: H (${POS_ATOMO.H.join(', ')}) · He (${POS_ATOMO.He.join(', ')}) · C (${POS_ATOMO.C.join(', ')})`;
+      `• átomos: H (${POS_ATOMO.H.join(', ')}) · He (${POS_ATOMO.He.join(', ')}) · C (${POS_ATOMO.C.join(', ')})\n` +
+      `• galeria dos cientistas (centro): (${GALERIA.x}, ${GALERIA.y}, ${GALERIA.z})`;
   }
 
   function monta(){
@@ -1680,6 +1751,7 @@ const Atomo = (() => {
     const luz = new THREE.DirectionalLight(0xffffff, 1.1); luz.position.set(4, 6, 8); cena.add(luz);
     const luzCiano = new THREE.PointLight(0x3ee0ff, 1.2, 30); luzCiano.position.set(-5, -2, 4); cena.add(luzCiano);
     montaLab();
+    montaGaleria();      // depois do "apagar as luzes": a galeria fica clara e iluminada
 
     /* ---- lítio: 3 prótons + 3 nêutrons, nuvens 1s e 2s ---- */
     li = new THREE.Group(); grupo.add(li);
@@ -2468,6 +2540,12 @@ const Atomo = (() => {
       return rel;
     },
     get camLivreAtiva(){ return livre.on; },
+    /* (testes / roteiro) aponta a câmera livre: posição e ponto para onde olha */
+    _apontaCamera(px, py, pz, ax, ay, az){
+      livre.pos.set(px, py, pz);
+      const d = new THREE.Vector3(ax - px, ay - py, az - pz).normalize();
+      livre.yaw = Math.atan2(d.x, -d.z); livre.pitch = Math.asin(d.y);
+    },
     teclaCam(tecla, apertada){ if (apertada) livre.teclas.add(tecla); else livre.teclas.delete(tecla); },
     /* zoom da tela (só o modo edição usa) */
     zoomPor(f){ zoomGesto = Math.min(2.5, Math.max(.5, zoomGesto * f)); },

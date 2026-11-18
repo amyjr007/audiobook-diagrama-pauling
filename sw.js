@@ -1,6 +1,6 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v31';  // acompanhe APP_VERSAO do index.html (0.31 → v31)
+const CACHE = 'pauling-v32';  // acompanhe APP_VERSAO do index.html (0.32 → v32)
 const ARQUIVOS = [
   './',
   './index.html',
@@ -12,6 +12,9 @@ const ARQUIVOS = [
   './icones/icone-maskable-512.png',
   './icones/apple-touch-icon.png',
   './imagens/amauri_jr.jpg',
+  './imagens/rutherford_free.jpg',
+  './imagens/Niels_Bohr_free.jpg',
+  './imagens/Linus_Pauling_Free.png',
   './fontes/ibm-plex-mono-500.woff2',
   './fontes/ibm-plex-sans-300.woff2',
   './fontes/ibm-plex-sans-400.woff2',
