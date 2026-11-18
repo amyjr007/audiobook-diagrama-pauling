@@ -751,7 +751,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.22';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.23';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -785,12 +785,13 @@ const EVENTOS = {
     { t: 12.9, acao: () => Atomo.escreve('eletrosfera') },
     { t: 14.0, acao: () => pausaRoteiro(1500) },                       // pausa 1,5 s
     { t: 14.5, acao: () => Atomo.zoomLento(.464, 4500) },              // zoom lento no núcleo: 14,5 s → 19 s (alvo do modo edição: .26 ÷ .56)
-    { t: 21.0, acao: () => { Atomo.destaca('protons', true); Atomo.escreve('protons'); } },
+    { t: 21.0, acao: () => { Atomo.destaca('protons', true); Atomo.escreve('protons'); Atomo.frente('protons', 1000); } },   // prótons brilham e vêm para a frente
     { t: 22.9, acao: () => Atomo.maisProtons() },
-    { t: 24.0, acao: () => { Atomo.destaca('protons', false); Atomo.destaca('neutrons', true); Atomo.escreve('neutrons'); } },
+    { t: 24.0, acao: () => { Atomo.destaca('protons', false); Atomo.destaca('neutrons', true); Atomo.escreve('neutrons'); Atomo.frente('neutrons', 1000); } },   // nêutrons brilham e vêm para a frente
     /* fim: play some, câmera volta, molde aparece; encaixou → áudio 2 */
     { t: 'fim', acao: () => {
         Atomo.destaca('neutrons', false);
+        Atomo.voltaGirar();                                  // depois do áudio, o núcleo volta a girar
         ['protons','neutrons','nucleo','eletrosfera'].forEach(id => Atomo.apaga(id));
         Atomo.zoomInicial();
         escondePlay(true);
@@ -815,7 +816,7 @@ const EVENTOS = {
     { t: 38.0, acao: () => Atomo.pulsaLinha('z') },
     { t: 39.5, acao: () => Atomo.digita('elem', 'Hélio (2He)', { cor: '#eef1ff', sub: [7] }) },   // ₂He
     /* fim: play some, aparece "toque na tela"; tocou → áudio 3 */
-    { t: 'fim', acao: () => { escondePlay(true); mostraToque(true); } },
+    { t: 'fim', acao: () => { Atomo.voltaGirar(); escondePlay(true); mostraToque(true); } },
     /* virada para o hidrogênio (Atomo.viraParaHidrogenio) fica guardada para depois */
   ],
   'audio_distribuição_3': [
@@ -1902,19 +1903,24 @@ const Atomo = (() => {
     /* cenas do número atômico e dos quizzes: o MESMO zoom suave do áudio 1 (~14 s) —
        a eletrosfera some e o foco fica nas partículas do núcleo (e assim continua no H e no C) */
     zoomDiscreto2(){ this.zoomLento(.464, 2200); },
-    /* gira o núcleo (suave) até os 2 prótons ficarem de frente para a câmera */
-    protonsNaFrente(dur = 1000){
+    /* gira o núcleo (suave) até as 2 partículas escolhidas ficarem de frente para a câmera, lado a lado.
+       O giro automático para até o fim do áudio (voltaGirar). */
+    frente(qual = 'protons', dur = 1000){
       if (!pronto) return;
       giroNucleo = false; giroAuto = false;
       grupo.updateMatrixWorld();
       const qGrupo = new THREE.Quaternion().setFromEuler(grupo.rotation);
-      /* no núcleo, os prótons ficam em (1,1,1) e (−1,−1,1): o meio deles é +z e a linha entre eles é a diagonal x=y.
-         alvo: +z apontando para a câmera e os dois lado a lado (diagonal → horizontal) */
-      const qAlvoMundo = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 0, 1), -Math.PI / 4);
+      const eixoZ = new THREE.Vector3(0, 0, 1), eixoY = new THREE.Vector3(0, 1, 0);
+      /* prótons em (1,1,1) e (−1,−1,1): o meio deles é +z e a linha entre eles é a diagonal → gira −45° em z.
+         nêutrons em (1,−1,−1) e (−1,1,−1): o meio é −z → meia-volta em y, depois −45° em z. */
+      const qAlvoMundo = new THREE.Quaternion().setFromAxisAngle(eixoZ, -Math.PI / 4);
+      if (qual === 'neutrons') qAlvoMundo.multiply(new THREE.Quaternion().setFromAxisAngle(eixoY, Math.PI));
       const qAlvo = qGrupo.clone().invert().multiply(qAlvoMundo);
       const q0 = heNucleo.quaternion.clone();
       anima(dur, k => heNucleo.quaternion.slerpQuaternions(q0, qAlvo, k));
     },
+    protonsNaFrente(dur = 1000){ this.frente('protons', dur); },
+    voltaGirar(){ giroNucleo = true; giroAuto = true; },
     /* apaga uma linha de texto com fade */
     apagaLinha(id){
       const L = linhas[id]; if (!L) return;
