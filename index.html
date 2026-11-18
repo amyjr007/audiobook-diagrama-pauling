@@ -318,6 +318,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   text-shadow:0 0 14px rgba(0,0,0,.6);
 }
 .linha.linha-hnome{font-size:clamp(22px,6vw,32px)}
+.linha.linha-z{font-size:clamp(19px,calc(4.6vw + 2px),28px)}   /* "Z = 2": 2px maior */
 .linha sub{font-size:.6em;line-height:0;vertical-align:-.3em}
 .linha.digitando::after{content:"";display:inline-block;width:2px;height:.95em;margin-left:3px;vertical-align:-.1em;background:currentColor;animation:cursor .6s steps(1) infinite}
 
@@ -389,16 +390,16 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .confetes{position:fixed;inset:0;z-index:55;pointer-events:none;overflow:hidden}
 .confete{position:absolute;top:-12px;width:9px;height:14px;border-radius:2px}
 
-/* "toque na tela" — cobre a área do átomo; a pílula pulsa embaixo */
-.toque-tela{position:absolute;inset:0;z-index:5;display:flex;align-items:flex-end;justify-content:center;padding-bottom:14px;cursor:pointer}
+/* "toque na tela para continuar" — cobre a área do átomo; só o texto, pulsando
+   (posição do modo edição: ~8,4% acima da base da área do átomo) */
+.toque-tela{position:absolute;inset:0;z-index:5;cursor:pointer}
 .tt-pilula{
-  display:inline-flex;align-items:center;gap:10px;
-  font:600 15px "Space Grotesk",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:#061018;
-  padding:12px 22px;border-radius:999px;background:linear-gradient(90deg,var(--s),#7cf0ff);
-  box-shadow:0 8px 24px rgba(62,224,255,.35);animation:pulsoToque 1.6s ease-in-out infinite;
+  position:absolute;left:50%;bottom:calc(14px + 8.4%);transform:translateX(-50%);white-space:nowrap;
+  font:600 15px "Space Grotesk",sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--s);
+  text-shadow:0 0 14px rgba(62,224,255,.6);
+  animation:pulsoToque 1.6s ease-in-out infinite;
 }
-.tt-pilula svg{width:20px;height:20px}
-@keyframes pulsoToque{0%,100%{transform:scale(1);box-shadow:0 8px 24px rgba(62,224,255,.35),0 0 0 0 rgba(62,224,255,.5)}50%{transform:scale(1.07);box-shadow:0 8px 24px rgba(62,224,255,.35),0 0 0 14px rgba(62,224,255,0)}}
+@keyframes pulsoToque{0%,100%{opacity:1;transform:translateX(-50%) scale(1)}50%{opacity:.55;transform:translateX(-50%) scale(1.05)}}
 .btn-play.oculto{opacity:0;transform:scale(.5);pointer-events:none;transition:opacity .4s,transform .4s}
 
 /* rótulos digitados sobre a cena 3D */
@@ -675,10 +676,7 @@ body.editando #palco canvas{cursor:default}
     </div>
     <!-- fim do áudio 2: toque em qualquer lugar da tela para continuar -->
     <button class="toque-tela" id="toqueTela" hidden aria-label="Toque na tela para continuar">
-      <span class="tt-pilula">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
-        toque na tela
-      </span>
+      <span class="tt-pilula">toque na tela para continuar</span>
     </button>
   </main>
 
@@ -751,7 +749,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.23';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.24';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -820,7 +818,8 @@ const EVENTOS = {
     /* virada para o hidrogênio (Atomo.viraParaHidrogenio) fica guardada para depois */
   ],
   'audio_distribuição_3': [
-    { t: 1.0, acao: () => Atomo.viraParaHidrogenio('Hidrogênio - D', 'elem') },     // cubo vira → deutério (1 p⁺ + 1 n⁰)
+    { t: 1.0, acao: () => Atomo.viraPara('H', 'Hidrogênio - D', 'elem', { inteiroAntes: true }) },   // cubo vira → deutério inteiro
+    { t: 4.0, acao: () => Atomo.zoomLento(.464, 2200) },               // zoom no núcleo (a eletrosfera some)
     { t: 4.0, acao: () => Quiz.pergunta({
         pergunta: 'Qual o número atômico dele?',
         opcoes: ['2', '1', '3'],
@@ -831,7 +830,8 @@ const EVENTOS = {
     }) },
   ],
   'audio_distribuição_4': [
-    { t: 1.0, acao: () => Atomo.viraPara('C', 'Carbono', 'elem') },   // cubo vira → carbono (6 p⁺ + 6 n⁰)
+    { t: 1.0, acao: () => Atomo.viraPara('C', 'Carbono', 'elem', { inteiroAntes: true, dica: 'toque para girar o núcleo' }) },   // cubo vira → carbono inteiro (6 p⁺ + 6 n⁰)
+    { t: 3.5, acao: () => Atomo.zoomLento(.464, 2200) },               // zoom no núcleo
     { t: 2.0, acao: () => Quiz.pergunta({                              // assim que o carbono aparece, as respostas
         pergunta: 'Qual o número atômico dele?',
         opcoes: ['12', '6', '4'],
@@ -1369,6 +1369,12 @@ const Atomo = (() => {
     tweens.push({ ini: relogio, dur, fn, fim, curva });
   }
   const agenda = (ms, fn) => anima(ms, () => {}, fn, k => k);   // "setTimeout" que respeita a pausa
+  /* zoom com duração exata */
+  function zoomLentoF(alvo, dur){
+    camTween = true; fatorCamAlvo = alvo;
+    const ini = fatorCam;
+    anima(dur, k => { fatorCam = ini + (alvo - ini) * k; }, () => { camTween = false; });
+  }
   function rodaTweens(agora){
     const lista = tweens; tweens = [];
     const ficam = lista.filter(tw => {
@@ -1611,7 +1617,7 @@ const Atomo = (() => {
     const camLinhas = document.createElement('div'); camLinhas.className = 'linhas'; face.appendChild(camLinhas);
     /* alturas (fração da área do átomo) — eq e z ajustadas no modo edição */
     /* y = tela deitada · yR = celular em pé (quando ajustado no modo edição) */
-    Object.entries({ eq: .665, z: .366, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9 }).forEach(([id, p]) => {
+    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9 }).forEach(([id, p]) => {
       const el = document.createElement('div'); el.className = 'linha linha-' + id;
       camLinhas.appendChild(el);
       linhas[id] = { el, timer: null, y: typeof p === 'number' ? p : p.y, yR: typeof p === 'number' ? null : p.yR };
@@ -1891,12 +1897,7 @@ const Atomo = (() => {
       anima(1300, k => { esfera.material.uniforms.opac.value = k; });
     },
     /* zoom com duração exata (ex.: 10 s → 12,5 s = 2500 ms) */
-    zoomLento(alvo, dur){
-      if (!pronto) return;
-      camTween = true; fatorCamAlvo = alvo;
-      const ini = fatorCam;
-      anima(dur, k => { fatorCam = ini + (alvo - ini) * k; }, () => { camTween = false; });
-    },
+    zoomLento(alvo, dur){ if (pronto) zoomLentoF(alvo, dur); },
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
     zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
@@ -2043,7 +2044,9 @@ const Atomo = (() => {
     viraParaHidrogenio(nome = 'Hidrogênio', linha = 'hnome'){ this.viraPara('H', nome, linha); },
     /* só a região do átomo vira como a face de um cubo e mostra outro átomo
        qual: 'H' (deutério) ou 'C' (carbono) */
-    viraPara(qual, nome, linha = 'elem'){
+    /* opts.inteiroAntes: mostra o átomo inteiro (com eletrosfera) e depois dá o zoom no núcleo
+       opts.dica: texto da instrução embaixo (some ao tocar no átomo) */
+    viraPara(qual, nome, linha = 'elem', opts = {}){
       if (!pronto) return;
       const w = palco.clientWidth;
       /* foto da face atual (canvas + textos) para girar para fora */
@@ -2064,10 +2067,15 @@ const Atomo = (() => {
       grupoNovo.visible = true;
       giroAuto = giroNucleo = true;      // o átomo novo volta a girar devagar
       maisNovo.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
-      fatorCamAlvo = fatorCam; camTween = false;   // mesmo enquadramento da cena anterior
+      if (opts.inteiroAntes){
+        camTween = false; fatorCam = fatorCamAlvo = 1;          // o átomo inteiro (o zoom no núcleo vem por evento do áudio)
+      } else {
+        fatorCamAlvo = fatorCam; camTween = false;              // mesmo enquadramento da cena anterior
+      }
       linhas[linha].el.innerHTML = '';
       const sp = document.createElement('span'); sp.textContent = nome; linhas[linha].el.appendChild(sp);
       $('#dicaGirar').classList.add('some');
+      if (opts.dica){ dica(opts.dica); $('#dicaGirar').classList.remove('some'); }
       sfx('transition_cube');
       const op = { duration: 900, easing: 'cubic-bezier(.65,0,.35,1)', fill: 'both' };
       const recuo = `translateZ(${-w * .3}px)`;
@@ -2151,10 +2159,12 @@ const Intro = (() => {
   function para(instantaneo){
     clearInterval(timer); timer = null;
     const estava = ativo; ativo = false;
-    $('#palco').classList.remove('intro');
     ['#cardsTras', '#cardsFrente'].forEach(s => $(s).classList.add('some'));
     const limpa = () => { if (!ativo) ['#cardsTras', '#cardsFrente'].forEach(s => $(s).innerHTML = ''); };
     if (instantaneo || !estava) limpa(); else setTimeout(limpa, 850);
+    /* o átomo de fundo continua escurecido enquanto some (não "acende" antes de sumir) */
+    if (instantaneo || !estava) $('#palco').classList.remove('intro');
+    else setTimeout(() => { if (!ativo) $('#palco').classList.remove('intro'); }, 950);
   }
   return { inicia, para, get ativo(){ return ativo; } };
 })();
