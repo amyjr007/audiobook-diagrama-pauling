@@ -849,7 +849,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.52';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.53';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1757,6 +1757,10 @@ const Atomo = (() => {
   /* áudio 7.3: elétron de Bohr interativo (definidos em monta) */
   let bohr = null, atualizaBohr = null, bohrSalta = null, bohrLimpa = null;
   let letras = null;           // áudio 8: letras K…Q das camadas (definidas em monta)
+  /* tamanho do conjunto das camadas de Bohr (ajustado no modo edição com a pinça; 1 = original) */
+  const ESCALA_CAMADAS = 1;
+  let escalaCamadas = ESCALA_CAMADAS;
+  const camadasNaTela = () => !!(ruth && ruth.on && ruth.camadas.some(C => C.g.visible));
   /* áudio 5.2: elétrons do carbono ganham energia (0 → 1) e o contorno das camadas some (1 → 0) */
   let energiaC = 0, contornoC = 1;
   const CORES_NEON = [0xff2bd6, 0x8a2bff, 0x00ff9c, 0xffd200, 0xff3b6b, 0x2b8cff];
@@ -1819,6 +1823,7 @@ const Atomo = (() => {
   };
   /* etiqueta "n = …" desligando como TV */
   function tvDesligaRotulo(C, k){
+    C.glowR.material.opacity = 0; C.destaque = 0;                       // sem destaque enquanto some
     const [, sx, sy] = curvaTV(TV_DESLIGA, k);
     C.rotulo.scale.set(1.95 * Math.max(.001, sx), .73 * Math.max(.001, sy), 1);
     if (k >= 1) C.rotulo.visible = false;
@@ -1890,7 +1895,7 @@ const Atomo = (() => {
     /* núcleo completo de novo (4 p⁺ + 3 n⁰) e sem o elétron de Bohr */
     ruth.bolas.forEach(b => { ruth.nucleo.add(b.m); b.m.position.copy(b.pos0); b.m.rotation.set(0, 0, 0); b.m.scale.setScalar(1); b.m.visible = true; });
     if (bohrLimpa) bohrLimpa();
-    ruth.camadas.forEach(C => { C.g.visible = false; C.fio.material.opacity = C.brilhoC.material.opacity = C.rotulo.material.opacity = 0; C.rotulo.visible = true; C.rotulo.scale.set(1.95, .73, 1); });
+    ruth.camadas.forEach(C => { C.g.visible = false; C.fio.material.opacity = C.brilhoC.material.opacity = C.rotulo.material.opacity = 0; C.rotulo.visible = true; C.rotulo.scale.set(1.95, .73, 1); C.rotulo.material.color.setScalar(1); C.glowR.material.opacity = 0; C.destaque = 0; });
     /* letras do áudio 8 escondidas, mãozinha fora, toque nos níveis liberado */
     if (letras){ letras.itens.forEach(it => { it.estado = "oculta"; it.interativa = false; it.s.visible = false; it.s.material.opacity = 0; }); letras.mao = -1; letras.arrastando = null; letras.aoTerminar = null; }
     { const m = $("#maoGuia"); if (m) m.classList.remove("on"); }
@@ -2495,9 +2500,11 @@ const Atomo = (() => {
          Cor de cada uma = trecho da barra "Energia" (ciano perto do núcleo → vermelho na mais afastada) */
       const GRAD = [0x3ee0ff, 0x6f9bff, 0x9b5cff, 0xff3bd0, 0xff5a5a].map(h => new THREE.Color(h));
       const corGrad = t => { const x = t * (GRAD.length - 1), i = Math.min(GRAD.length - 2, Math.floor(x)); return GRAD[i].clone().lerp(GRAD[i + 1], x - i); };
+      /* conjunto das camadas (anéis, etiquetas, elétron de Bohr e letras): pode ser ampliado sozinho, sem mexer no núcleo */
+      const conj = new THREE.Group(); conj.scale.setScalar(ESCALA_CAMADAS); atomo.add(conj);
       const camadasR = [0, 1, 2, 3, 4, 5, 6].map(i => {
         const r = 1.3 + i * 1.15, cor = corGrad(i / 6);
-        const g = new THREE.Group(); g.visible = false; atomo.add(g);
+        const g = new THREE.Group(); g.visible = false; conj.add(g);
         /* linha bem fina (1 px) + um brilho estreito e fraco em volta */
         const pts = [];
         for (let s = 0; s < 240; s++){ const a = s / 240 * Math.PI * 2; pts.push(new THREE.Vector3(r * Math.cos(a), r * Math.sin(a), 0)); }
@@ -2509,10 +2516,13 @@ const Atomo = (() => {
         const rotulo = new THREE.Sprite(new THREE.SpriteMaterial({ map: texCamada(i + 1, cor), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
         const ang = THREE.MathUtils.degToRad(35);
         rotulo.position.set(r * Math.cos(ang), r * Math.sin(ang), .1); rotulo.scale.set(1.95, .73, 1); rotulo.renderOrder = 5;
-        g.add(fio, brilhoC, rotulo);
-        return { g, fio, brilhoC, rotulo, cor };
+        /* brilho atrás da etiqueta: acende quando o elétron está neste nível (destaque) */
+        const glowR = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: cor, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
+        glowR.position.copy(rotulo.position); glowR.position.z = .05; glowR.scale.set(3.6, 1.7, 1); glowR.renderOrder = 4;
+        g.add(fio, brilhoC, glowR, rotulo);
+        return { g, fio, brilhoC, rotulo, glowR, cor, destaque: 0 };
       });
-      ruth = { on: false, cena: c, cam, escuro, atomo, nucleo, aura, mats: [mPr, mNr], eletrons: eletronsR, camadas: camadasR, bolas: bolasR, opNucleo: 0, opEscuro: 0 };
+      ruth = { on: false, cena: c, cam, escuro, atomo, nucleo, aura, mats: [mPr, mNr], eletrons: eletronsR, camadas: camadasR, conj, bolas: bolasR, opNucleo: 0, opEscuro: 0 };
       [mPr, mNr].forEach(m => m.opacity = 0);
 
       /* ---- áudio 7.3: o elétron de Bohr (o aluno segura e solta em qualquer nível) ---- */
@@ -2520,7 +2530,7 @@ const Atomo = (() => {
         const RN = n => 1.3 + (n - 1) * 1.15;                                   // raio do nível n (1…7), igual às camadas
         const nivelDe = r => Math.min(7, Math.max(1, (r - 1.3) / 1.15 + 1));   // nível "fracionário" de um raio
         const aditivo = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
-        const g = new THREE.Group(); atomo.add(g);
+        const g = new THREE.Group(); conj.add(g);
         const e = new THREE.Mesh(new THREE.SphereGeometry(.17, 20, 14), new THREE.MeshBasicMaterial({ color: 0xe8fbff, transparent: true, opacity: 0, depthWrite: false }));
         const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: 0x3ee0ff, opacity: 0, ...aditivo }));
         halo.scale.setScalar(1.2); e.add(halo); g.add(e);
@@ -2639,6 +2649,23 @@ const Atomo = (() => {
         };
         /* salto quântico: o elétron some no nível atual e reaparece no nível tocado, na posição do toque.
            A frase "salto quântico" pisca na tela junto com o salto. */
+        /* destaque da etiqueta "n = x": 15% maior e acesa (mais clara + brilho atrás). Só a do nível atual fica assim */
+        const aplicaDestaque = (C, d) => {
+          C.destaque = d;
+          if (!C.rotulo.visible) { C.glowR.material.opacity = 0; return; }
+          C.rotulo.scale.set(1.95 * (1 + .15 * d), .73 * (1 + .15 * d), 1);
+          C.rotulo.material.color.setScalar(1 + .9 * d);
+          C.glowR.material.opacity = Math.max(0, .75 * d);
+          C.glowR.scale.set(3.6 * (1 + .15 * d), 1.7 * (1 + .15 * d), 1);
+        };
+        const destacaRotulo = n => {
+          ruth.camadas.forEach((C, i) => {
+            const alvo = i === n - 1 ? 1 : 0, d0 = C.destaque || 0;
+            if (Math.abs(alvo - d0) < .001) return;
+            let t = 0;
+            bohr.efeitos.push(dt => { t += dt; const k = Math.min(1, t / .25); aplicaDestaque(C, d0 + (alvo - d0) * easeBack(k)); return k < 1; });
+          });
+        };
         const SOME = .12, VOLTA = .14;                                            // s: some → reaparece
         bohrSalta = (nNovo, ang) => {
           const B = bohr, nAntes = B.n;
@@ -2659,6 +2686,7 @@ const Atomo = (() => {
               if (B.saltos === 3 && B.aoTresSaltos){ const cb = B.aoTresSaltos; B.aoTresSaltos = null; setTimeout(cb, 1200); }   // 3º salto: o roteiro segue (depois que o efeito termina)
               const pNovo = new THREE.Vector3(B.r * Math.cos(ang), B.r * Math.sin(ang), .3);
               barraNivel(nNovo / 7, true);
+              destacaRotulo(nNovo);                                              // o "n = x" do nível tocado cresce 15% e acende
               if (nNovo < nAntes) emite(pNovo, corGrad((nAntes - 1) / 6), nAntes - nNovo);   // desceu: libera o excesso
               else absorve(pNovo, corGrad((nNovo - 1) / 6));                                 // subiu: absorveu energia
             }
@@ -2687,7 +2715,7 @@ const Atomo = (() => {
           ruth.cam.updateMatrixWorld();
           ray.setFromCamera(new THREE.Vector2((ev.clientX - rc.left) / rc.width * 2 - 1, -(ev.clientY - rc.top) / rc.height * 2 + 1), ruth.cam);
           if (!ray.ray.intersectPlane(plano, tmp)) return null;
-          return ruth.atomo.worldToLocal(tmp.clone());
+          return ruth.conj.worldToLocal(tmp.clone());
         };
         /* nível tocado: o mais próximo do toque (meio espaço de tolerância para dentro e para fora) */
         const nivelTocado = ev => {
@@ -2726,7 +2754,7 @@ const Atomo = (() => {
         const BASE = new THREE.Vector2(1.45, .87);
         const itensL = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'].map((L, i) => {
           const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texLetra(L, ruth.camadas[i].cor), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
-          s.renderOrder = 6; s.visible = false; s.scale.set(BASE.x, BASE.y, 1); atomo.add(s);
+          s.renderOrder = 6; s.visible = false; s.scale.set(BASE.x, BASE.y, 1); conj.add(s);
           return { L, i, s, estado: 'oculta' };                                  // oculta | esperando | movendo | arrastando | encaixada
         });
         letras = { itens: itensL, posN, BASE, mao: -1, arrastando: null, aoTerminar: null };
@@ -3708,8 +3736,13 @@ const Atomo = (() => {
     },
     teclaCam(tecla, apertada){ if (apertada) livre.teclas.add(tecla); else livre.teclas.delete(tecla); },
     /* zoom da tela (só o modo edição usa) */
-    zoomPor(f){ zoomGesto = Math.min(2.5, Math.max(.5, zoomGesto * f)); },
+    /* com as camadas de Bohr na tela, a pinça muda só o tamanho do conjunto das camadas (o núcleo fica igual) */
+    zoomPor(f){
+      if (camadasNaTela()){ escalaCamadas = Math.min(2.5, Math.max(.4, escalaCamadas * f)); ruth.conj.scale.setScalar(escalaCamadas); return; }
+      zoomGesto = Math.min(2.5, Math.max(.5, zoomGesto * f));
+    },
     get zoom(){ return zoomGesto; },
+    get escalaCamadas(){ return escalaCamadas; },
   };
 })();
 document.addEventListener('visibilitychange', () => {
@@ -3993,7 +4026,7 @@ const Edicao = (() => {
     calaTudo();                  // e cala o que estiver tocando (digitação, efeitos)
     mutaTudo(true);              // e deixa tudo no mudo, por garantia
     document.body.classList.add('editando');
-    zoomAntes = Atomo.zoom;
+    zoomAntes = Atomo.zoom; camadasAntes = Atomo.escalaCamadas;
     const lista = candidatos();
     lista.forEach(el => {
       if (!itens.has(el)) itens.set(el, { antes: textoDe(el), proprioAntes: textoProprio(el), fonteAntes: parseFloat(getComputedStyle(el).fontSize), posAntes: el.style.translate || '', desc: descreve(el) });
@@ -4028,6 +4061,7 @@ const Edicao = (() => {
       }
     });
     if (Math.abs(Atomo.zoom - zoomAntes) > .01) linhas.push(`• zoom da tela (átomo 3D): ${zoomAntes.toFixed(2)} → ${Atomo.zoom.toFixed(2)}`);
+    if (Math.abs(Atomo.escalaCamadas - camadasAntes) > .005) linhas.push(`• tamanho das camadas (conjunto): ${camadasAntes.toFixed(2)} → ${Atomo.escalaCamadas.toFixed(2)}`);
     if (!linhas.length) return '';
     return `ALTERAÇÕES DO MODO EDIÇÃO · v${APP_VERSAO} · tela ${innerWidth}×${innerHeight}\n\n` + linhas.join('\n');
   }
@@ -4083,7 +4117,7 @@ const Edicao = (() => {
      · 2 dedos sobre um texto: pinça muda o tamanho
      · fora dos textos: nada chega ao app (átomo não gira, botões não funcionam) */
   const UI_EDICAO = '#barraEdicao, #painelEdicao, #versao';
-  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, zoomAntes = 1;
+  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, zoomAntes = 1, camadasAntes = 1;
   const lerDesloc = el => { const p = (el.style.translate || '0px 0px').split(' ').map(parseFloat); return { x: p[0] || 0, y: p[1] || 0 }; };
   document.addEventListener('pointerdown', e => {
     if (!ativo || e.target.closest(UI_EDICAO)) return;
