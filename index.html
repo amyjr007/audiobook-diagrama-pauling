@@ -877,7 +877,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.63';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.64';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1126,8 +1126,11 @@ const EVENTOS = {
   ],
   'audio_distribuição_8.1': [
     { t: .05, acao: () => escondePlay(false) },                                 // o play volta (estava escondido durante as letras)
+    /* 1,5 s → 3 s: as letras K → Q aumentam em onda (a anterior diminui); o Q fica aumentado mais 1 s */
+    { t: 1.5, acao: () => Atomo.ondaLetras(1500, 1000) },
     /* 4 s → 8 s: o átomo vira o diagrama de níveis de energia (eixos da esquerda, círculos → linhas, letras ao lado da seta) */
     { t: 4.0, acao: () => Atomo.viraGrafico(4000) },
+    { t: "fim", acao: () => tocaDepois(1500, "audio_distribuição_8.2") },     // passa sozinho para o 8.2 depois de 1,5 s
   ],
   'audio_distribuição_8.2': [
     /* 1 s → 5 s: a seta vertical some e sobe de novo; cada linha dá um saltinho quando a ponta passa por ela */
@@ -1136,7 +1139,8 @@ const EVENTOS = {
     /* 14,5 s → 17 s: cada nível se divide em degraus (um por subnível), em sequência K → Q */
     { t: 14.5, acao: () => Atomo.degraus(2500) },
     { t: 18.0, acao: () => Atomo.digita('sub', 'subníveis atômicos', { cor: '#eef1ff', dur: 1000 }) },
-    { t: 28.0, acao: () => Atomo.apagaLinha('sub') },
+    /* 28 s: no celular o texto sai (os cartões vêm para o mesmo lugar); na tela deitada ele fica (há espaço) */
+    { t: 28.0, acao: () => { const p = $("#palco"); if (p.clientWidth < p.clientHeight) Atomo.apagaLinha("sub"); } },
     /* cartões dos subníveis (fade in) e o total de elétrons em cima, na diagonal direita */
     { t: 29.0, acao: () => Atomo.cartao('s') },
     { t: 30.6, acao: () => Atomo.cartaoEletrons('s') },
@@ -1157,11 +1161,16 @@ const EVENTOS = {
     { t: 53.0, acao: () => Atomo.cartaoDestaque(null) },
   ],
   'audio_distribuição_8.3': [
+    /* 2 s: os degraus aumentam e brilham em onda, de baixo para cima (1 s); o último fica aceso mais 1 s */
+    { t: 2.0,  acao: () => Atomo.ondaDegraus(1000, 1000) },
+    { t: 7.0,  acao: () => Atomo.destacaDegrau("primeiro", 1200) },            // o de baixo (1s) aumenta e brilha
+    { t: 8.5,  acao: () => Atomo.destacaDegrau("ultimo", 1200) },              // o mais energético (o mais alto) aumenta e brilha
     { t: 15.8, acao: () => Atomo.pulsaLetra(0) },                              // a letra K (no eixo) pulsa
     { t: 19.0, acao: () => Atomo.eletronsK(700) },                             // "2e⁻" digitado à direita do K (o K se afasta)
-    { t: 22.5, acao: () => Atomo.pulsaEletronsK() },                           // o "2e⁻" pulsa
+    { t: 22.5, acao: () => Atomo.pulsaEletronsK(2) },                          // o "2e⁻" pulsa 2 vezes
     { t: 26.0, acao: () => Atomo.cartaoDestaque('s') },                        // o cartão s² aumenta por 2 s
     { t: 28.0, acao: () => Atomo.cartaoDestaque(null) },
+    { t: 28.2, acao: () => Atomo.seguraEletronsK(2000) },                      // o "2e⁻" aumenta e segura 2 s
     { t: 28.6, acao: () => Atomo.expoentePulsa('s', 1000) },                   // o "2" do s² aumenta por 1 s
     /* 30,3 s: a mãozinha ensina a levar o s² até o degrau do nível K (repete a cada 3 s até o aluno arrastar) */
     { t: 30.3, acao: () => Atomo.arrasteBloco('s', 1, 0) },
@@ -2928,6 +2937,7 @@ const Atomo = (() => {
            as letras deslizam para a esquerda do eixo vertical, na altura da sua linha.
            Medidas em unidades do conjunto das camadas. Tela deitada: fixas. Celular em pé: o gráfico se estica
            na largura até as letras ficarem perto da borda esquerda (medeGrafico) */
+        const EK_W = 1.725, EK_H = .8625;                                         // tamanho do "2e⁻" (áudio 8.3), 15% maior
         const PADRAO = { GX0: -4.1, GX1: 6.4, XEIXO: -4.6, XLETRA: -6.7 };   // (folga entre a letra e o eixo para o "2e⁻" do áudio 8.3)
         let { GX0, GX1, XEIXO, XLETRA } = PADRAO;
         /* os degraus (Aufbau) usam também o espaço acima das linhas: vão de GY0 até TOPO_DEG */
@@ -3021,7 +3031,7 @@ const Atomo = (() => {
           glow.visible = false; conj.add(glow);
           /* d: linha → degraus (dentro do nível) · a: degraus flutuam até a altura de energia (Aufbau)
              b: salto · p: brilho · corSub[j]: degrau j na cor do bloco (0 → 1) · rot[j]: rótulo do degrau j */
-          return { n: i + 1, m, tiras, rotulos, glow, cor: C.cor, d: 0, a: 0, b: 0, p: 0, op: 0, corSub: Array(m).fill(0), rot: Array(m).fill(0) };
+          return { n: i + 1, m, tiras, rotulos, glow, cor: C.cor, d: 0, a: 0, b: 0, p: 0, op: 0, corSub: Array(m).fill(0), rot: Array(m).fill(0), hl: Array(m).fill(0) };   // hl[j]: destaque do degrau j (cresce e brilha)
         });
         const aplica = L => {
           const y0 = yN(L.n), h = H0, W = GX1 - GX0, Wc = W / 4;
@@ -3031,8 +3041,9 @@ const Atomo = (() => {
             const yb = y0 + j * DEG_IN + (yAufbau(L.n, j) - y0 - j * DEG_IN) * L.a;           // …dentro do nível → altura de energia
             const y = ya + (yb - ya) * L.d + L.b;
             t.position.set(xa + (xb - xa) * L.d, y, .02);
-            t.scale.set(wa + (wb - wa) * L.d, h, 1);
-            t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar(1 + .9 * L.p);   // cor do nível; a do bloco quando encaixado
+            const hl = L.hl[j];
+            t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl), h * (1 + 1.4 * hl), 1);
+            t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar(1 + .9 * L.p + 1.1 * hl);   // cor do nível; a do bloco quando encaixado; acende no destaque
             t.material.opacity = L.op; t.visible = L.op > .01;
             const r = L.rotulos[j];                                                            // rótulo "3d¹⁰" logo acima do degrau
             r.position.set(xb, y + .6, .03); r.material.opacity = L.rot[j] * L.op; r.visible = r.material.opacity > .01;
@@ -3097,12 +3108,16 @@ const Atomo = (() => {
             niveis.forEach((L, i) => agenda(i * passo, () => anima(cada, k => { L.d = k; aplica(L); }, () => { L.d = 1; aplica(L); }, easeBack)));
           },
           degrausJa: () => niveis.forEach(L => { L.d = 1; aplica(L); }),
+          /* destaque de um degrau (cresce e brilha) — h de 0 a 1 */
+          hlDegrau: (n, j, h) => { const L = niveis[n - 1]; if (!L || j >= L.m) return; L.hl[j] = h; aplica(L); },
+          /* degraus de baixo para cima (pela altura na tela) */
+          degrausDeBaixo: () => niveis.flatMap(L => L.tiras.map((t, j) => ({ n: L.n, j, y: t.position.y }))).sort((a, b) => a.y - b.y),
           /* ---- áudio 8.3: "2e⁻" ao lado da letra K (digitado), e posições na tela para a mãozinha e o encaixe ---- */
           eK: (() => {
             const c = document.createElement('canvas'); c.width = 200; c.height = 100;
             const tex = new THREE.CanvasTexture(c);
             const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
-            s.scale.set(1.5, .75, 1); s.renderOrder = 7; s.visible = false; conj.add(s);
+            s.scale.set(EK_W, EK_H, 1); s.renderOrder = 7; s.visible = false; conj.add(s);
             const desenha = n => {                                                     // n = quantos caracteres de "2e⁻" já foram digitados
               const x = c.getContext('2d'), cor = '#' + niveis[0].cor.getHexString();
               x.clearRect(0, 0, 200, 100); x.shadowColor = cor; x.shadowBlur = 10; x.fillStyle = '#eef1ff'; x.textBaseline = 'alphabetic';
@@ -3115,17 +3130,22 @@ const Atomo = (() => {
           /* coloca o "2e⁻" à direita da letra K; a letra se afasta para a esquerda enquanto ele é digitado */
           eletronsK(dur = 700, ja = false){
             const it = letras.itens[0], E = this.eK, L = niveis[0];
-            const posiciona = () => { E.s.position.set(XLETRA + (it.dx || 0) + letras.BASE.x * .4 + .95, yN(1) + L.b, .3); };
+            const posiciona = () => { E.s.position.set(XLETRA + (it.dx || 0) + letras.BASE.x * .4 + 1.05, yN(1) + L.b, .3); };
             E.s.visible = true; E.op = 1; E.s.material.opacity = 1 - L.a;
             if (ja){ it.dx = -.45; E.desenha(3); aplica(L); posiciona(); return; }
             E.desenha(0);
             anima(dur, k => { it.dx = -.45 * k; E.desenha(Math.ceil(k * 3)); aplica(L); posiciona(); }, () => { E.desenha(3); posiciona(); }, k => k);
           },
-          /* "2e⁻" pulsa (cresce e brilha) */
-          pulsaEletronsK(){
+          /* "2e⁻" pulsa (cresce e brilha) "vezes" vezes seguidas */
+          pulsaEletronsK(vezes = 1){
             const E = this.eK;
-            anima(700, k => { const p = Math.sin(Math.PI * k); E.s.scale.set(1.5 * (1 + .4 * p), .75 * (1 + .4 * p), 1); E.s.material.color.setScalar(1 + p); },
-              () => { E.s.scale.set(1.5, .75, 1); E.s.material.color.setScalar(1); }, k => k);
+            anima(700 * vezes, k => { const p = Math.abs(Math.sin(Math.PI * k * vezes)); E.s.scale.set(EK_W * (1 + .4 * p), EK_H * (1 + .4 * p), 1); E.s.material.color.setScalar(1 + p); },
+              () => { E.s.scale.set(EK_W, EK_H, 1); E.s.material.color.setScalar(1); }, k => k);
+          },
+          /* "2e⁻" aumenta, segura por "dur" ms e volta */
+          seguraEletronsK(dur = 2000){
+            const E = this.eK, f = h => { E.s.scale.set(EK_W * (1 + .45 * h), EK_H * (1 + .45 * h), 1); E.s.material.color.setScalar(1 + .8 * h); };
+            anima(250, k => f(k), () => { f(1); agenda(dur, () => anima(300, k => f(1 - k), () => f(0))); });
           },
           /* a letra i pulsa (cresce e volta) */
           pulsaLetra(i){
@@ -3161,7 +3181,7 @@ const Atomo = (() => {
             setaAte(1); vert.material = ponta.material = matEixo;
             if (letras) letras.itens.forEach(it => { it.noGrafico = false; it.dx = 0; });
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
-            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.corSub.fill(0); L.rot.fill(0); aplica(L); });
+            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); aplica(L); });
           },
         };
       }
@@ -3199,7 +3219,7 @@ const Atomo = (() => {
     /* neutro: no celular embaixo do átomo (centralizado, pode quebrar linha); na tela deitada, ao lado do átomo */
     /* escurecedor da cena (fica atrás dos textos) — usado nos "conceitos" */
     const escuro = document.createElement('div'); escuro.className = 'escurecedor'; face.appendChild(escuro);
-    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .578, yR: .86, xLado: .65, fonteLado: .065 }, conceito: .45, topo: .075, sub: { y: .5, yR: .89, xLado: .84 } }).forEach(([id, p]) => {
+    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .578, yR: .86, xLado: .65, fonteLado: .065 }, conceito: .45, topo: .075, sub: { y: .36, yR: .89, xLado: .84 } }).forEach(([id, p]) => {
       const el = document.createElement('div'); el.className = 'linha linha-' + id;
       camLinhas.appendChild(el);
       linhas[id] = { el, timer: null, y: typeof p === 'number' ? p : p.y, yR: typeof p === 'number' ? null : p.yR, xLado: p.xLado, fonteLado: p.fonteLado };
@@ -3796,10 +3816,40 @@ const Atomo = (() => {
         agenda(ini, () => anima(total - ini, k => passo(i, k), () => passo(i, 1)));
       });
     },
+    /* "onda" de destaque: os itens aumentam um depois do outro (o anterior diminui enquanto o próximo cresce);
+       a varredura leva "dur" ms e o último fica aumentado mais "segura" ms */
+    onda(N, dur, segura, setH){
+      anima(dur, k => {
+        const pos = k * N;
+        for (let i = 0; i < N; i++) setH(i, i === N - 1 && pos >= N - .5 ? 1 : Math.max(0, 1 - Math.abs(pos - i - .5)));
+      }, () => {
+        for (let i = 0; i < N - 1; i++) setH(i, 0);
+        setH(N - 1, 1);
+        agenda(segura, () => anima(300, k => setH(N - 1, 1 - k), () => setH(N - 1, 0)));
+      }, k => k);
+    },
+    /* áudio 8.1: as letras K → Q (no lugar dos "n = …") aumentam em onda */
+    ondaLetras(dur = 1500, segura = 1000){
+      if (!pronto) return;
+      this.onda(7, dur, segura, (i, h) => { const it = letras.itens[i]; if (!it || it.estado !== 'encaixada') return; tamLetra(it, 1 + .35 * h); it.s.material.color.setScalar(1 + .8 * h); });
+    },
+    /* áudio 8.3: os degraus aumentam e brilham em onda, de baixo para cima */
+    ondaDegraus(dur = 1000, segura = 1000){
+      if (!pronto || !grafico) return;
+      const lista = grafico.degrausDeBaixo();
+      this.onda(lista.length, dur, segura, (i, h) => grafico.hlDegrau(lista[i].n, lista[i].j, h));
+    },
+    /* um degrau aumenta e brilha por "dur" ms ("ultimo" = o mais energético, o mais alto) */
+    destacaDegrau(qual = 'primeiro', dur = 1200){
+      if (!pronto || !grafico) return;
+      const lista = grafico.degrausDeBaixo(), d = qual === 'ultimo' ? lista[lista.length - 1] : lista[0];
+      anima(250, k => grafico.hlDegrau(d.n, d.j, k), () => agenda(dur - 550, () => anima(300, k => grafico.hlDegrau(d.n, d.j, 1 - k), () => grafico.hlDegrau(d.n, d.j, 0))));
+    },
+    seguraEletronsK(dur = 2000){ if (pronto && grafico) grafico.seguraEletronsK(dur); },
     /* ----- áudio 8.3 ----- */
     pulsaLetra(i){ if (pronto && grafico) grafico.pulsaLetra(i); },
     eletronsK(dur = 700, ja = false){ if (pronto && grafico) grafico.eletronsK(dur, ja); },
-    pulsaEletronsK(){ if (pronto && grafico) grafico.pulsaEletronsK(); },
+    pulsaEletronsK(vezes = 1){ if (pronto && grafico) grafico.pulsaEletronsK(vezes); },
     /* o expoente (total de elétrons) do cartão "tipo" aumenta por "dur" ms */
     expoentePulsa(tipo, dur = 1000){
       const s = document.querySelector(`#cartoes [data-t="${tipo}"] sup`); if (!s) return;
@@ -3901,7 +3951,8 @@ const Atomo = (() => {
         c.style.width = c.offsetWidth + 'px';
         const corta = n => { nome.textContent = txt.slice(0, n); c.style.width = (nome.offsetWidth + pad) + 'px'; };
         if (ja){ corta(1); return; }
-        anima(dur, k => corta(Math.max(1, Math.round(txt.length - (txt.length - 1) * k))), () => corta(1), k => k);
+        comecaSom();                                                            // som de digitação enquanto apaga
+        anima(dur, k => corta(Math.max(1, Math.round(txt.length - (txt.length - 1) * k))), () => { corta(1); paraSom(); }, k => k);
       });
     },
     /* só o cartão "tipo" fica aumentado e aceso (null = nenhum) */
