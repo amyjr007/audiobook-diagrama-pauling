@@ -785,7 +785,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.35';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.36';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -909,6 +909,7 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_6'); } },
   ],
   'audio_distribuição_6': [
+    { t: .05,  acao: () => Atomo.mostraCavaletes(true) },               // os cavaletes dos cientistas aparecem
     /* 10 s → 13 s: a câmera voa até a posição do modo câmera (de costas para os átomos, olhando a parede da frente) */
     { t: 10.0, acao: () => Atomo.voaCamera([13.64, -2.36, 24.93], [13.62, -2.02, 34.92], 3000) },
   ],
@@ -1656,6 +1657,7 @@ const Atomo = (() => {
      com o cavalete (~9 de largura) → um a cada 23 unidades (à direita na tela = −x) */
   const CAVALETES = [13.6, -9.4, -32.4];
   const TABLADO = -9.4;                           // altura do tampo do tablado (o piso fica em −11)
+  let galeria = null;                             // grupo com tablado, cavaletes e luzes (invisível até o áudio 6)
   function texPlaca(nome, anos){
     const c = document.createElement('canvas'); c.width = 512; c.height = 128;
     const g = c.getContext('2d');
@@ -1679,6 +1681,8 @@ const Atomo = (() => {
     /* três cavaletes de madeira, em pé no chão, virados para o centro da sala.
        Espaço entre eles = meia tela no enquadramento da câmera do áudio 6
        (câmera a ~17 de distância → tela ≈ 22 de largura → vão ≈ 11 entre os cavaletes). */
+    /* tudo da galeria num grupo só: fica invisível até o áudio 6 */
+    galeria = new THREE.Group(); galeria.visible = false; cena.add(galeria);
     const loader = new THREE.TextureLoader();
     const madeira = new THREE.MeshStandardMaterial({ color: 0xa87a45, roughness: .6, metalness: .05 });
     const madeiraClara = new THREE.MeshStandardMaterial({ color: 0xbf9561, roughness: .55, metalness: .05 });
@@ -1686,9 +1690,9 @@ const Atomo = (() => {
     /* tablado baixo de madeira escura onde os cavaletes ficam */
     const xs = CAVALETES, xMin = Math.min(...xs) - 9, xMax = Math.max(...xs) + 9;
     const tablado = new THREE.Mesh(new THREE.BoxGeometry(xMax - xMin, TABLADO + 11, 7), new THREE.MeshStandardMaterial({ color: 0x2a1c10, roughness: .5, metalness: .1 }));
-    tablado.position.set((xMin + xMax) / 2, (TABLADO - 11) / 2, GALERIA.z + .2); cena.add(tablado);
+    tablado.position.set((xMin + xMax) / 2, (TABLADO - 11) / 2, GALERIA.z + .2); galeria.add(tablado);
     const friso = new THREE.Mesh(new THREE.BoxGeometry(xMax - xMin, .15, .1), new THREE.MeshStandardMaterial({ color: 0xc79a3e, emissive: 0x3a2808, roughness: .3, metalness: .7 }));
-    friso.position.set((xMin + xMax) / 2, TABLADO - .1, GALERIA.z - 3.35); cena.add(friso);
+    friso.position.set((xMin + xMax) / 2, TABLADO - .1, GALERIA.z - 3.35); galeria.add(friso);
     const CIENTISTAS = [
       { img: 'imagens/rutherford_free.jpg',    nome: 'Ernest Rutherford', anos: '1871 – 1937', prop: 960 / 1300 },
       { img: 'imagens/Niels_Bohr_free.jpg',    nome: 'Niels Bohr',        anos: '1885 – 1962', prop: 960 / 1350 },
@@ -1704,7 +1708,7 @@ const Atomo = (() => {
     };
     CIENTISTAS.forEach((c, i) => {
       const x = CAVALETES[i];
-      const cav = new THREE.Group(); cena.add(cav);
+      const cav = new THREE.Group(); galeria.add(cav);
       cav.position.set(x, 0, GALERIA.z);
       cav.rotation.y = Math.PI;                              // de frente para o centro da sala
       const alt = 8, larg = alt * c.prop;                    // tamanho do quadro
@@ -1734,8 +1738,8 @@ const Atomo = (() => {
       const spot = new THREE.SpotLight(0xffd9a0, 1.7, 40, .55, .7);
       spot.position.set(x, yQ + 12, GALERIA.z - 9);
       spot.target.position.set(x, yQ - 1, GALERIA.z);
-      cena.add(spot, spot.target);
-      const brilho = new THREE.PointLight(0xffc27a, .45, 12); brilho.position.set(x, CHAO + 2, GALERIA.z - 4); cena.add(brilho);   // poça de luz no tablado
+      galeria.add(spot, spot.target);
+      const brilho = new THREE.PointLight(0xffc27a, .45, 12); brilho.position.set(x, CHAO + 2, GALERIA.z - 4); galeria.add(brilho);   // poça de luz no tablado
     });
   }
 
@@ -2266,6 +2270,7 @@ const Atomo = (() => {
       somDigitar.pause(); digitando = 0;
       fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; camTween = false; rotX = .35; zoomGesto = 1;
       alvoCam.set(0, 0, 0); alvoCamAtual.set(0, 0, 0); camRot.on = false;
+      if (galeria) galeria.visible = false;                      // cavaletes só aparecem no áudio 6
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
@@ -2344,6 +2349,7 @@ const Atomo = (() => {
       });
     },
     cameraNoAtomo(){ camRot.on = false; },                       // volta à câmera que segue o átomo
+    mostraCavaletes(on){ if (galeria) galeria.visible = on; },   // galeria dos cientistas (só a partir do áudio 6)
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
     zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
@@ -2609,9 +2615,10 @@ const Atomo = (() => {
         livre.on = true; livre.teclas.clear();
         /* os 3 átomos aparecem juntos para enquadrar (o estado do roteiro volta ao sair) */
         const sprites = [...maisHe, ...maisH, ...maisC].map(m => m.sprite);
-        livre.salvo = { vis: [he, hAtomo, cAtomo].map(g => g.visible), sp: sprites.map(s => [s.visible, s.material.opacity]),
+        livre.salvo = { vis: [he, hAtomo, cAtomo].map(g => g.visible), sp: sprites.map(s => [s.visible, s.material.opacity]), gal: galeria.visible,
                         esf: esfera.visible, op: esfera.material.uniforms.opac.value, nuc: heNucleo.scale.x, mat: matsHe.map(m => m.opacity) };
         [he, hAtomo, cAtomo].forEach(g => g.visible = true);
+        galeria.visible = true;                                  // no modo câmera os cavaletes aparecem para enquadrar
         sprites.forEach(s => { s.visible = true; s.material.opacity = 1; });
         esfera.visible = true; esfera.material.uniforms.opac.value = 1; heNucleo.scale.setScalar(1); matsHe.forEach(m => m.opacity = 1);
         livre.pos.copy(camera.position);
@@ -2625,6 +2632,7 @@ const Atomo = (() => {
       const s = livre.salvo;
       if (s){
         [he, hAtomo, cAtomo].forEach((g, i) => g.visible = s.vis[i]);
+        galeria.visible = s.gal;
         [...maisHe, ...maisH, ...maisC].forEach((m, i) => { m.sprite.visible = s.sp[i][0]; m.sprite.material.opacity = s.sp[i][1]; });
         esfera.visible = s.esf; esfera.material.uniforms.opac.value = s.op; heNucleo.scale.setScalar(s.nuc);
         matsHe.forEach((m, i) => m.opacity = s.mat[i]);
