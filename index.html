@@ -785,7 +785,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.34';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.35';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1650,7 +1650,12 @@ const Atomo = (() => {
   /* ---------- GALERIA DOS CIENTISTAS ----------
      Na parede da FRENTE do laboratório (atrás da câmera do roteiro), enquadrada pela câmera
      do modo F: posição (0, 0, 21.93) olhando para (−0.08, −1.21, 31.85). */
-  const GALERIA = { x: 0, y: 0, z: 49.6 };       // base do painel na parede da frente (virado para o centro da sala)
+  const GALERIA = { x: 0, y: 0, z: 47 };         // linha dos cavaletes (sobre um tablado junto da parede da frente)
+  /* x de cada cavalete: o 1º (Rutherford) fica no centro da câmera do áudio 6 (x 13.64).
+     A câmera está a ~22 dos cavaletes → a tela mostra ~28,6 de largura → meia tela ≈ 14,3 de vão;
+     com o cavalete (~9 de largura) → um a cada 23 unidades (à direita na tela = −x) */
+  const CAVALETES = [13.6, -9.4, -32.4];
+  const TABLADO = -9.4;                           // altura do tampo do tablado (o piso fica em −11)
   function texPlaca(nome, anos){
     const c = document.createElement('canvas'); c.width = 512; c.height = 128;
     const g = c.getContext('2d');
@@ -1671,45 +1676,66 @@ const Atomo = (() => {
     return new THREE.CanvasTexture(c);
   }
   function montaGaleria(){
-    const gal = new THREE.Group(); cena.add(gal);
-    gal.position.set(GALERIA.x, GALERIA.y, GALERIA.z);
-    gal.rotation.y = Math.PI;                       // virada para o centro da sala
-    /* painel claro (não é escurecido como o resto do laboratório), do piso para cima */
-    const painel = new THREE.Mesh(new THREE.PlaneGeometry(46, 24), new THREE.MeshStandardMaterial({ color: 0xd8d0bf, roughness: .85 }));
-    painel.position.set(0, 1, 0); gal.add(painel);
-    const rodape = new THREE.Mesh(new THREE.BoxGeometry(46, .8, .5), new THREE.MeshStandardMaterial({ color: 0x3a2a18, roughness: .6 }));
-    rodape.position.set(0, -10.6, .25); gal.add(rodape);
-    const titulo = new THREE.Mesh(new THREE.PlaneGeometry(20, 1.6), new THREE.MeshBasicMaterial({ map: texTituloGaleria(), transparent: true }));
-    titulo.position.set(0, 10.6, .3); gal.add(titulo);
+    /* três cavaletes de madeira, em pé no chão, virados para o centro da sala.
+       Espaço entre eles = meia tela no enquadramento da câmera do áudio 6
+       (câmera a ~17 de distância → tela ≈ 22 de largura → vão ≈ 11 entre os cavaletes). */
     const loader = new THREE.TextureLoader();
+    const madeira = new THREE.MeshStandardMaterial({ color: 0xa87a45, roughness: .6, metalness: .05 });
+    const madeiraClara = new THREE.MeshStandardMaterial({ color: 0xbf9561, roughness: .55, metalness: .05 });
+    const CHAO = TABLADO;
+    /* tablado baixo de madeira escura onde os cavaletes ficam */
+    const xs = CAVALETES, xMin = Math.min(...xs) - 9, xMax = Math.max(...xs) + 9;
+    const tablado = new THREE.Mesh(new THREE.BoxGeometry(xMax - xMin, TABLADO + 11, 7), new THREE.MeshStandardMaterial({ color: 0x2a1c10, roughness: .5, metalness: .1 }));
+    tablado.position.set((xMin + xMax) / 2, (TABLADO - 11) / 2, GALERIA.z + .2); cena.add(tablado);
+    const friso = new THREE.Mesh(new THREE.BoxGeometry(xMax - xMin, .15, .1), new THREE.MeshStandardMaterial({ color: 0xc79a3e, emissive: 0x3a2808, roughness: .3, metalness: .7 }));
+    friso.position.set((xMin + xMax) / 2, TABLADO - .1, GALERIA.z - 3.35); cena.add(friso);
     const CIENTISTAS = [
       { img: 'imagens/rutherford_free.jpg',    nome: 'Ernest Rutherford', anos: '1871 – 1937', prop: 960 / 1300 },
       { img: 'imagens/Niels_Bohr_free.jpg',    nome: 'Niels Bohr',        anos: '1885 – 1962', prop: 960 / 1350 },
       { img: 'imagens/Linus_Pauling_Free.png', nome: 'Linus Pauling',     anos: '1901 – 1994', prop: 711 / 806 },
     ];
-    const altura = 10;
+    /* barra de madeira entre dois pontos (para as pernas inclinadas) */
+    const barra = (pai, a, b, esp, mat) => {
+      const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+      const m = new THREE.Mesh(new THREE.BoxGeometry(esp, A.distanceTo(B), esp), mat);
+      m.position.copy(A).add(B).multiplyScalar(.5);
+      m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.clone().sub(A).normalize());
+      pai.add(m); return m;
+    };
     CIENTISTAS.forEach((c, i) => {
-      const x = (i - 1) * 12.5, y = -1.6;
-      const largura = altura * c.prop;
-      /* moldura de madeira escura */
-      const moldura = new THREE.Mesh(new THREE.BoxGeometry(largura + 1.6, altura + 1.6, .5), new THREE.MeshStandardMaterial({ color: 0x2b1a0c, roughness: .45, metalness: .1 }));
-      moldura.position.set(x, y, .25); gal.add(moldura);
-      const passe = new THREE.Mesh(new THREE.PlaneGeometry(largura + .6, altura + .6), new THREE.MeshBasicMaterial({ color: 0xf2ece0 }));
-      passe.position.set(x, y, .52); gal.add(passe);
-      const foto = new THREE.Mesh(new THREE.PlaneGeometry(largura, altura), new THREE.MeshBasicMaterial({ map: loader.load(c.img) }));
-      foto.position.set(x, y, .54); gal.add(foto);
-      /* plaquinha com o nome */
-      const placa = new THREE.Mesh(new THREE.PlaneGeometry(8.4, 2.1), new THREE.MeshBasicMaterial({ map: texPlaca(c.nome, c.anos) }));
-      placa.position.set(x, y - altura / 2 - 2.3, .3); gal.add(placa);
-      /* luminária de galeria + luz quente sobre o quadro */
-      const lum = new THREE.Mesh(new THREE.BoxGeometry(4.6, .4, .9), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, emissive: 0xffe2b0, emissiveIntensity: .9 }));
-      lum.position.set(x, y + altura / 2 + 1.7, 1.1); gal.add(lum);
-      /* a galeria está virada (rotação de 180°): x local → −x no mundo, e "à frente" é −z */
-      const wx = GALERIA.x - x;
-      const spot = new THREE.SpotLight(0xffe2b0, 2.6, 40, .5, .65);
-      spot.position.set(wx, GALERIA.y + y + 11, GALERIA.z - 10);
-      spot.target.position.set(wx, GALERIA.y + y - 1, GALERIA.z);
+      const x = CAVALETES[i];
+      const cav = new THREE.Group(); cena.add(cav);
+      cav.position.set(x, 0, GALERIA.z);
+      cav.rotation.y = Math.PI;                              // de frente para o centro da sala
+      const alt = 8, larg = alt * c.prop;                    // tamanho do quadro
+      const yQ = -1.8;                                       // centro do quadro (altura dos olhos da câmera)
+      const base = yQ - alt / 2 - .9;                        // altura da bandeja
+      /* pernas: duas na frente, abertas (passando ATRÁS do quadro); uma atrás, apoiando */
+      barra(cav, [-3.1, CHAO, .2], [-.45, yQ + alt / 2 + 2.2, -.9], .36, madeira);
+      barra(cav, [ 3.1, CHAO, .2], [ .45, yQ + alt / 2 + 2.2, -.9], .36, madeira);
+      barra(cav, [0, CHAO, -4.6], [0, yQ + alt / 2 + 1.2, -1.2], .34, madeira);
+      /* mastro central atrás do quadro e o prendedor de cima */
+      barra(cav, [0, base, -.7], [0, yQ + alt / 2 + 2.6, -.9], .3, madeiraClara);
+      const prende = new THREE.Mesh(new THREE.BoxGeometry(1.6, .5, .9), madeira); prende.position.set(0, yQ + alt / 2 + .6, .05); cav.add(prende);
+      /* bandeja onde o quadro se apoia (na frente das pernas) */
+      const bandeja = new THREE.Mesh(new THREE.BoxGeometry(larg + 3, .45, 1.6), madeira); bandeja.position.set(0, base, .55); cav.add(bandeja);
+      const borda = new THREE.Mesh(new THREE.BoxGeometry(larg + 3, .5, .18), madeiraClara); borda.position.set(0, base + .4, 1.3); cav.add(borda);
+      /* quadro: moldura de madeira clara, passe-partout branco e a foto (levemente inclinado para trás) */
+      const quadro = new THREE.Group(); quadro.position.set(0, yQ, .75); quadro.rotation.x = -.05; cav.add(quadro);
+      const moldura = new THREE.Mesh(new THREE.BoxGeometry(larg + 1.3, alt + 1.3, .35), madeiraClara); quadro.add(moldura);
+      const passe = new THREE.Mesh(new THREE.PlaneGeometry(larg + .7, alt + .7), new THREE.MeshStandardMaterial({ color: 0xf4efe6, roughness: .9 }));
+      passe.position.z = .18; quadro.add(passe);
+      const foto = new THREE.Mesh(new THREE.PlaneGeometry(larg, alt), new THREE.MeshBasicMaterial({ map: loader.load(c.img) }));
+      foto.position.z = .19; quadro.add(foto);
+      /* plaquinha dourada com o nome, presa na frente da bandeja */
+      const placa = new THREE.Mesh(new THREE.PlaneGeometry(6.4, 1.6), new THREE.MeshBasicMaterial({ map: texPlaca(c.nome, c.anos) }));
+      placa.position.set(0, base - 1.2, 1.0); cav.add(placa);
+      /* luz quente de cima, como num estúdio */
+      const spot = new THREE.SpotLight(0xffd9a0, 1.7, 40, .55, .7);
+      spot.position.set(x, yQ + 12, GALERIA.z - 9);
+      spot.target.position.set(x, yQ - 1, GALERIA.z);
       cena.add(spot, spot.target);
+      const brilho = new THREE.PointLight(0xffc27a, .45, 12); brilho.position.set(x, CHAO + 2, GALERIA.z - 4); cena.add(brilho);   // poça de luz no tablado
     });
   }
 
@@ -1739,7 +1765,7 @@ const Atomo = (() => {
       `• direção: yaw ${i.yaw.toFixed(1)}° · pitch ${i.pitch.toFixed(1)}°\n` +
       `• campo de visão: ${camera.fov}°\n` +
       `• átomos: H (${POS_ATOMO.H.join(', ')}) · He (${POS_ATOMO.He.join(', ')}) · C (${POS_ATOMO.C.join(', ')})\n` +
-      `• galeria dos cientistas (centro): (${GALERIA.x}, ${GALERIA.y}, ${GALERIA.z})`;
+      `• cavaletes (centro do quadro): Rutherford (${CAVALETES[0]}, −1.8, ${GALERIA.z}) · Bohr (${CAVALETES[1]}, −1.8, ${GALERIA.z}) · Pauling (${CAVALETES[2]}, −1.8, ${GALERIA.z})`;
   }
 
   function monta(){
