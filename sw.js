@@ -1,6 +1,6 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v39';  // acompanhe APP_VERSAO do index.html (0.39 → v39)
+const CACHE = 'pauling-v48';  // acompanhe APP_VERSAO do index.html (0.48 → v48)
 const ARQUIVOS = [
   './',
   './index.html',
@@ -15,6 +15,7 @@ const ARQUIVOS = [
   './imagens/rutherford_free.jpg',
   './imagens/Niels_Bohr_free.jpg',
   './imagens/Linus_Pauling_Free.png',
+  './imagens/bohr_postulados.webp',
   './fontes/ibm-plex-mono-500.woff2',
   './fontes/ibm-plex-sans-300.woff2',
   './fontes/ibm-plex-sans-400.woff2',
@@ -31,16 +32,16 @@ const ARQUIVOS = [
   './audio/' + encodeURIComponent('audio_distribuição_5') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_5.1') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_5.2') + '.mp3',
-  './audio/' + encodeURIComponent('audio_distribuição_5.3') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_6') + '.mp3',
-  ...['7', '7.1', '7.2', '7.3'].map(n => './audio/' + encodeURIComponent('audio_distribuição_' + n) + '.mp3'),
+  ...['7', '7.1', '7.2', '7.3', '7.4'].map(n => './audio/' + encodeURIComponent('audio_distribuição_' + n) + '.mp3'),
   /* sons do quiz */
   ...['funfare','applause','error','Calmanaproximaacerta','exato!','muitobem','issomesmo!','excelente']
       .map(n => './audio/vfx/' + encodeURIComponent(n) + '.mp3'),
   './audio/vfx/right.mp3',
   './audio/vfx/flip.mp3',
   './audio/vfx/transition_cube.mp3',
-  './audio/vfx/' + encodeURIComponent('typing sound') + '.mp3'
+  './audio/vfx/' + encodeURIComponent('typing sound') + '.mp3',
+  './audio/vfx/electron_jumping.mp3'
 ];
 
 self.addEventListener('install', e => {

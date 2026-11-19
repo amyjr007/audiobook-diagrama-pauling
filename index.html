@@ -324,12 +324,53 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .escurecedor.on{opacity:.93}
 .linha.linha-conceito{white-space:normal;width:min(86%,920px);text-align:center;font-size:clamp(22px,5.2vw,40px);line-height:1.32;font-weight:600}
 /* equações subindo no fundo escuro (áudio 7) */
-.equacoes{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.equacoes{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden;transition:filter .8s ease}
+/* áudio 7: imagem dos postulados de Bohr subindo (tela deitada: à direita do retrato · celular: no centro, fundo embaçado) */
+.postulado{position:absolute;z-index:3;left:79%;top:50%;width:min(36%,62vh);pointer-events:none;opacity:0;transform:translate(-50%,-50%)}
+.postulado.centro{left:50%;width:min(92%,560px)}
+.postulado img{display:block;width:100%;height:auto;border-radius:10px;box-shadow:0 22px 50px rgba(0,0,0,.65)}
+#palco.desfoca .face,#palco.desfoca .equacoes{filter:blur(7px) brightness(.7)}
+/* áudio 7.3: barra de energia acima do átomo (cresce para a direita junto com as camadas) */
+.energia{position:absolute;z-index:3;left:50%;top:17%;transform:translateX(-50%);width:min(70%,520px);display:flex;align-items:center;gap:12px;pointer-events:none;opacity:0;transition:opacity .6s ease}
+.energia.on{opacity:1}
+.energia span{font:700 clamp(14px,3.6vw,19px) "Space Grotesk",sans-serif;color:#eef1ff;letter-spacing:.02em}
+.en-trilho{position:relative;flex:1;height:12px;border-radius:999px;background:rgba(238,241,255,.08);border:1px solid rgba(238,241,255,.18);overflow:hidden}
+.en-trilho i{position:absolute;left:0;top:0;bottom:0;width:0;border-radius:inherit;
+  background:linear-gradient(90deg,#3ee0ff,#6f9bff,#9b5cff,#ff3bd0,#ff5a5a);background-size:var(--cheio,520px) 100%;
+  box-shadow:0 0 14px rgba(155,92,255,.8)}
+.linha.linha-topo{font-size:clamp(18px,4.6vw,28px)}
+/* áudio 7.3: frase-relâmpago do salto do elétron (pisca em sincronia com o salto) */
+.salto-frase{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;opacity:0;
+  font:700 clamp(30px,8vw,64px) "Space Grotesk",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#f4fbff;
+  text-shadow:0 0 6px #fff,0 0 18px #7ce7ff,0 0 40px #9b5cff,0 0 70px #ff3bd0}
+.salto-frase.on{animation:relampago .7s linear both}
+@keyframes relampago{
+  0%  {opacity:0;transform:translate(-50%,-50%) scale(.92) skewX(-8deg);filter:brightness(3)}
+  6%  {opacity:1;transform:translate(-50%,-50%) scale(1.06) skewX(6deg)}
+  12% {opacity:.15}
+  18% {opacity:1;transform:translate(-50%,-50%) scale(1) skewX(0);filter:brightness(1.6)}
+  26% {opacity:.4}
+  32% {opacity:1;filter:brightness(1)}
+  70% {opacity:1}
+  100%{opacity:0;transform:translate(-50%,-50%) scale(1.04)}
+}
 .equacao{position:absolute;left:0;top:0;white-space:nowrap;font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--c);text-shadow:0 0 12px color-mix(in srgb,var(--c) 55%,transparent)}
 .equacao sub,.equacao sup{font-size:.62em}
+.espectro{position:absolute;left:0;top:0;display:flex;flex-direction:column;gap:4px}
+.espectro img{display:block;width:100%;height:auto;border-radius:3px;border:1px solid rgba(238,241,255,.25);box-shadow:0 0 14px rgba(62,224,255,.25)}
+.espectro span{font:500 11px "IBM Plex Mono",monospace;color:#cfd6ff;letter-spacing:.03em}
 /* "Átomo neutro: Z = número de elétrons": no celular pode quebrar em 2 linhas, centralizado */
 .linha.linha-neutro{white-space:normal;width:min(92%,560px);text-align:center;line-height:1.25}
-.linha.linha-neutro.ao-lado{width:auto;max-width:none;white-space:nowrap;text-align:left;transform:translate(0,-50%)}
+/* tela deitada: bloco centralizado à direita do átomo, letras maiores e um respiro entre as 2 linhas (posições da print) */
+.linha.linha-neutro.ao-lado{width:auto;max-width:none;white-space:nowrap;text-align:center;line-height:2.2;transform:translate(-50%,-50%)}
+/* ajustes do modo edição (v0.40, tela 1440×900, fonte da linha 47px): tamanho de cada trecho e deslocamento
+   em fração do palco (--w/--h vêm de posLinhas) — acompanha qualquer tela deitada */
+.linha.linha-neutro.ao-lado span{display:inline-block}
+.linha.linha-neutro.ao-lado.digitando::after{display:none}   /* o cursor ficaria fora do lugar (os trechos são deslocados) */
+.linha.linha-neutro.ao-lado span:nth-of-type(1){font-size:.617em;translate:calc(var(--w) * .1653) calc(var(--h) * -.0851)}   /* "Átomo neutro:" 29px */
+.linha.linha-neutro.ao-lado span:nth-of-type(2){font-size:.532em;translate:calc(var(--w) * .1694) calc(var(--h) * -.0809)}   /* "Nº atômico" 25px (igual ao "= Nº de elétrons") */
+.linha.linha-neutro.ao-lado span:nth-of-type(3){font-size:.532em;translate:calc(var(--w) * .175) calc(var(--h) * -.0809)}    /* "= Nº de elétrons" 25px */
+.linha.linha-neutro:not(.ao-lado) span:nth-of-type(3){margin-left:.25em}   /* celular: espaço antes do "=" */
 
 /* play no modo "Ok": verde, piscando, com "Ok" escrito dentro */
 .btn-play .ok-texto{display:none;position:relative;font:700 20px "Space Grotesk",sans-serif;color:#04140a}
@@ -702,6 +743,9 @@ body.editando #palco canvas{cursor:default}
     <div class="cards" id="cardsTras" aria-hidden="true"></div>
     <div class="cards cards-frente" id="cardsFrente" aria-hidden="true"></div>
     <div class="equacoes" id="equacoes" aria-hidden="true"></div>
+    <div class="postulado" id="postulado" aria-hidden="true"><img src="imagens/bohr_postulados.webp" alt="Postulados de Bohr"></div>
+    <div class="salto-frase" id="saltoFrase" aria-hidden="true">salto quântico</div>
+    <div class="energia" id="energia" aria-hidden="true"><span>Energia</span><div class="en-trilho"><i id="energiaFill"></i></div></div>
     <div class="dica-girar" id="dicaGirar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
       <span id="dicaTexto">arraste para girar</span>
@@ -797,7 +841,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.39';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.48';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -807,11 +851,29 @@ const CAPITULOS = [
   { titulo: 'Quiz do H',                   pagina: 'pagina1', audio: 'audio_distribuição_3', inicio: 0, prepara: () => Atomo.estado('He', .464, 'Hélio (2He)', [7]) },
   { titulo: 'Quiz do C',                   pagina: 'pagina1', audio: 'audio_distribuição_4', inicio: 0, prepara: () => Atomo.estado('H', .464, 'Hidrogênio - D') },
   { titulo: 'O princípio da neutralidade do átomo', pagina: 'pagina1', audio: 'audio_distribuição_5', inicio: 0, prepara: () => Atomo.estado('C', .464, 'Carbono') },
+  /* 6: vai direto ao 1º conceito (áudio 7.1) — câmera no Bohr, tela escura */
+  { titulo: 'Os níveis de energia',        pagina: 'pagina1', audio: 'audio_distribuição_7.1', inicio: 0,
+    prepara: () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); } },
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_5.3', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4'];
 
+/* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
+const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
+const CAM_RUTHERFORD = [[13.64, -2.36, 24.93], [13.62, -2.02, 34.92]];
+const CAM_BOHR       = [[-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92]];
+/* conceitos (áudios 7.1 e 7.2) */
+const CONCEITO_1 = '1. Os elétrons se organizam em níveis discretos de energia, também conhecidos como camadas eletrônicas.';
+const CONCEITO_2 = '2. Cada nível é representado por um número inteiro, n, e sua energia aumenta quanto mais afastado do núcleo esse nível está.';
+
+/* áudio 7.3: depois de 3 saltos do elétron, toca o 7.4 (se o 7.3 ainda estiver tocando, espera ele acabar) */
+let pendente7_4 = false;
+function depoisDe3Saltos(){
+  if (atual !== 'audio_distribuição_7.3') return;                                          // saiu da cena (Home, Sumário…)
+  if (!audio.ended){ pendente7_4 = true; return; }                                         // o 7.3 ainda está tocando
+  carrega('audio_distribuição_7.4'); audio.play().catch(() => {});
+}
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
   [AUDIO_CAPA]: [
@@ -909,27 +971,36 @@ const EVENTOS = {
     { t: .05, acao: () => Atomo.viajaPara('C', 'Carbono', 'elem') },                    // câmera voa ao carbono (zoom no núcleo)
     { t: 1.0, acao: () => { Atomo.frenteC(1000); Atomo.brilhaProtons(1000); } },          // prótons de frente, brilham por 1 s
     { t: 3.0, acao: () => Atomo.zoomLento(1, 2200) },                                    // zoom out: aparecem os elétrons
-    { t: 4.7, acao: () => pausaRoteiro(1500) },                                          // pausa o áudio por 1,5 s
+    { t: 5.0, acao: () => pausaRoteiro(1500) },                                          // pausa o áudio por 1,5 s
+    /* 6 s → 26 s: câmera se afasta devagar, o contorno das camadas some e os elétrons aceleram com rastro neon intenso */
+    { t: 6.0,  acao: () => Atomo.energizaCarbono(20000) },
     { t: 8.5,  acao: () => Atomo.digita('neutro', 'Átomo neutro:', { cor: '#eef1ff' }) },    // celular: embaixo · Chromebook: ao lado
-    { t: 11.3, acao: () => { Atomo.quebraLinha('neutro'); Atomo.digita('neutro', 'Z', { cor: '#6f9bff' }); } },   // 2ª linha, alinhada com a 1ª
-    { t: 11.4, acao: () => Atomo.digita('neutro', ' = Nº de elétrons', { cor: '#7ce7ff' }) },   // Nº = número
-    /* fim: tudo fica na tela e o áudio 5.3 começa sozinho, com o play escondido */
-    { t: 'fim', acao: () => { escondePlay(true); tocaDepois(1500, 'audio_distribuição_5.3'); } },   // 1,5 s de silêncio e o 5.3 começa
-  ],
-  'audio_distribuição_5.3': [
-    /* fim: o play volta como "Ok" verde piscando → áudio 6 */
+    { t: 11.3, acao: () => { Atomo.quebraLinha('neutro'); Atomo.digita('neutro', 'Nº atômico', { cor: '#6f9bff' }); } },   // 2ª linha (com um respiro entre as duas)
+    { t: 11.4, acao: () => Atomo.digita('neutro', '= Nº de elétrons', { cor: '#7ce7ff' }) },   // Nº = número
+    /* fim: tudo fica na tela; o play volta como "Ok" verde piscando → áudio 6 */
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_6'); } },
   ],
   'audio_distribuição_6': [
-    { t: .05,  acao: () => Atomo.mostraCavaletes(true) },               // os cavaletes dos cientistas aparecem
-    /* 10 s → 13 s: a câmera voa até a posição do modo câmera (de costas para os átomos, olhando a parede da frente) */
-    { t: 10.0, acao: () => Atomo.voaCamera([13.64, -2.36, 24.93], [13.62, -2.02, 34.92], 3000) },
-    { t: 'fim', acao: () => tocaDepois(800, 'audio_distribuição_7') },        // o áudio 7 começa sozinho
+    /* a câmera voa até a "bancada de montagem" (posição do modo câmera) e um átomo é construído lá */
+    { t: .05,  acao: () => { Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_CONSTRUCAO[0], CAM_CONSTRUCAO[1], 2500); Atomo.construcao(true); } },
+    /* 3,5 s → 8,5 s: a cada 0,5 s entra 1 próton no núcleo e 1 elétron na eletrosfera (11 de cada) */
+    ...Array.from({ length: 11 }, (_, i) => ({ t: 3.5 + i * .5, acao: () => Atomo.construcaoPasso(i) })),
+    /* 9,5 s → 13 s: a câmera vira para o cavalete do Rutherford */
+    { t: 9.5,  acao: () => Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 3500) },
+    /* 22,2 s: a tela escurece e o átomo de Rutherford aparece (núcleo 4 p⁺ + 3 n⁰, depois os 4 elétrons, até 27 s) */
+    { t: 22.2, acao: () => Atomo.rutherford(true) },
+    ...[23.0, 24.2, 25.4, 26.5].map((t, i) => ({ t, acao: () => Atomo.rutherfordEletron(i) })),
+    /* fim: não passa sozinho — o play aparece e o toque nele começa o áudio 7 */
+    { t: 'fim', acao: () => escondePlay(false) },
   ],
   'audio_distribuição_7': [
+    { t: 1.5, acao: () => Atomo.rutherford(false) },                          // o átomo de Rutherford e o escuro saem em fade
     /* 3 s → 4 s: a câmera desliza até o cavalete do Bohr (mesma altura e distância) */
     { t: 3.0, acao: () => Atomo.voaCamera([-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92], 1000) },
     { t: 7.8, acao: () => Equacoes.inicia() },                                // equações sobem pelos lados, no fundo escuro
+    /* 14 s → 17 s: a imagem dos postulados sobe e para no meio (celular: no centro, fundo embaçado) */
+    { t: 14.0, acao: () => Postulado.sobe(3000) },
+    { t: 21.0, acao: () => Postulado.some(800) },                             // some em fade; o fundo volta ao normal
     /* fim: as equações terminam de subir; o play vira "1º conceito" */
     { t: 'fim', acao: () => {
         Equacoes.para(false); escondePlay(false);
@@ -937,11 +1008,42 @@ const EVENTOS = {
     } },
   ],
   'audio_distribuição_7.1': [
-    { t: 1.0, acao: () => Atomo.digita('conceito', 'Os elétrons se organizam em níveis discretos de energia, também conhecidos como camadas eletrônicas.', { cor: '#eef1ff', ms: 55 }) },
+    { t: 1.0, acao: () => Atomo.digita('conceito', CONCEITO_1, { cor: '#eef1ff', ms: 55 }) },
     { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, 'audio_distribuição_7.2'); } },
   ],
   'audio_distribuição_7.2': [
-    // coreografia do áudio 7.2 — a definir
+    { t: .05, acao: () => Atomo.apagaLinha('conceito') },                     // o 1º conceito some
+    { t: .8,  acao: () => Atomo.digita('conceito', CONCEITO_2, { cor: '#eef1ff', ms: 55 }) },
+    /* fim: a tela (continua) escura e aparece "toque na tela para continuar" → áudio 7.3 */
+    { t: 'fim', acao: () => { Atomo.escurece(true); escondePlay(true); mostraToque(true, 'audio_distribuição_7.3'); } },
+  ],
+  'audio_distribuição_7.3': [
+    /* 2 s → 3 s: a câmera volta ao Rutherford; o escuro e o átomo do áudio 6 voltam (o texto do conceito sai) */
+    { t: 2.0, acao: () => {
+        Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 1000);
+        Atomo.escurece(false); Atomo.rutherfordVolta();
+    } },
+    { t: 3.0, acao: () => Atomo.digita('topo', 'Modelo de Rutherford - 1911', { cor: '#eef1ff', ms: 45 }) },
+    /* 8,3 s: a eletrosfera some (fica só o núcleo) e a câmera volta para o Bohr: o átomo dele é
+       construído em cima do retrato (o escuro clareia um pouco para o retrato aparecer atrás) */
+    { t: 8.3, acao: () => {
+        Atomo.rutherfordSemEletrons(1000);
+        Atomo.bohrNucleo();                                                  // fica só 1 próton (o resto: "TV desligando")
+        Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1500);                     // (o título sai junto, em fade)
+        Atomo.rutherfordEscuro(.8, 1500);                                    // bem escuro: o retrato aparece só de leve
+    } },
+    { t: 9.9, acao: () => Atomo.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 45 }) },
+    /* 11 s → 17 s: 7 camadas ligam uma a uma (efeito TV) e a barra "Energia" cresce junto, terminando com a 7ª */
+    { t: 11.0, acao: () => Atomo.energiaBarra(6000) },
+    ...Array.from({ length: 7 }, (_, i) => ({ t: 11 + i * (5.2 / 6), acao: () => Atomo.camadaLiga(i, 800) })),
+    /* 27 s: 1 elétron no nível 1; a barra vai para o nível 1. Daí em diante o aluno segura e solta o elétron em qualquer nível */
+    { t: 27.0, acao: () => Atomo.bohrEletron(depoisDe3Saltos) },
+    /* fim: o play some — o áudio 7.4 só vem depois de 3 saltos (se já aconteceram, toca agora) */
+    { t: 'fim', acao: () => { escondePlay(true); if (pendente7_4){ pendente7_4 = false; tocaDepois(600, 'audio_distribuição_7.4'); } } },
+  ],
+  'audio_distribuição_7.4': [
+    /* fim: o play vira "Ok" verde → áudio 8 */
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8'); } },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -969,31 +1071,116 @@ const Equacoes = (() => {
     'n = 1, 2, 3, …', 'h = 6,63 × 10<sup>−34</sup> J·s', 'Z = nº de prótons', 'e<sup>−</sup> → órbita estável',
   ];
   const CORES = ['#3ee0ff', '#ffc24a', '#9b8cff', '#8cff6a', '#ff5fa8', '#eef1ff'];
-  let timer = null;
+  /* espectros de emissão (linhas coloridas no fundo preto) e de absorção (arco-íris com linhas escuras)
+     do H, do He e do Na — linhas visíveis em nm */
+  const LINHAS_ESP = {
+    H:  { nome: 'H',  linhas: [410.2, 434.0, 486.1, 656.3] },
+    He: { nome: 'He', linhas: [447.1, 471.3, 492.2, 501.6, 587.6, 667.8, 706.5] },
+    Na: { nome: 'Na', linhas: [498.3, 568.8, 589.0, 589.6, 615.4] },
+  };
+  /* cor (aproximada) de um comprimento de onda visível */
+  function corOnda(l){
+    let r = 0, g = 0, b = 0;
+    if (l < 440){ r = -(l - 440) / 60; b = 1; } else if (l < 490){ g = (l - 440) / 50; b = 1; }
+    else if (l < 510){ g = 1; b = -(l - 510) / 20; } else if (l < 580){ r = (l - 510) / 70; g = 1; }
+    else if (l < 645){ r = 1; g = -(l - 645) / 65; } else r = 1;
+    const f = l < 420 ? .3 + .7 * (l - 380) / 40 : l > 700 ? .3 + .7 * (780 - l) / 80 : 1;
+    return [r, g, b].map(c => Math.round(255 * Math.pow(Math.max(0, c) * f, .8)));
+  }
+  const imgsEsp = [];
+  function montaEspectros(){
+    if (imgsEsp.length) return;
+    const W = 420, H = 46, x = l => (l - 380) / 400 * W;
+    Object.values(LINHAS_ESP).forEach(at => ['emissão', 'absorção'].forEach(tipo => {
+      const c = document.createElement('canvas'); c.width = W; c.height = H;
+      const g = c.getContext('2d');
+      if (tipo === 'emissão'){
+        g.fillStyle = '#000'; g.fillRect(0, 0, W, H);
+        at.linhas.forEach(l => {
+          const [r, gg, b] = corOnda(l);
+          g.shadowColor = `rgb(${r},${gg},${b})`; g.shadowBlur = 8;
+          g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(x(l) - 1.5, 0, 3, H);
+        });
+      } else {
+        for (let i = 0; i < W; i++){ const [r, gg, b] = corOnda(380 + i / W * 400); g.fillStyle = `rgb(${r},${gg},${b})`; g.fillRect(i, 0, 1, H); }
+        g.fillStyle = '#000'; at.linhas.forEach(l => g.fillRect(x(l) - 1.5, 0, 3, H));
+      }
+      imgsEsp.push({ src: c.toDataURL(), rotulo: `${at.nome} · ${tipo}` });
+    }));
+  }
+  let timer = null, nCria = 0;
+  function criaEspectro(caixa, w, h){
+    montaEspectros();
+    const it = imgsEsp[Math.floor(Math.random() * imgsEsp.length)];
+    const el = document.createElement('div'); el.className = 'espectro';
+    const prof = Math.random();
+    el.style.width = Math.round(Math.min(w * .26, 150 + prof * 110)) + 'px';
+    el.innerHTML = `<img src="${it.src}" alt=""><span>${it.rotulo}</span>`;
+    caixa.appendChild(el);
+    return { el, prof };
+  }
   function cria(){
     if (roteiroCongelado()) return;                        // pausou o áudio: não nascem equações novas
     const caixa = $('#equacoes'), w = caixa.clientWidth, h = caixa.clientHeight;
     if (!w || !h) return;
+    /* a cada 3 itens, 1 é um espectro */
+    if (++nCria % 3 === 0){ const { el, prof } = criaEspectro(caixa, w, h); sobe(el, prof, w, h); return; }
     const el = document.createElement('div'); el.className = 'equacao';
     el.innerHTML = LISTA[Math.floor(Math.random() * LISTA.length)];
     const prof = Math.random();                           // profundidade: perto = maior, mais forte e mais rápida
     el.style.setProperty('--c', CORES[Math.floor(Math.random() * CORES.length)]);
     el.style.fontSize = (13 + prof * 15) + 'px';
     caixa.appendChild(el);
+    sobe(el, prof, w, h);
+  }
+  function sobe(el, prof, w, h){
     const lw = el.offsetWidth;
     const esquerda = Math.random() < .5;
     let x = esquerda ? w * .02 + Math.random() * Math.max(0, w * .3 - lw) : w * .7 + Math.random() * Math.max(0, w * .28 - lw);
     x = Math.max(4, Math.min(w - lw - 4, x));
-    const op = .3 + prof * .55, dur = 12000 - prof * 5000;
+    const esp = el.classList.contains('espectro');
+    const op = esp ? .55 + prof * .4 : .3 + prof * .55, dur = 12000 - prof * 5000;   // espectros um pouco mais visíveis
     el.animate([
       { transform: `translate(${x}px, ${h + 20}px)`, opacity: 0 },
       { opacity: op, offset: .15 }, { opacity: op, offset: .8 },
-      { transform: `translate(${x}px, -60px)`, opacity: 0 }
+      { transform: `translate(${x}px, ${-(el.offsetHeight + 20)}px)`, opacity: 0 }
     ], { duration: dur, easing: 'linear', fill: 'both' }).finished.then(() => el.remove()).catch(() => el.remove());
   }
   function inicia(){ para(true); cria(); timer = setInterval(cria, 600); }
   function para(limpa){ clearInterval(timer); timer = null; if (limpa) $('#equacoes').innerHTML = ''; }
   return { inicia, para };
+})();
+/* =====================================================================
+   POSTULADOS DE BOHR (áudio 7): a imagem sobe e para no meio; depois some em fade.
+   Tela deitada: à direita do retrato · celular em pé: no centro, com o fundo embaçado.
+   ===================================================================== */
+const Postulado = (() => {
+  let anim = null;
+  const el = () => $('#postulado');
+  function sobe(dur = 3000){
+    const p = $('#palco'), e = el(); if (!p || !e) return;
+    limpa();
+    const celular = p.clientWidth < p.clientHeight;
+    e.classList.toggle('centro', celular);
+    p.classList.toggle('desfoca', celular);
+    const d = p.clientHeight / 2 + e.offsetHeight / 2 + 30;   // começa logo abaixo da borda de baixo
+    anim = e.animate([
+      { transform: `translate(-50%,-50%) translateY(${d}px)`, opacity: 1 },
+      { transform: 'translate(-50%,-50%) translateY(0)', opacity: 1 }
+    ], { duration: dur, easing: 'cubic-bezier(.22,.8,.3,1)', fill: 'forwards' });
+  }
+  function some(dur = 800){
+    const p = $('#palco'), e = el(); if (!e) return;
+    p && p.classList.remove('desfoca');                     // o fundo volta ao normal junto com o fade
+    const a = e.animate([{ opacity: 1 }, { opacity: 0 }], { duration: dur, fill: 'forwards' });   // por cima da subida (que continua parada no meio)
+    a.finished.then(limpa).catch(() => {});
+  }
+  function limpa(){
+    const e = el(); if (!e) return;
+    e.getAnimations().forEach(a => a.cancel()); anim = null;
+    const p = $('#palco'); p && p.classList.remove('desfoca');
+  }
+  return { sobe, some, limpa };
 })();
 /* "toque na tela para continuar": o toque toca o áudio guardado em proximoAoTocar */
 let proximoAoTocar = 'audio_distribuição_3';
@@ -1287,7 +1474,7 @@ function abreSecao(id){
   audio.pause();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
   if (id === 'pagina1'){  // a página 1 sempre começa do início
-    Atomo.reset(); atual = null; $('#barra').style.width = '0'; botaoOk(false); btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha(); Equacoes.para(true);
+    Atomo.reset(); atual = null; $('#barra').style.width = '0'; botaoOk(false); btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha(); Equacoes.para(true); Postulado.limpa(); pendente7_4 = false;
     Intro.inicia();       // abertura: átomo escurecido + cartões de subníveis, até o play
   }
   viraCubo('capa', id);
@@ -1446,7 +1633,7 @@ function montaLista(){
   $('#lista').innerHTML = CAPITULOS.map((c,i) => `
     <li><button data-i="${i}">
       <span class="num" style="--c:${CORES[i % 4]}">${i+1}</span>
-      <span class="txt"><b>${c.titulo}</b><span>Página ${c.pagina.replace('pagina','')}${c.inicio ? ' · ' + formata(c.inicio) : ''}</span></span>
+      <span class="txt"><b>${c.titulo}</b></span>
     </button></li>`).join('');
 }
 function atualizaLista(){
@@ -1469,7 +1656,7 @@ $('#lista').addEventListener('click', e => {
   cancelaPausaRoteiro();
   fechaSumario();
   mostra(c.pagina);
-  escondePlay(false); mostraToque(false); Quiz.fecha(); Intro.para(); botaoOk(false); Equacoes.para(true);
+  escondePlay(false); mostraToque(false); Quiz.fecha(); Intro.para(); botaoOk(false); Equacoes.para(true); Postulado.limpa(); pendente7_4 = false;
   carrega(c.audio, c.inicio);
   if (c.prepara) c.prepara();
   audio.play().catch(() => {});
@@ -1519,6 +1706,15 @@ const Atomo = (() => {
   /* carbono */
   let cAtomo, cNucleo, maisC = [], cEsferas = [];
   const eletrons = [];   // { e: mesh, esf: camada a que pertence }
+  /* áudio 6: átomo construído próton a próton / elétron a elétron, e o átomo de Rutherford sobre a tela escura */
+  let constr = null;     // { g, nucleo, esf, protons:[], eletrons:[], mais:[] }
+  let ruth = null;       // { on, cena, cam, escuro, nucleo, mats:[], eletrons:[] }
+  let atualizaOrbita = null;   // move um elétron na órbita e acerta o rastro (definida em monta)
+  /* áudio 7.3: elétron de Bohr interativo (definidos em monta) */
+  let bohr = null, atualizaBohr = null, bohrSalta = null, bohrLimpa = null;
+  /* áudio 5.2: elétrons do carbono ganham energia (0 → 1) e o contorno das camadas some (1 → 0) */
+  let energiaC = 0, contornoC = 1;
+  const CORES_NEON = [0xff2bd6, 0x8a2bff, 0x00ff9c, 0xffd200, 0xff3b6b, 0x2b8cff];
   /* posições dos átomos no laboratório (mesmo plano): H à esquerda, He no meio, C à direita */
   const POS_ATOMO = { H: [-16, 0, 0], He: [0, 0, 0], C: [16, 0, 0] };
   /* câmera: alvo do roteiro e modo câmera livre (F) */
@@ -1532,6 +1728,62 @@ const Atomo = (() => {
   const rotulos = {}, linhas = {};
   let camadaNomes;
   const V = (x,y,z) => new THREE.Vector3(x,y,z);
+  const pronto_ = () => pronto;                  // (para métodos que têm um parâmetro chamado "pronto")
+  /* efeito "TV antiga ligando" numa camada 3D (mesma curva do @keyframes tvLiga):
+     risco de luz → abre na horizontal → abre na vertical com tremida. [k, escalaX, escalaY, brilho, opacidade] */
+  const TV_LIGA = [[0, 0, .006, 5, 1], [.28, 1, .006, 5, 1], [.52, 1, 1.06, 2.2, 1], [.62, 1, .97, 1.5, .75],
+                   [.70, 1, .985, 1.4, 1], [.78, 1, 1.01, 1.2, .85], [.86, 1, 1, 1.1, 1], [1, 1, 1, 1, 1]];
+  function tvLigaCamada(C, k){
+    let j = 0; while (j < TV_LIGA.length - 2 && k > TV_LIGA[j + 1][0]) j++;
+    const A = TV_LIGA[j], B = TV_LIGA[j + 1], f = Math.min(1, Math.max(0, (k - A[0]) / (B[0] - A[0])));
+    const v = n => A[n] + (B[n] - A[n]) * f;
+    C.g.scale.set(Math.max(.001, v(1)), Math.max(.001, v(2)), 1);
+    const b = v(3), op = v(4);
+    C.fio.material.color.copy(C.cor).multiplyScalar(Math.min(b, 1.8)); C.fio.material.opacity = op;
+    C.brilhoC.material.color.copy(C.cor); C.brilhoC.material.opacity = op * Math.min(.5, .1 * b);
+    C.rotulo.material.opacity = op;                                       // identificação "n = …" liga junto
+  }
+  /* textura da identificação de uma camada: "n = 1" numa pílula escura (a linha da camada não passa por cima) */
+  function texCamada(n, cor){
+    const c = document.createElement('canvas'); c.width = 256; c.height = 96;
+    const g = c.getContext('2d'), hex = '#' + cor.getHexString();
+    g.fillStyle = 'rgba(2,4,10,.88)'; g.strokeStyle = hex; g.lineWidth = 3;
+    g.beginPath(); g.roundRect(14, 14, 228, 68, 34); g.fill(); g.stroke();
+    g.fillStyle = hex; g.textAlign = 'center'; g.textBaseline = 'middle';
+    g.shadowColor = hex; g.shadowBlur = 10;
+    g.font = '700 58px "Space Grotesk", sans-serif'; g.fillText(`n = ${n}`, 128, 51);
+    const t = new THREE.CanvasTexture(c); t.anisotropy = 4; return t;
+  }
+  /* átomo de Rutherford no tamanho/posição do áudio 6 e sem camadas */
+  /* efeito "TV desligando" numa bolinha (mesma curva do @keyframes tvDesliga): vira uma linha e depois um ponto */
+  const TV_DESLIGA = [[0, 1, 1], [.45, 1.04, .008], [.8, .02, .008], [1, 0, 0]];
+  function tvDesligaBola(m, k){
+    let j = 0; while (j < TV_DESLIGA.length - 2 && k > TV_DESLIGA[j + 1][0]) j++;
+    const A = TV_DESLIGA[j], B = TV_DESLIGA[j + 1], f = Math.min(1, Math.max(0, (k - A[0]) / (B[0] - A[0])));
+    const sx = Math.max(.001, A[1] + (B[1] - A[1]) * f), sy = Math.max(.001, A[2] + (B[2] - A[2]) * f);
+    m.scale.set(sx, sy, sx);
+  }
+  /* "salto quântico" pisca na tela (reinicia a animação a cada salto) */
+  function fraseSalto(){
+    const f = $('#saltoFrase'); if (!f) return;
+    f.classList.remove('on'); void f.offsetWidth; f.classList.add('on');
+  }
+  /* barra "Energia" num valor (0…1); suave = desliza, senão vai na hora */
+  function barraNivel(frac, suave){
+    const caixa = $('#energia'), fill = $('#energiaFill'); if (!caixa || !fill) return;
+    caixa.classList.add('on');
+    fill.style.setProperty('--cheio', fill.parentElement.clientWidth + 'px');
+    fill.style.transition = suave ? 'width .5s cubic-bezier(.3,.8,.3,1)' : 'none';
+    fill.style.width = (Math.max(0, Math.min(1, frac)) * 100) + '%';
+  }
+  function ruthPadrao(){
+    ruth.atomo.scale.setScalar(1); ruth.atomo.position.y = 0;
+    /* núcleo completo de novo (4 p⁺ + 3 n⁰) e sem o elétron de Bohr */
+    ruth.bolas.forEach(b => { ruth.nucleo.add(b.m); b.m.position.copy(b.pos0); b.m.rotation.set(0, 0, 0); b.m.scale.setScalar(1); b.m.visible = true; });
+    if (bohrLimpa) bohrLimpa();
+    ruth.camadas.forEach(C => { C.g.visible = false; C.fio.material.opacity = C.brilhoC.material.opacity = C.rotulo.material.opacity = 0; });
+    const e = $('#energia'); if (e) e.classList.remove('on');
+  }
   const ease = k => k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
   const easeBack = k => 1 + 2.4*Math.pow(k-1,3) + 1.4*Math.pow(k-1,2);
   const reduz = a => a - Math.round(a / (2*Math.PI)) * 2*Math.PI;
@@ -1738,8 +1990,12 @@ const Atomo = (() => {
     g.fillStyle = gr; g.fillRect(0, 0, 512, 128);
     g.strokeStyle = 'rgba(60,40,10,.6)'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 116);
     g.fillStyle = '#2a1c05'; g.textAlign = 'center';
-    g.font = '700 46px "Space Grotesk", sans-serif'; g.fillText(nome, 256, 62);
-    g.font = '500 28px "IBM Plex Mono", monospace'; g.fillText(anos, 256, 104);
+    if (anos){
+      g.font = '700 46px "Space Grotesk", sans-serif'; g.fillText(nome, 256, 62);
+      g.font = '600 32px "IBM Plex Mono", monospace'; g.fillText(anos, 256, 106);
+    } else {                                                 // sem ano: só o nome, centralizado
+      g.font = '700 46px "Space Grotesk", sans-serif'; g.fillText(nome, 256, 80);
+    }
     return new THREE.CanvasTexture(c);
   }
   function texTituloGaleria(){
@@ -1767,9 +2023,10 @@ const Atomo = (() => {
     const friso = new THREE.Mesh(new THREE.BoxGeometry(xMax - xMin, .15, .1), new THREE.MeshStandardMaterial({ color: 0xc79a3e, emissive: 0x3a2808, roughness: .3, metalness: .7 }));
     friso.position.set((xMin + xMax) / 2, TABLADO - .1, GALERIA.z - 3.35); galeria.add(friso);
     const CIENTISTAS = [
-      { img: 'imagens/rutherford_free.jpg',    nome: 'Ernest Rutherford', anos: '1871 – 1937', prop: 960 / 1300 },
-      { img: 'imagens/Niels_Bohr_free.jpg',    nome: 'Niels Bohr',        anos: '1885 – 1962', prop: 960 / 1350 },
-      { img: 'imagens/Linus_Pauling_Free.png', nome: 'Linus Pauling',     anos: '1901 – 1994', prop: 711 / 806 },
+      /* anos = ano do modelo atômico (não as datas de vida e morte) */
+      { img: 'imagens/rutherford_free.jpg',    nome: 'Ernest Rutherford', anos: '1911', prop: 960 / 1300 },
+      { img: 'imagens/Niels_Bohr_free.jpg',    nome: 'Niels Bohr',        anos: '1913', prop: 960 / 1350 },
+      { img: 'imagens/Linus_Pauling_Free.png', nome: 'Linus Pauling',     anos: '',     prop: 711 / 806 },
     ];
     /* barra de madeira entre dois pontos (para as pernas inclinadas) */
     const barra = (pai, a, b, esp, mat) => {
@@ -2003,6 +2260,327 @@ const Atomo = (() => {
     criaEletrons(cAtomo, cEsferas[0], R_ESF * .62, 2);     // carbono: 2 na camada K
     criaEletrons(cAtomo, cEsferas[1], R_ESF, 4);           //          4 na camada L
 
+    /* ---- elétron "solto" (com opacidade própria) numa órbita elíptica, com rastro neon ----
+       a, b = semieixos da órbita (no plano XZ do grupo "plano") */
+    const eletronOrbita = (pai, { a, b, vel, fase, cor = 0x3ee0ff, tam = .08, halo = .55, nRastro = 16, passo = .05,
+                                  tamRastro = .34, trilhaOp = .3, linhaRastro = 0 }) => {
+      const plano = new THREE.Group(); pai.add(plano);
+      const pts = [];
+      for (let s = 0; s <= 160; s++){ const t = s / 160 * Math.PI * 2; pts.push(new THREE.Vector3(a * Math.cos(t), 0, b * Math.sin(t))); }
+      const trilha = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),
+        new THREE.LineBasicMaterial({ color: cor, transparent: true, opacity: 0, depthWrite: false }));
+      plano.add(trilha);
+      const e = new THREE.Mesh(new THREE.SphereGeometry(tam, 16, 12), new THREE.MeshBasicMaterial({ color: 0xe8fbff, transparent: true, opacity: 0, depthWrite: false }));
+      const h = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: cor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      h.scale.setScalar(halo); e.add(h); plano.add(e);
+      const rastro = [];
+      for (let j = 0; j < nRastro; j++){
+        const r = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: cor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+        plano.add(r); rastro.push(r);
+      }
+      /* cauda contínua (linha com cores que apagam até o preto: no modo aditivo o preto some) */
+      let cauda = null;
+      if (linhaRastro){
+        const g = new THREE.BufferGeometry();
+        g.setAttribute('position', new THREE.BufferAttribute(new Float32Array(linhaRastro * 3), 3));
+        g.setAttribute('color', new THREE.BufferAttribute(new Float32Array(linhaRastro * 3), 3));
+        cauda = new THREE.Line(g, new THREE.LineBasicMaterial({ vertexColors: true, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+        cauda.frustumCulled = false; plano.add(cauda);
+      }
+      const o = { plano, e, h, trilha, rastro, cauda, cor: new THREE.Color(cor), a, b, vel, fase, passo, tamRastro, trilhaOp, op: 0 };
+      atualizaOrbita(o, 0);
+      return o;
+    };
+    atualizaOrbita = (o, dt) => {
+      o.fase += dt * o.vel;
+      const op = o.op, vis = op > .01;
+      o.e.position.set(o.a * Math.cos(o.fase), 0, o.b * Math.sin(o.fase));
+      o.e.material.opacity = op; o.h.material.opacity = .9 * op; o.e.visible = vis;
+      o.trilha.material.opacity = o.trilhaOp * op; o.trilha.visible = vis;
+      o.rastro.forEach((r, j) => {
+        const t = o.fase - (j + 1) * o.passo, f = 1 - j / o.rastro.length;
+        r.position.set(o.a * Math.cos(t), 0, o.b * Math.sin(t));
+        r.scale.setScalar(o.tamRastro * (.25 + .75 * f));
+        r.material.opacity = op * .8 * Math.pow(f, 1.6); r.visible = vis;
+      });
+      if (o.cauda){
+        const P = o.cauda.geometry.attributes.position, C = o.cauda.geometry.attributes.color, n = P.count;
+        for (let j = 0; j < n; j++){
+          const t = o.fase - j * o.passo * .5, f = Math.pow(1 - j / n, 1.4);
+          P.setXYZ(j, o.a * Math.cos(t), 0, o.b * Math.sin(t));
+          C.setXYZ(j, o.cor.r * f + f * f * .5, o.cor.g * f + f * f * .5, o.cor.b * f + f * f * .5);   // perto do elétron fica quase branco
+        }
+        P.needsUpdate = C.needsUpdate = true;
+        o.cauda.material.opacity = op; o.cauda.visible = vis;
+      }
+    };
+
+    /* ---- áudio 6: átomo em construção (na frente da câmera CAM_CONSTRUCAO) ---- */
+    {
+      const [p, olha] = CAM_CONSTRUCAO.map(v => new THREE.Vector3(...v));
+      const centro = p.clone().addScaledVector(olha.clone().sub(p).normalize(), 20);
+      const g = new THREE.Group(); g.position.copy(centro); g.visible = false; cena.add(g);
+      g.lookAt(p);                                          // o átomo fica de frente para a câmera
+      const nucleo = new THREE.Group(); g.add(nucleo);
+      const esf = new THREE.Mesh(esfera.geometry, matEsfera(ESF_FINA, 0)); g.add(esf);
+      /* 11 prótons: o 1º no centro, os outros em volta (esfera de Fibonacci) */
+      const posP = [[0, 0, 0]];
+      for (let i = 0; i < 10; i++){
+        const y = 1 - (i + .5) / 10 * 2, r = Math.sqrt(1 - y * y), th = i * 2.39996;
+        posP.push([Math.cos(th) * r * .82, y * .82, Math.sin(th) * r * .82]);
+      }
+      const mais = [];
+      const protonsK = posP.map(([x, y, z]) => {
+        const m = new THREE.Mesh(geoN, mP); m.position.set(x, y, z);
+        m.userData.escala = 0; m.scale.setScalar(0); m.visible = false; nucleo.add(m);
+        novoMais(m, mais); return m;
+      });
+      /* 11 elétrons em órbitas inclinadas de raios diferentes, dentro da eletrosfera */
+      const RAIOS = [3.2, 4.5, 5.6];
+      const eletronsK = posP.map((_, i) => {
+        const o = eletronOrbita(g, { a: RAIOS[i % 3], b: RAIOS[i % 3], vel: .55 + (i % 4) * .08, fase: i * 2.1, trilhaOp: .22 });
+        o.plano.rotation.set((i % 2 ? -1 : 1) * (.5 + .35 * (i % 3)), i * .9, (i % 2 ? .4 : -.4));
+        return o;
+      });
+      constr = { g, nucleo, esf, protons: protonsK, eletrons: eletronsK, mais };
+    }
+
+    /* ---- áudio 6: átomo de Rutherford — cena própria, desenhada POR CIMA da tela escurecida ---- */
+    {
+      const c = new THREE.Scene();
+      const cam = new THREE.PerspectiveCamera(40, 1, .1, 200); cam.position.set(0, 0, 22); c.add(cam);
+      /* "escurecedor" dentro do WebGL (o HTML cobriria o átomo) */
+      const escuro = new THREE.Mesh(new THREE.PlaneGeometry(400, 400),
+        new THREE.MeshBasicMaterial({ color: 0x02040a, transparent: true, opacity: 0, depthTest: false, depthWrite: false }));
+      escuro.position.z = -2; escuro.renderOrder = -10; cam.add(escuro);
+      c.add(new THREE.AmbientLight(0xffffff, .55));
+      const lz = new THREE.DirectionalLight(0xffffff, 1.1); lz.position.set(4, 6, 8); c.add(lz);
+      const lc = new THREE.PointLight(0x3ee0ff, 1.2, 30); lc.position.set(-5, -2, 4); c.add(lc);
+      const atomo = new THREE.Group(); c.add(atomo);
+      const nucleo = new THREE.Group(); atomo.add(nucleo);
+      const mPr = matBola(0x3d74ff, 0x0b1d5c), mNr = matBola(0xe0a21f, 0x3d2600);
+      mNr.metalness = .55; mNr.roughness = .3;
+      /* 4 prótons + 3 nêutrons, bem juntinhos */
+      const bolasR = [];
+      [[0, 0, .55, 1], [.62, .3, 0, 0], [-.62, .3, 0, 1], [0, -.66, .05, 0], [.32, .12, -.6, 1], [-.32, .12, -.6, 0], [0, .78, -.15, 1]]
+        .forEach(([x, y, z, pr], i) => {
+          const m = new THREE.Mesh(geoN, pr ? mPr : mNr); m.position.set(x, y, z); nucleo.add(m);
+          bolasR.push({ m, pos0: m.position.clone(), fica: i === 0 });     // a 1ª (próton) é a que fica no átomo de Bohr
+        });
+      /* brilho suave em volta do núcleo */
+      const aura = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: 0x6f9bff, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+      aura.scale.setScalar(4.2); atomo.add(aura);
+      /* 4 órbitas elípticas cruzadas (a imagem clássica), cada uma com seu elétron e rastro neon */
+      const eletronsR = [0, 1, 2, 3].map(i => {
+        const giro = new THREE.Group(); giro.rotation.z = i * Math.PI / 4; atomo.add(giro);
+        const o = eletronOrbita(giro, { a: 6.4, b: 2.3, vel: 1.5 + i * .07, fase: i * 1.7, tam: .17, halo: 1.1,
+          nRastro: 34, passo: .045, tamRastro: .55, trilhaOp: .38, linhaRastro: 70 });
+        o.plano.rotation.x = Math.PI / 2 - .22;              // elipse de frente, com um leve volume
+        return o;
+      });
+      /* áudio 7.3: 7 camadas (níveis de energia) concêntricas, de frente para a câmera.
+         Cor de cada uma = trecho da barra "Energia" (ciano perto do núcleo → vermelho na mais afastada) */
+      const GRAD = [0x3ee0ff, 0x6f9bff, 0x9b5cff, 0xff3bd0, 0xff5a5a].map(h => new THREE.Color(h));
+      const corGrad = t => { const x = t * (GRAD.length - 1), i = Math.min(GRAD.length - 2, Math.floor(x)); return GRAD[i].clone().lerp(GRAD[i + 1], x - i); };
+      const camadasR = [0, 1, 2, 3, 4, 5, 6].map(i => {
+        const r = 1.6 + i * .95, cor = corGrad(i / 6);
+        const g = new THREE.Group(); g.visible = false; atomo.add(g);
+        /* linha bem fina (1 px) + um brilho estreito e fraco em volta */
+        const pts = [];
+        for (let s = 0; s < 240; s++){ const a = s / 240 * Math.PI * 2; pts.push(new THREE.Vector3(r * Math.cos(a), r * Math.sin(a), 0)); }
+        const fio = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts),
+          new THREE.LineBasicMaterial({ color: cor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+        const brilhoC = new THREE.Mesh(new THREE.TorusGeometry(r, .045, 6, 180),
+          new THREE.MeshBasicMaterial({ color: cor, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+        /* identificação da camada ("n = 1", "n = 2"…), na cor dela, em cima da linha (a 35° à direita) */
+        const rotulo = new THREE.Sprite(new THREE.SpriteMaterial({ map: texCamada(i + 1, cor), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
+        const ang = THREE.MathUtils.degToRad(35);
+        rotulo.position.set(r * Math.cos(ang), r * Math.sin(ang), .1); rotulo.scale.set(1.95, .73, 1); rotulo.renderOrder = 5;
+        g.add(fio, brilhoC, rotulo);
+        return { g, fio, brilhoC, rotulo, cor };
+      });
+      ruth = { on: false, cena: c, cam, escuro, atomo, nucleo, aura, mats: [mPr, mNr], eletrons: eletronsR, camadas: camadasR, bolas: bolasR, opNucleo: 0, opEscuro: 0 };
+      [mPr, mNr].forEach(m => m.opacity = 0);
+
+      /* ---- áudio 7.3: o elétron de Bohr (o aluno segura e solta em qualquer nível) ---- */
+      {
+        const RN = n => 1.6 + (n - 1) * .95;                                   // raio do nível n (1…7), igual às camadas
+        const nivelDe = r => Math.min(7, Math.max(1, (r - 1.6) / .95 + 1));   // nível "fracionário" de um raio
+        const aditivo = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
+        const g = new THREE.Group(); atomo.add(g);
+        const e = new THREE.Mesh(new THREE.SphereGeometry(.17, 20, 14), new THREE.MeshBasicMaterial({ color: 0xe8fbff, transparent: true, opacity: 0, depthWrite: false }));
+        const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: 0x3ee0ff, opacity: 0, ...aditivo }));
+        halo.scale.setScalar(1.2); e.add(halo); g.add(e);
+        const N = 24, rastro = [];
+        for (let j = 0; j < N; j++){
+          const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: 0x3ee0ff, opacity: 0, ...aditivo }));
+          s.visible = false; g.add(s); rastro.push(s);
+        }
+        bohr = { g, e, halo, rastro, hist: [], n: 1, ang: Math.PI / 2, r: RN(1), op: 0, ativo: false, arrastando: false,
+                 snap: null, acum: 0, raios: [], efeitos: [], RN, nivelDe, cor: new THREE.Color(0x3ee0ff) };
+
+        /* raio elétrico (zigue-zague) saindo do elétron, na cor do nível */
+        const criaRaio = (p, cor, nivel, forca = 1) => {
+          const a = Math.random() * Math.PI * 2, comp = (.45 + .1 * nivel + Math.random() * .35) * forca;
+          const dir = new THREE.Vector3(Math.cos(a), Math.sin(a), 0), perp = new THREE.Vector3(-dir.y, dir.x, 0);
+          const pts = [p.clone()], SEG = 7;
+          for (let s = 1; s <= SEG; s++){
+            const q = p.clone().addScaledVector(dir, comp * s / SEG);
+            if (s < SEG) q.addScaledVector(perp, (Math.random() - .5) * .3 * forca);
+            pts.push(q);
+          }
+          const geo = new THREE.BufferGeometry().setFromPoints(pts);
+          const mCor = new THREE.LineBasicMaterial({ color: cor, opacity: 1, ...aditivo });
+          const mBranco = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: .8, ...aditivo });
+          const grupo = new THREE.Group(), l2 = new THREE.Line(geo, mCor);
+          l2.position.set(.03, .03, 0);                                          // segunda linha ao lado: o raio fica mais grosso
+          grupo.add(new THREE.Line(geo, mCor), l2, new THREE.Line(geo, mBranco)); g.add(grupo);
+          bohr.raios.push({ grupo, geo, mats: [mCor, mBranco], t: 0, vida: .14 + Math.random() * .14 });
+        };
+        const tira = o => { g.remove(o); if (o.material) o.material.dispose(); if (o.geometry && !o.isSprite) o.geometry.dispose(); };
+        const circulo = () => { const p = []; for (let s = 0; s <= 64; s++){ const a = s / 64 * Math.PI * 2; p.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); } return p; };
+
+        /* desceu de nível: o elétron "libera o excesso" — clarão, onda de choque, fótons em onda e uma rajada de raios */
+        const emite = (p, cor, dif) => {
+          const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: cor, opacity: 1, ...aditivo })); fl.position.copy(p); g.add(fl);
+          const anel = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(circulo()), new THREE.LineBasicMaterial({ color: cor, opacity: 1, ...aditivo }));
+          anel.position.copy(p); g.add(anel);
+          const fotons = [], nF = Math.min(4, dif), base = Math.atan2(p.y, p.x);
+          for (let i = 0; i < nF; i++){
+            const pts = []; for (let s = 0; s < 48; s++){ const x = s / 47 * 1.6; pts.push(new THREE.Vector3(x, Math.sin(x * 14) * .13, 0)); }
+            const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: cor, opacity: 1, ...aditivo }));
+            const a = base + (i - (nF - 1) / 2) * .45;
+            l.position.copy(p); l.rotation.z = a; g.add(l); fotons.push({ l, a });
+          }
+          for (let i = 0; i < 6 + 3 * dif; i++) criaRaio(p, cor, 7, 1.3);
+          let t = 0;
+          bohr.efeitos.push(dt => {
+            t += dt; const k = Math.min(1, t / 1.4);
+            fl.scale.setScalar(.6 + 4 * Math.min(1, t / .5)); fl.material.opacity = Math.max(0, 1 - t / .6);
+            anel.scale.setScalar(.2 + 3.5 * Math.min(1, t / .8)); anel.material.opacity = Math.max(0, 1 - t / .8);
+            fotons.forEach(F => { const d = t * 4.5; F.l.position.set(p.x + Math.cos(F.a) * d, p.y + Math.sin(F.a) * d, p.z); F.l.material.opacity = 1 - k; });
+            if (k >= 1){ [fl, anel, ...fotons.map(F => F.l)].forEach(tira); return false; }
+            return true;
+          });
+        };
+        /* subiu de nível: um brilho curto na cor do novo nível (absorveu energia) */
+        const absorve = (p, cor) => {
+          const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: texHalo, color: cor, opacity: 0, ...aditivo })); fl.position.copy(p); g.add(fl);
+          let t = 0;
+          bohr.efeitos.push(dt => {
+            t += dt; const k = Math.min(1, t / .6);
+            fl.position.copy(bohr.e.position); fl.scale.setScalar(2.6 * (1 - k) + .6); fl.material.opacity = Math.sin(k * Math.PI);
+            if (k >= 1){ tira(fl); return false; }
+            return true;
+          });
+        };
+
+        atualizaBohr = dt => {
+          const B = bohr;
+          if (!B.arrastando){
+            if (B.snap){ B.snap.k = Math.min(1, B.snap.k + dt / .3); B.r = B.snap.r0 + (B.snap.r1 - B.snap.r0) * ease(B.snap.k); if (B.snap.k >= 1) B.snap = null; }
+            B.ang += dt * .6;                                                    // mesma velocidade dos outros elétrons
+          }
+          const vis = B.op > .01, nf = nivelDe(B.r);
+          const p = new THREE.Vector3(B.r * Math.cos(B.ang), B.r * Math.sin(B.ang), .3);
+          B.cor.copy(corGrad((nf - 1) / 6));
+          B.e.position.copy(p); B.e.visible = vis;
+          B.e.material.opacity = B.op; B.halo.material.opacity = .9 * B.op; B.halo.material.color.copy(B.cor);
+          if (!B.hist.length || B.hist[0].distanceTo(p) > .05){ B.hist.unshift(p.clone()); if (B.hist.length > N) B.hist.length = N; }
+          B.rastro.forEach((s, j) => {
+            const h = B.hist[j]; s.visible = vis && !!h; if (!h) return;
+            const f = 1 - j / N;
+            s.position.copy(h); s.scale.setScalar(.5 * (.3 + .7 * f));
+            s.material.color.copy(B.cor); s.material.opacity = B.op * .75 * Math.pow(f, 1.5);
+          });
+          /* raios: quanto mais alto o nível, mais raios (bem mais enquanto o aluno arrasta) */
+          if (vis && B.ativo){
+            B.acum += dt * (B.arrastando ? 6 + 5 * nf : (nf - 1) * 1.3);
+            while (B.acum >= 1){ B.acum -= 1; criaRaio(p, B.cor, nf); }
+          }
+          B.raios = B.raios.filter(R => {
+            R.t += dt; const k = R.t / R.vida;
+            if (k >= 1){ g.remove(R.grupo); R.geo.dispose(); R.mats.forEach(m => m.dispose()); return false; }
+            const pisca = Math.random() < .25 ? .35 : 1;
+            R.mats[0].opacity = (1 - k) * pisca; R.mats[1].opacity = .8 * (1 - k) * pisca;
+            return true;
+          });
+          /* efeitos (um efeito pode criar outro — o salto cria a emissão — então os novos são guardados à parte) */
+          const lista = B.efeitos; B.efeitos = [];
+          B.efeitos = lista.filter(E => E(dt)).concat(B.efeitos);
+        };
+        /* salto quântico: o elétron some no nível atual e reaparece no nível tocado, na posição do toque.
+           A frase "salto quântico" pisca na tela junto com o salto. */
+        const SOME = .12, VOLTA = .14;                                            // s: some → reaparece
+        bohrSalta = (nNovo, ang) => {
+          const B = bohr, nAntes = B.n;
+          if (B.saltando || nNovo === nAntes) return;
+          B.saltando = true;
+          const pVelho = B.e.position.clone();
+          absorve(pVelho, corGrad((nAntes - 1) / 6));                             // brilho rápido onde ele estava
+          fraseSalto();
+          sfx('electron_jumping');
+          let t = 0, chegou = false;
+          B.efeitos.push(dt => {
+            t += dt;
+            if (t < SOME){ B.op = 1 - t / SOME; return true; }                   // some…
+            if (!chegou){                                                         // …e reaparece no nível tocado
+              chegou = true;
+              B.n = nNovo; B.r = RN(nNovo); B.ang = ang; B.hist = []; B.snap = null;
+              B.saltos++;
+              if (B.saltos === 3 && B.aoTresSaltos){ const cb = B.aoTresSaltos; B.aoTresSaltos = null; setTimeout(cb, 1200); }   // 3º salto: o roteiro segue (depois que o efeito termina)
+              const pNovo = new THREE.Vector3(B.r * Math.cos(ang), B.r * Math.sin(ang), .3);
+              barraNivel(nNovo / 7, true);
+              if (nNovo < nAntes) emite(pNovo, corGrad((nAntes - 1) / 6), nAntes - nNovo);   // desceu: libera o excesso
+              else absorve(pNovo, corGrad((nNovo - 1) / 6));                                 // subiu: absorveu energia
+            }
+            const k = Math.min(1, (t - SOME) / VOLTA);
+            B.op = k;
+            if (k >= 1){ B.saltando = false; return false; }
+            return true;
+          });
+        };
+        bohrLimpa = () => {
+          const B = bohr;
+          B.aoTresSaltos = null; B.saltos = 0;                                    // (antes de encerrar os efeitos: um salto pela metade não conta)
+          for (let i = 0; i < 4 && B.efeitos.length; i++){ const l = B.efeitos; B.efeitos = []; l.forEach(E => E(999)); }   // termina (e limpa) todos
+          B.efeitos = [];
+          B.raios.forEach(R => { g.remove(R.grupo); R.geo.dispose(); R.mats.forEach(m => m.dispose()); }); B.raios = [];
+          B.op = 0; B.ativo = B.arrastando = B.saltando = false; B.snap = null; B.hist = []; B.n = 1; B.r = RN(1); B.acum = 0;
+          B.rastro.forEach(s => s.visible = false); B.e.visible = false;
+          if (face) face.style.cursor = '';
+          const f = $('#saltoFrase'); if (f) f.classList.remove('on');
+        };
+
+        /* toque num nível: o elétron salta para lá (o toque é tratado antes do giro do átomo, que fica no canvas) */
+        const ray = new THREE.Raycaster(), plano = new THREE.Plane(new THREE.Vector3(0, 0, 1), 0), tmp = new THREE.Vector3();
+        const local = ev => {
+          const rc = renderer.domElement.getBoundingClientRect();
+          ruth.cam.updateMatrixWorld();
+          ray.setFromCamera(new THREE.Vector2((ev.clientX - rc.left) / rc.width * 2 - 1, -(ev.clientY - rc.top) / rc.height * 2 + 1), ruth.cam);
+          if (!ray.ray.intersectPlane(plano, tmp)) return null;
+          return ruth.atomo.worldToLocal(tmp.clone());
+        };
+        /* nível tocado: o mais próximo do toque (meio espaço de tolerância para dentro e para fora) */
+        const nivelTocado = ev => {
+          if (!bohr.ativo || !ruth.on || bohr.op < .5 && !bohr.saltando) return null;
+          const q = local(ev); if (!q) return null;
+          const r = Math.hypot(q.x, q.y);
+          if (r < RN(1) - .5 || r > RN(7) + .5) return null;                    // fora das camadas
+          return { n: Math.round(nivelDe(r)), ang: Math.atan2(q.y, q.x) };
+        };
+        face.addEventListener('pointerdown', ev => {
+          const alvo = nivelTocado(ev); if (!alvo) return;
+          ev.stopPropagation(); ev.preventDefault();
+          $('#dicaGirar').classList.add('some');
+          bohrSalta(alvo.n, alvo.ang);
+        }, true);
+        window.addEventListener('pointermove', ev => {
+          if (bohr.ativo && ruth.on && ev.target === renderer.domElement) face.style.cursor = nivelTocado(ev) ? 'pointer' : '';
+        });
+      }
+    }
+
     /* ---- rótulos presos a pontos da cena ---- */
     const camada = document.createElement('div'); camada.className = 'rotulos';
     camada.innerHTML = '<svg></svg>'; face.appendChild(camada);
@@ -2035,10 +2613,10 @@ const Atomo = (() => {
     /* neutro: no celular embaixo do átomo (centralizado, pode quebrar linha); na tela deitada, ao lado do átomo */
     /* escurecedor da cena (fica atrás dos textos) — usado nos "conceitos" */
     const escuro = document.createElement('div'); escuro.className = 'escurecedor'; face.appendChild(escuro);
-    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .5, yR: .86, xLado: .71 }, conceito: .45 }).forEach(([id, p]) => {
+    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .578, yR: .86, xLado: .65, fonteLado: .065 }, conceito: .45, topo: .075 }).forEach(([id, p]) => {
       const el = document.createElement('div'); el.className = 'linha linha-' + id;
       camLinhas.appendChild(el);
-      linhas[id] = { el, timer: null, y: typeof p === 'number' ? p : p.y, yR: typeof p === 'number' ? null : p.yR, xLado: p.xLado };
+      linhas[id] = { el, timer: null, y: typeof p === 'number' ? p : p.y, yR: typeof p === 'number' ? null : p.yR, xLado: p.xLado, fonteLado: p.fonteLado };
     });
     posLinhas();
 
@@ -2095,6 +2673,14 @@ const Atomo = (() => {
     if (!w || !h) return;
     renderer.setSize(w, h, false);
     camera.aspect = w / h; camera.updateProjectionMatrix();
+    /* átomo de Rutherford sempre inteiro na tela (deitada ou em pé) */
+    if (ruth){
+      ruth.cam.aspect = w / h; ruth.cam.updateProjectionMatrix();
+      const tg = Math.tan(THREE.MathUtils.degToRad(20)), R = 7.2;
+      ruth.cam.position.z = Math.max(R / tg, R / (tg * ruth.cam.aspect)) * 1.04;
+    }
+    /* átomo em construção: menor no celular em pé, para caber na largura */
+    if (constr) constr.g.scale.setScalar(.8 * Math.min(1, camera.aspect * 1.15));
     posLinhas();
   }
   const retrato = () => palco && palco.clientWidth < palco.clientHeight;
@@ -2105,6 +2691,9 @@ const Atomo = (() => {
       if (L.xLado != null){                       // linha que fica AO LADO do átomo na tela deitada
         L.el.classList.toggle('ao-lado', !r);
         L.el.style.left = r ? '' : (L.xLado * 100) + '%';
+        /* tamanho da letra na tela deitada: fração da altura do palco (acompanha qualquer tela) */
+        if (L.fonteLado) L.el.style.fontSize = r ? '' : Math.round(Math.min(palco.clientHeight * L.fonteLado, palco.clientWidth * .04)) + 'px';
+        L.el.style.setProperty('--w', palco.clientWidth + 'px'); L.el.style.setProperty('--h', palco.clientHeight + 'px');
       }
     });
     /* a instrução amarela se posiciona a partir da linha do nome do elemento */
@@ -2224,22 +2813,46 @@ const Atomo = (() => {
     if (!camTween) fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dtR * taxaCam));
     /* quanto mais perto do núcleo, mais a eletrosfera some (ela cobriria a tela toda) */
     const vis = Math.min(1, Math.max(0, (fatorCam - .5) / .3));
-    [esfera, esferaH, ...cEsferas].forEach(e => e.material.uniforms.vis.value = vis);
-    /* elétrons circulam (no relógio do roteiro) e acompanham a camada: somem junto com ela */
-    eletrons.forEach(({ e, esf }) => {
-      const u = e.userData; u.fase += dtR * u.vel;
+    [esfera, esferaH].forEach(e => e.material.uniforms.vis.value = vis);
+    cEsferas.forEach(e => e.material.uniforms.vis.value = vis * contornoC);   // contorno do C pode sumir sozinho (áudio 5.2)
+    /* elétrons circulam (no relógio do roteiro) e acompanham a camada: somem junto com ela.
+       No carbono, "energiaC" (0 → 1, áudio 5.2) acelera os elétrons e deixa o rastro longo, forte e colorido */
+    eletrons.forEach(({ e, esf }, i) => {
+      const u = e.userData, en = esf.parent === cAtomo ? energiaC : 0;
+      u.fase += dtR * u.vel * (1 + 3.2 * en);
       e.position.set(u.raio * Math.cos(u.fase), 0, u.raio * Math.sin(u.fase));
       const op = esf.visible ? esf.material.uniforms.opac.value * vis : 0;
       e.material.opacity = op; u.halo.material.opacity = .85 * op; e.visible = op > .01;
-      u.trilha.material.opacity = .42 * op; u.trilha.visible = op > .01;   // órbita (trajetória) desenhada
+      u.trilha.material.opacity = .42 * op * (1 - .5 * en); u.trilha.visible = op > .01;   // órbita (trajetória) desenhada
+      if (Math.abs(en - (u.enUlt ?? 0)) > .003){                                         // cor do rastro: ciano → neon intenso
+        u.enUlt = en;
+        const cor = new THREE.Color(0x3ee0ff).lerp(new THREE.Color(CORES_NEON[i % CORES_NEON.length]), en);
+        u.halo.material.color.copy(cor); u.rastro.forEach(r => r.material.color.copy(cor));
+      }
+      const passo = .05 * (1 + 1.6 * en);                                   // rastro mais comprido
       u.rastro.forEach((r, j) => {                                          // rastro de energia
-        const a = u.fase - (j + 1) * .05, f = 1 - j / u.rastro.length;
+        const a = u.fase - (j + 1) * passo, f = 1 - j / u.rastro.length;
         r.position.set(u.raio * Math.cos(a), 0, u.raio * Math.sin(a));
-        r.scale.setScalar(.34 * (.25 + .75 * f));
-        r.material.opacity = op * .8 * Math.pow(f, 1.6);
+        r.scale.setScalar(.34 * (1 + .7 * en) * (.25 + .75 * f));
+        r.material.opacity = op * Math.min(1, .8 + .5 * en) * Math.pow(f, 1.6 - .8 * en);
         r.visible = op > .01;
       });
     });
+    /* áudio 6: átomo em construção (núcleo girando, elétrons em órbita) */
+    if (constr.g.visible){
+      constr.nucleo.rotation.y += dtR * .25; constr.nucleo.rotation.x += dtR * .09;
+      constr.eletrons.forEach(o => atualizaOrbita(o, dtR));
+    }
+    /* átomo de Rutherford: núcleo gira devagar, elétrons correm nas elipses */
+    if (ruth.on){
+      ruth.nucleo.rotation.y += dtR * .35; ruth.nucleo.rotation.x += dtR * .12;
+      ruth.mats.forEach(m => m.opacity = ruth.opNucleo);
+      ruth.nucleo.visible = ruth.opNucleo > .01;
+      ruth.aura.material.opacity = .45 * ruth.opNucleo;
+      ruth.escuro.material.opacity = ruth.opEscuro;
+      ruth.eletrons.forEach(o => atualizaOrbita(o, dtR));
+      atualizaBohr(dt);                         // elétron de Bohr: tempo real (o aluno pode arrastar mesmo com o áudio parado)
+    }
     const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
     const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
     alvoCamAtual.lerp(alvoCam, 1 - Math.exp(-dt * 6));
@@ -2277,7 +2890,7 @@ const Atomo = (() => {
     if (slot && !slot.encaixado && !travaGesto && erroEncaixe() < .3) encaixa();
     /* sinal de + na frente de cada próton, virado para a câmera */
     const p = new THREE.Vector3(), dir = new THREE.Vector3();
-    [...maisHe, ...maisH, ...maisC].forEach(({ sprite, alvo }) => {
+    [...maisHe, ...maisH, ...maisC, ...constr.mais].forEach(({ sprite, alvo }) => {
       if (!sprite.visible) return;
       alvo.getWorldPosition(p);
       dir.copy(camera.position).sub(p).normalize();
@@ -2285,6 +2898,12 @@ const Atomo = (() => {
       sprite.scale.setScalar(.42 * alvo.userData.escala);
     });
     renderer.render(cena, camera);
+    /* átomo de Rutherford: desenhado por cima (escurecedor + átomo, numa cena própria) */
+    if (ruth.on){
+      renderer.autoClear = false; renderer.clearDepth();
+      renderer.render(ruth.cena, ruth.cam);
+      renderer.autoClear = true;
+    }
     posicionaRotulos();
   }
 
@@ -2346,6 +2965,13 @@ const Atomo = (() => {
       fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; camTween = false; rotX = .35; zoomGesto = 1;
       alvoCam.set(0, 0, 0); alvoCamAtual.set(0, 0, 0); camRot.on = false;
       if (galeria) galeria.visible = false;                      // cavaletes só aparecem no áudio 6
+      /* átomo em construção e átomo de Rutherford (áudio 6) somem */
+      constr.g.visible = false; constr.esf.material.uniforms.opac.value = 0;
+      constr.protons.forEach(m => { m.visible = false; m.userData.escala = 0; m.scale.setScalar(0); });
+      constr.mais.forEach(({sprite}) => { sprite.visible = false; sprite.material.opacity = 0; });
+      constr.eletrons.forEach(o => { o.op = 0; atualizaOrbita(o, 0); });
+      ruth.on = false; ruth.opNucleo = ruth.opEscuro = 0; ruth.eletrons.forEach(o => o.op = 0); ruthPadrao();
+      energiaC = 0; contornoC = 1;                               // carbono "calmo" de novo
       { const e = face.querySelector('.escurecedor'); if (e) e.classList.remove('on'); }
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
@@ -2369,7 +2995,11 @@ const Atomo = (() => {
       $('#dicaGirar').classList.add('some');
     },
     /* quebra a linha de um texto digitado (o próximo trecho começa embaixo, alinhado) */
-    quebraLinha(id){ const L = linhas[id]; if (L){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.appendChild(document.createElement('br')); } },
+    quebraLinha(id){
+      const L = linhas[id]; if (!L) return;
+      if (L.timer){ L.timer.cancela(); L.timer = null; const ult = L.el.lastChild; if (ult && ult.dataset && ult.dataset.txt) ult.textContent = ult.dataset.txt; }   // termina o trecho que estava sendo digitado
+      L.el.appendChild(document.createElement('br'));
+    },
     /* estado pronto para começar o áudio 2 direto (pelo Sumário) */
     estadoAudio2(){
       this.reset(); if (!pronto) return;
@@ -2436,6 +3066,113 @@ const Atomo = (() => {
     },
     cameraNoAtomo(){ camRot.on = false; },                       // volta à câmera que segue o átomo
     mostraCavaletes(on){ if (galeria) galeria.visible = on; },   // galeria dos cientistas (só a partir do áudio 6)
+    /* áudio 6: o átomo em construção aparece (só a eletrosfera; prótons e elétrons entram com construcaoPasso).
+       pronto = já montado por inteiro (retomar depois de recarregar) */
+    construcao(on, pronto = false){
+      if (!pronto_()) return;
+      const u = constr.esf.material.uniforms.opac;
+      if (!on){ anima(700, k => u.value = 1 - k, () => { constr.g.visible = false; }); return; }
+      constr.g.visible = true;
+      if (pronto){ u.value = 1; for (let i = 0; i < constr.protons.length; i++) this.construcaoPasso(i, true); return; }
+      u.value = 0; anima(1200, k => u.value = k);
+    },
+    /* mais 1 próton no núcleo (surge com um "pop") e mais 1 elétron na eletrosfera (fade, já girando) */
+    construcaoPasso(i, ja = false){
+      if (!pronto_()) return;
+      const m = constr.protons[i], o = constr.eletrons[i], mais = constr.mais[i];
+      if (!m || m.visible) return;
+      m.visible = true; mais.sprite.visible = true;
+      if (ja){ m.userData.escala = 1; m.scale.setScalar(1); mais.sprite.material.opacity = 1; o.op = 1; return; }
+      anima(450, k => { m.userData.escala = Math.max(0, k); m.scale.setScalar(Math.max(0, k)); mais.sprite.material.opacity = Math.min(1, k); }, null, easeBack);
+      anima(450, k => o.op = k);
+    },
+    /* tela escurece e o átomo de Rutherford aparece no meio (núcleo em fade); on = false: tudo sai em fade */
+    rutherford(on, ja = false){
+      if (!pronto_()) return;
+      if (on){
+        ruth.on = true;
+        if (ja){ ruth.opEscuro = .93; ruth.opNucleo = 1; ruth.eletrons.forEach(o => o.op = 1); return; }
+        anima(900, k => ruth.opEscuro = .93 * k);
+        agenda(250, () => anima(900, k => ruth.opNucleo = k));
+        return;
+      }
+      if (!ruth.on) return;
+      const e0 = ruth.opEscuro, n0 = ruth.opNucleo, ops = ruth.eletrons.map(o => o.op);
+      anima(1000, k => { ruth.opEscuro = e0 * (1 - k); ruth.opNucleo = n0 * (1 - k); ruth.eletrons.forEach((o, i) => o.op = ops[i] * (1 - k)); },
+        () => { ruth.on = false; ruthPadrao(); });
+    },
+    /* áudio 7.3: volta o átomo de Rutherford do áudio 6 (escuro + núcleo + 4 elétrons), um pouco menor e
+       mais para baixo, deixando espaço para o título e para a barra de energia. ja = sem animação (retomar) */
+    rutherfordVolta(ja = false){
+      if (!pronto) return;
+      ruthPadrao(); ruth.atomo.scale.setScalar(.68); ruth.atomo.position.y = -1.3;
+      ruth.on = true;
+      if (ja){ ruth.opEscuro = .93; ruth.opNucleo = 1; ruth.eletrons.forEach(o => o.op = 1); return; }
+      const e0 = ruth.opEscuro, n0 = ruth.opNucleo, ops = ruth.eletrons.map(o => o.op);
+      anima(1000, k => { ruth.opEscuro = e0 + (.93 - e0) * k; ruth.opNucleo = n0 + (1 - n0) * k; ruth.eletrons.forEach((o, i) => o.op = ops[i] + (1 - ops[i]) * k); });
+    },
+    /* muda o quanto o fundo fica escuro atrás do átomo (0 = nada, .93 = quase preto) */
+    rutherfordEscuro(alvo, dur = 1000){
+      if (!pronto || !ruth.on) return;
+      const e0 = ruth.opEscuro;
+      anima(dur, k => ruth.opEscuro = e0 + (alvo - e0) * k);
+    },
+    /* a "eletrosfera" de Rutherford (elétrons + órbitas) some em fade; fica só o núcleo */
+    rutherfordSemEletrons(dur = 1000){
+      if (!pronto) return;
+      const ops = ruth.eletrons.map(o => o.op);
+      anima(dur, k => ruth.eletrons.forEach((o, i) => o.op = ops[i] * (1 - k)));
+    },
+    /* átomo de Bohr: fica só 1 próton (vai para o centro); as outras partículas somem com o efeito "TV desligando" */
+    bohrNucleo(){
+      if (!pronto) return;
+      let atraso = 0;
+      ruth.bolas.forEach(b => {
+        ruth.atomo.attach(b.m); b.m.rotation.set(0, 0, 0);           // sai do núcleo que gira: o efeito fica "de frente" para a tela
+        if (b.fica){ const p0 = b.m.position.clone(); anima(700, k => b.m.position.lerpVectors(p0, V(0, 0, 0), k)); return; }
+        agenda(atraso, () => anima(480, k => tvDesligaBola(b.m, k), () => { b.m.visible = false; }, k => k));
+        atraso += 90;
+      });
+    },
+    /* 1 elétron no nível 1 (aparece em fade, já girando); a barra vai para o valor do nível 1 e o aluno toca nos níveis.
+       aoTresSaltos: chamado (uma vez) depois do 3º salto. ja = sem fade (retomar) */
+    bohrEletron(aoTresSaltos = null, ja = false){
+      if (!pronto) return;
+      const B = bohr; bohrLimpa();
+      B.ativo = true; B.hist = []; B.aoTresSaltos = aoTresSaltos;
+      if (ja) B.op = 1; else anima(600, k => B.op = k);
+      barraNivel(1 / 7, true);
+      dica('toque num nível'); $('#dicaGirar').classList.remove('some');
+    },
+    /* liga a camada i (0 = mais perto do núcleo) com o efeito "TV antiga ligando" */
+    camadaLiga(i, dur = 800){
+      if (!pronto) return;
+      const C = ruth.camadas[i]; if (!C || C.g.visible) return;
+      C.g.visible = true;
+      anima(dur, k => tvLigaCamada(C, k), () => tvLigaCamada(C, 1), k => k);
+    },
+    /* barra "Energia": aparece vazia e enche da esquerda para a direita em "dur" ms */
+    energiaBarra(dur){
+      const caixa = $('#energia'), fill = $('#energiaFill'); if (!caixa || !fill) return;
+      caixa.classList.add('on');
+      fill.style.setProperty('--cheio', fill.parentElement.clientWidth + 'px');   // o degradê fica parado: a barra "revela" as cores
+      fill.style.transition = 'none';
+      if (!dur){ fill.style.width = '100%'; return; }
+      fill.style.width = '0';
+      anima(dur, k => fill.style.width = (k * 100) + '%', null, k => k);
+    },
+    /* áudio 5.2: em "dur" ms a câmera se afasta (até o zoom 0,65 do modo edição), o contorno das camadas
+       do carbono some em fade e os elétrons aceleram aos poucos, com o rastro cada vez mais intenso.
+       dur = 0: já no estado final (retomar) */
+    energizaCarbono(dur){
+      if (!pronto) return;
+      const ALVO = 1 / .65;
+      if (!dur){ energiaC = 1; contornoC = 0; camTween = false; fatorCam = fatorCamAlvo = ALVO; return; }
+      zoomLentoF(ALVO, dur);
+      anima(Math.min(dur, 2500), k => contornoC = 1 - k);              // o contorno some nos primeiros 2,5 s
+      anima(dur, k => energiaC = k, null, k => k * k * (3 - 2 * k));    // energia sobe aos poucos
+    },
+    rutherfordEletron(i){ const o = ruth && ruth.eletrons[i]; if (o && o.op < .01) anima(500, k => o.op = k); },
     /* escurece a cena (os textos continuam por cima) */
     escurece(on){ const e = face && face.querySelector('.escurecedor'); if (e) e.classList.toggle('on', on); },
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
@@ -2887,7 +3624,7 @@ const Retomar = (() => {
   /* cena do começo de cada áudio (o que já estava na tela quando ele começa) */
   const neutroNaTela = () => {
     Atomo.digita('neutro', 'Átomo neutro:', { cor: '#eef1ff' }); Atomo.quebraLinha('neutro');
-    Atomo.digita('neutro', 'Z', { cor: '#6f9bff' }); Atomo.digita('neutro', ' = Nº de elétrons', { cor: '#7ce7ff' });
+    Atomo.digita('neutro', 'Nº atômico', { cor: '#6f9bff' }); Atomo.digita('neutro', '= Nº de elétrons', { cor: '#7ce7ff' });
   };
   const INICIO = {
     'audio_distribuição_1':   () => Atomo.reset(),
@@ -2897,17 +3634,29 @@ const Retomar = (() => {
     'audio_distribuição_5':   () => Atomo.estado('C', .464, 'Carbono'),
     'audio_distribuição_5.1': () => Atomo.estado('H', 1, 'Hidrogênio - D'),
     'audio_distribuição_5.2': () => Atomo.estado('He', 1, 'Hélio (2He)', [7]),
-    'audio_distribuição_5.3': () => { Atomo.estado('C', 1, 'Carbono'); neutroNaTela(); },
-    'audio_distribuição_6':   () => { Atomo.estado('C', 1, 'Carbono'); neutroNaTela(); },
-    'audio_distribuição_7':   () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 1); },
+    'audio_distribuição_6':   () => { Atomo.estado('C', 1, 'Carbono'); Atomo.energizaCarbono(0); neutroNaTela(); },
+    'audio_distribuição_7':   () => {
+      Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 1);
+      Atomo.construcao(true, true); Atomo.rutherford(true, true);      // como o áudio 6 terminou: átomo montado e Rutherford na tela
+    },
     'audio_distribuição_7.1': () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); },
     'audio_distribuição_7.2': () => {
       Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true);
-      Atomo.digita('conceito', 'Os elétrons se organizam em níveis discretos de energia, também conhecidos como camadas eletrônicas.', { cor: '#eef1ff' });
+      Atomo.digita('conceito', CONCEITO_1, { cor: '#eef1ff' });
+    },
+    'audio_distribuição_7.3': () => {
+      Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true);
+      Atomo.digita('conceito', CONCEITO_2, { cor: '#eef1ff' });
+    },
+    /* como o 7.3 terminou: átomo de Bohr montado (1 próton, 7 camadas, barra) e o elétron que o aluno pode mover */
+    'audio_distribuição_7.4': () => {
+      Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1);
+      Atomo.rutherfordVolta(true); Atomo.rutherfordEscuro(.8, 1); Atomo.rutherfordSemEletrons(1); Atomo.bohrNucleo();
+      Atomo.energiaBarra(0); for (let i = 0; i < 7; i++) Atomo.camadaLiga(i, 1);
+      Atomo.avancaTudo(); Atomo.bohrEletron(null, true);
+      Atomo.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 1 });
     },
   };
-  const CAM_RUTHERFORD = [[13.64, -2.36, 24.93], [13.62, -2.02, 34.92]];
-  const CAM_BOHR = [[-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92]];
   function salva(){
     try {
       const tela = (document.querySelector('.tela.ativa') || {}).id || 'capa';
