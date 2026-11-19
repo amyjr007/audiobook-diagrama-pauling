@@ -359,8 +359,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 @keyframes brilhaCartao{50%{filter:brightness(1.9) drop-shadow(0 0 14px var(--c))}}
 .cartao.maior{transform:scale(1.1)}
 .cartao.destaque{transform:scale(1.35);filter:brightness(1.45) drop-shadow(0 0 16px var(--c))}
+.cartao sup.pulsa{transform:scale(1.7)}
+/* áudio 8.3: cartão que o aluno arrasta até o degrau */
+.cartao.arrastavel{pointer-events:auto;cursor:grab;touch-action:none}
+.cartao.vazio{border-style:dashed;background:transparent;box-shadow:none}
+.cartao.vazio > *{visibility:hidden}
+.cartao-clone{position:absolute;left:0;top:0;z-index:6;pointer-events:none;opacity:1;transition:none}
+.cartao-clone.fantasma{opacity:.6}
 /* áudio 8: mãozinha que demonstra o arrasto das letras (posição vem do 3D, a cada quadro) */
-.mao-guia{position:absolute;left:0;top:0;z-index:4;width:46px;height:46px;pointer-events:none;opacity:0;transition:opacity .3s ease;
+.mao-guia{position:absolute;left:0;top:0;z-index:7;width:46px;height:46px;pointer-events:none;opacity:0;transition:opacity .3s ease;
   filter:drop-shadow(0 0 8px rgba(124,231,255,.8)) drop-shadow(0 4px 8px rgba(0,0,0,.6))}
 .mao-guia.on{opacity:1}
 .mao-guia svg{width:100%;height:100%;transform:translate(-14%,-2%)}
@@ -870,7 +877,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.62';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.63';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -895,7 +902,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1149,6 +1156,16 @@ const EVENTOS = {
     { t: 52.0, acao: () => Atomo.cartaoDestaque('f') },
     { t: 53.0, acao: () => Atomo.cartaoDestaque(null) },
   ],
+  'audio_distribuição_8.3': [
+    { t: 15.8, acao: () => Atomo.pulsaLetra(0) },                              // a letra K (no eixo) pulsa
+    { t: 19.0, acao: () => Atomo.eletronsK(700) },                             // "2e⁻" digitado à direita do K (o K se afasta)
+    { t: 22.5, acao: () => Atomo.pulsaEletronsK() },                           // o "2e⁻" pulsa
+    { t: 26.0, acao: () => Atomo.cartaoDestaque('s') },                        // o cartão s² aumenta por 2 s
+    { t: 28.0, acao: () => Atomo.cartaoDestaque(null) },
+    { t: 28.6, acao: () => Atomo.expoentePulsa('s', 1000) },                   // o "2" do s² aumenta por 1 s
+    /* 30,3 s: a mãozinha ensina a levar o s² até o degrau do nível K (repete a cada 3 s até o aluno arrastar) */
+    { t: 30.3, acao: () => Atomo.arrasteBloco('s', 1, 0) },
+  ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
 /* "toque na tela": aparece no fim do áudio 2; o toque começa o áudio 3 */
@@ -1371,7 +1388,9 @@ const Quiz = (() => {
     timers.forEach(clearTimeout); timers = [];
     $('#quiz').hidden = true; q = null;
   }
-  return { pergunta, fecha, confetes, get ativo(){ return !!q; } };
+  /* comemoração de acerto, igual à do quiz: confetes, funfare, aplausos e a voz sorteada */
+  function comemora(){ confetes(); sfx("funfare"); sfx("applause"); setTimeout(() => sfx(vozDoAcerto()), 1300); }
+  return { pergunta, fecha, confetes, comemora, get ativo(){ return !!q; } };
 })();
 
 document.getElementById('toqueTela').addEventListener('click', () => {
@@ -1831,6 +1850,16 @@ const Atomo = (() => {
   let bohr = null, atualizaBohr = null, bohrSalta = null, bohrLimpa = null;
   let grafico = null;          // áudio 8.1: diagrama de níveis (definido em monta)
   let letras = null;           // áudio 8: letras K…Q das camadas (definidas em monta)
+  /* áudio 8.3: cartão sendo arrastado até um degrau (mãozinha, clone, ouvintes) */
+  let arraste = null;
+  function arrasteLimpa(){
+    if (!arraste) return;
+    clearInterval(arraste.timer); arraste.solta && arraste.solta();
+    if (arraste.clone) arraste.clone.remove(); arraste.fantasmas.forEach(f => f.remove());
+    arraste.card.classList.remove("vazio", "arrastavel");
+    { const m = $("#maoGuia"); if (m) m.classList.remove("on"); }
+    arraste = null;
+  }
   /* tamanho do conjunto das camadas de Bohr (ajustado no modo edição com a pinça; 1 = original) */
   /* tamanho do conjunto das camadas de Bohr (modo edição v0.53): tela deitada 1,15 · celular em pé 1,42 */
   const ESCALA_CAMADAS = { deitada: 1.15, retrato: 1.42 };
@@ -1986,6 +2015,7 @@ const Atomo = (() => {
     { const m = $("#maoGuia"); if (m) m.classList.remove("on"); }
     if (bohr) bohr.semToque = false;
     if (grafico) grafico.desfaz();                                    // círculos de volta (áudio 8.1 transforma em linhas)
+    arrasteLimpa();                                                    // arrasto do áudio 8.3
     { const c = $("#cartoes"); if (c) c.innerHTML = ""; }                // cartões do áudio 8.2
     const e = $('#energia'); if (e) e.classList.remove('on');
   }
@@ -2898,7 +2928,7 @@ const Atomo = (() => {
            as letras deslizam para a esquerda do eixo vertical, na altura da sua linha.
            Medidas em unidades do conjunto das camadas. Tela deitada: fixas. Celular em pé: o gráfico se estica
            na largura até as letras ficarem perto da borda esquerda (medeGrafico) */
-        const PADRAO = { GX0: -4.1, GX1: 6.4, XEIXO: -4.6, XLETRA: -5.75 };
+        const PADRAO = { GX0: -4.1, GX1: 6.4, XEIXO: -4.6, XLETRA: -6.7 };   // (folga entre a letra e o eixo para o "2e⁻" do áudio 8.3)
         let { GX0, GX1, XEIXO, XLETRA } = PADRAO;
         /* os degraus (Aufbau) usam também o espaço acima das linhas: vão de GY0 até TOPO_DEG */
         const GY0 = -6.2, GY1 = 6.0, YBASE = GY0 - .8;
@@ -2940,8 +2970,8 @@ const Atomo = (() => {
             const rc = renderer.domElement.getBoundingClientRect(), meio = rc.top + rc.height / 2;
             const qE = local({ clientX: rc.left + 8, clientY: meio }), qD = local({ clientX: rc.right - 10, clientY: meio });
             if (qE && qD){
-              XLETRA = qE.x + letras.BASE.x / 2 + .1;
-              XEIXO = XLETRA + letras.BASE.x / 2 + .35;
+              XLETRA = qE.x + letras.BASE.x / 2 + .55;                                   // (folga para a letra se afastar no 8.3)
+              XEIXO = XLETRA + letras.BASE.x / 2 + 1.5;                                 // (cabe o "2e⁻" entre a letra e o eixo)
               GX0 = XEIXO + .45; GX1 = qD.x - .7;
               TOPO_DEG = GY1 + 6.5;                                                  // no celular há mais espaço acima: degraus mais afastados
             }
@@ -3013,7 +3043,7 @@ const Atomo = (() => {
           /* a letra fica no eixo, na altura do nível; quando os degraus flutuam (Aufbau) ela sai — os rótulos dos degraus a substituem */
           const it = letras.itens[L.n - 1];
           if (it && it.noGrafico){
-            it.s.position.set(XLETRA, y0 + L.b, .25);
+            it.s.position.set(XLETRA + (it.dx || 0), y0 + L.b, .25);
             const f = 1 - .195 * L.d; it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
             it.s.material.opacity = 1 - L.a; it.s.visible = L.a < .99;
           }
@@ -3067,13 +3097,59 @@ const Atomo = (() => {
             niveis.forEach((L, i) => agenda(i * passo, () => anima(cada, k => { L.d = k; aplica(L); }, () => { L.d = 1; aplica(L); }, easeBack)));
           },
           degrausJa: () => niveis.forEach(L => { L.d = 1; aplica(L); }),
+          /* ---- áudio 8.3: "2e⁻" ao lado da letra K (digitado), e posições na tela para a mãozinha e o encaixe ---- */
+          eK: (() => {
+            const c = document.createElement('canvas'); c.width = 200; c.height = 100;
+            const tex = new THREE.CanvasTexture(c);
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
+            s.scale.set(1.5, .75, 1); s.renderOrder = 7; s.visible = false; conj.add(s);
+            const desenha = n => {                                                     // n = quantos caracteres de "2e⁻" já foram digitados
+              const x = c.getContext('2d'), cor = '#' + niveis[0].cor.getHexString();
+              x.clearRect(0, 0, 200, 100); x.shadowColor = cor; x.shadowBlur = 10; x.fillStyle = '#eef1ff'; x.textBaseline = 'alphabetic';
+              x.font = '700 58px "Space Grotesk", sans-serif'; x.fillText('2e'.slice(0, Math.min(n, 2)), 14, 72);
+              if (n >= 3){ const w = x.measureText('2e').width; x.font = '700 40px "Space Grotesk", sans-serif'; x.fillText('−', 14 + w + 2, 40); }
+              tex.needsUpdate = true;
+            };
+            return { s, desenha, op: 0 };
+          })(),
+          /* coloca o "2e⁻" à direita da letra K; a letra se afasta para a esquerda enquanto ele é digitado */
+          eletronsK(dur = 700, ja = false){
+            const it = letras.itens[0], E = this.eK, L = niveis[0];
+            const posiciona = () => { E.s.position.set(XLETRA + (it.dx || 0) + letras.BASE.x * .4 + .95, yN(1) + L.b, .3); };
+            E.s.visible = true; E.op = 1; E.s.material.opacity = 1 - L.a;
+            if (ja){ it.dx = -.45; E.desenha(3); aplica(L); posiciona(); return; }
+            E.desenha(0);
+            anima(dur, k => { it.dx = -.45 * k; E.desenha(Math.ceil(k * 3)); aplica(L); posiciona(); }, () => { E.desenha(3); posiciona(); }, k => k);
+          },
+          /* "2e⁻" pulsa (cresce e brilha) */
+          pulsaEletronsK(){
+            const E = this.eK;
+            anima(700, k => { const p = Math.sin(Math.PI * k); E.s.scale.set(1.5 * (1 + .4 * p), .75 * (1 + .4 * p), 1); E.s.material.color.setScalar(1 + p); },
+              () => { E.s.scale.set(1.5, .75, 1); E.s.material.color.setScalar(1); }, k => k);
+          },
+          /* a letra i pulsa (cresce e volta) */
+          pulsaLetra(i){
+            const it = letras.itens[i]; if (!it) return;
+            const s0 = it.s.scale.clone();
+            anima(700, k => { const p = 1 + .35 * Math.sin(Math.PI * k); it.s.scale.set(s0.x * p, s0.y * p, 1); it.s.material.color.setScalar(1 + .8 * Math.sin(Math.PI * k)); },
+              () => { it.s.scale.copy(s0); it.s.material.color.setScalar(1); }, k => k);
+          },
+          /* posição na tela (px, relativa ao palco) do degrau j do nível n */
+          telaDoDegrau(n, j){
+            const t = niveis[n - 1].tiras[j], v = new THREE.Vector3();
+            ruth.cam.updateMatrixWorld(); t.updateWorldMatrix(true, false); t.getWorldPosition(v); v.project(ruth.cam);
+            return { x: (v.x + 1) / 2 * palco.clientWidth, y: (1 - v.y) / 2 * palco.clientHeight };
+          },
           /* mecânica da soma (a montar): o bloco s/p/d/f encaixado pinta o degrau j do nível n com a cor dele */
           encaixaBloco: (n, j, dur = 400) => { const L = niveis[n - 1]; if (!L || j >= L.m) return; const c0 = L.corSub[j]; anima(dur, k => { L.corSub[j] = c0 + (1 - c0) * k; aplica(L); }); },
           /* soma fechada: os degraus do nível flutuam até a altura de energia (Aufbau), a letra sai do eixo
              e cada degrau ganha o rótulo "nl" com o expoente (1s², 2p⁶…) */
           flutua: (n, dur = 1600) => {
             const L = niveis[n - 1]; if (!L) return;
-            anima(dur, k => { L.a = k; L.corSub = L.corSub.map(c => Math.max(c, k)); aplica(L); }, () => {   // (degraus que ainda não tinham cor ganham a do bloco)
+            anima(dur, k => {
+              L.a = k; L.corSub = L.corSub.map(c => Math.max(c, k)); aplica(L);       // (degraus que ainda não tinham cor ganham a do bloco)
+              if (L.n === 1 && grafico.eK.s.visible) grafico.eK.s.material.opacity = 1 - k;   // o "2e⁻" sai junto com a letra K
+            }, () => {
               L.a = 1; aplica(L);
               anima(500, k => { L.rot = L.rot.map(() => k); aplica(L); });
             });
@@ -3083,7 +3159,8 @@ const Atomo = (() => {
             eixos.visible = false; eixos.position.x = 0; matEixo.opacity = 0; rotE.material.opacity = 0;
             ({ GX0, GX1, XEIXO, XLETRA } = PADRAO); TOPO_DEG = GY1 + 3.6; yTopo = TOPO_DEG + .9; posEixos();
             setaAte(1); vert.material = ponta.material = matEixo;
-            if (letras) letras.itens.forEach(it => { it.noGrafico = false; });
+            if (letras) letras.itens.forEach(it => { it.noGrafico = false; it.dx = 0; });
+            grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
             niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.corSub.fill(0); L.rot.fill(0); aplica(L); });
           },
         };
@@ -3719,6 +3796,79 @@ const Atomo = (() => {
         agenda(ini, () => anima(total - ini, k => passo(i, k), () => passo(i, 1)));
       });
     },
+    /* ----- áudio 8.3 ----- */
+    pulsaLetra(i){ if (pronto && grafico) grafico.pulsaLetra(i); },
+    eletronsK(dur = 700, ja = false){ if (pronto && grafico) grafico.eletronsK(dur, ja); },
+    pulsaEletronsK(){ if (pronto && grafico) grafico.pulsaEletronsK(); },
+    /* o expoente (total de elétrons) do cartão "tipo" aumenta por "dur" ms */
+    expoentePulsa(tipo, dur = 1000){
+      const s = document.querySelector(`#cartoes [data-t="${tipo}"] sup`); if (!s) return;
+      s.classList.add('pulsa'); agenda(dur, () => s.classList.remove('pulsa'));
+    },
+    /* o aluno arrasta o cartão "tipo" até o degrau j do nível n. Uma mãozinha ensina (e repete a cada 3 s enquanto
+       ele não arrasta). Perto do degrau, encaixa (snap): o degrau ganha a cor do bloco, o rótulo "1s²" aparece e
+       há comemoração de quiz. Enquanto arrasta, o cartão de baixo fica vazio; ao encaixar, ele volta. */
+    arrasteBloco(tipo = 's', n = 1, j = 0, aoEncaixar = null){
+      if (!pronto || !grafico) return;
+      arrasteLimpa();
+      const card = document.querySelector(`#cartoes [data-t="${tipo}"]`); if (!card) return;
+      const mao = $('#maoGuia'), st = arraste = { card, feito: false, arrastando: false, clone: null, timer: null, fantasmas: [] };
+      card.classList.add('arrastavel');
+      const noPalco = (x, y) => { const p = palco.getBoundingClientRect(); return { x: x - p.left, y: y - p.top }; };
+      const centroCard = () => { const r = card.getBoundingClientRect(); return noPalco(r.left + r.width / 2, r.top + r.height / 2); };
+      const clona = cls => {
+        const c = card.cloneNode(true); c.classList.remove('destaque', 'brilha', 'maior', 'arrastavel', 'vazio');
+        c.classList.add('cartao-clone', cls); c.style.width = card.offsetWidth + 'px'; c.style.height = card.offsetHeight + 'px';
+        c.style.fontSize = getComputedStyle(card).fontSize; palco.appendChild(c); return c;
+      };
+      const poe = (el, x, y, esc = 1) => { el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${esc})`; };
+      /* mãozinha: sai do cartão e vai até o degrau, levando um "fantasma" do cartão */
+      const guia = () => {
+        if (st.feito || st.arrastando || !card.isConnected) return;
+        const a = centroCard(), b = grafico.telaDoDegrau(n, j), f = clona('fantasma');
+        st.fantasmas.push(f);
+        letras.mao = -1; mao.classList.add('on');
+        anima(1700, k => {
+          const e = ease(Math.min(1, k * 1.15)), x = a.x + (b.x - a.x) * e, y = a.y + (b.y - a.y) * e;
+          mao.style.transform = `translate(${x - 12}px, ${y - 4}px)`; poe(f, x, y, 1 - .35 * e); f.style.opacity = .6 * (1 - Math.max(0, k - .8) * 5);
+        }, () => { mao.classList.remove('on'); f.remove(); });
+      };
+      guia(); st.timer = setInterval(guia, 3000);
+      /* arrasto do aluno */
+      const alvo = () => grafico.telaDoDegrau(n, j);
+      const encaixa = () => {
+        st.feito = true; st.arrastando = false; clearInterval(st.timer); mao.classList.remove('on');
+        const c = st.clone, b = alvo();
+        c.animate([{ transform: c.style.transform, opacity: 1 }, { transform: `translate(${b.x}px, ${b.y}px) translate(-50%, -50%) scale(.3)`, opacity: 0 }],
+          { duration: 280, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'forwards' }).finished.then(() => c.remove()).catch(() => c.remove());
+        card.classList.remove('vazio', 'arrastavel');                                // o cartão de baixo volta (s²)
+        grafico.encaixaBloco(n, j, 250);
+        grafico.flutua(n, n === 1 ? 500 : 1600);                                    // aparece o rótulo "1s²" no degrau
+        sfx('right'); Quiz.comemora();
+        aoEncaixar && aoEncaixar();
+      };
+      const desce = e => {
+        if (st.feito) return;
+        e.preventDefault(); st.arrastando = true; mao.classList.remove('on');
+        st.clone = clona('arrastado'); card.classList.add('vazio');                  // o cartão de baixo fica vazio enquanto arrasta
+        move(e);
+      };
+      const move = e => {
+        if (!st.arrastando) return;
+        const p = noPalco(e.clientX, e.clientY); poe(st.clone, p.x, p.y, 1.05);
+        const b = alvo(); if (Math.hypot(p.x - b.x, p.y - b.y) < 70) encaixa();       // perto do degrau: snap
+      };
+      const sobe = () => {
+        if (!st.arrastando || st.feito) return;
+        st.arrastando = false;
+        const c = st.clone, a = centroCard();                                         // longe: volta para o lugar
+        c.animate([{ transform: c.style.transform }, { transform: `translate(${a.x}px, ${a.y}px) translate(-50%, -50%) scale(1)` }],
+          { duration: 300, easing: 'ease-out', fill: 'forwards' }).finished.then(() => { c.remove(); card.classList.remove('vazio'); }).catch(() => c.remove());
+      };
+      card.addEventListener('pointerdown', desce);
+      window.addEventListener('pointermove', move); window.addEventListener('pointerup', sobe); window.addEventListener('pointercancel', sobe);
+      st.solta = () => { card.removeEventListener('pointerdown', desce); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', sobe); window.removeEventListener('pointercancel', sobe); };
+    },
     /* mecânica da soma (a montar): bloco do subnível j (0 s · 1 p · 2 d · 3 f) encaixado no nível n → o degrau ganha a cor do bloco */
     blocoNoDegrau(n, j){ if (pronto && grafico) grafico.encaixaBloco(n, j); },
     /* soma do nível n fechada → os degraus flutuam até a altura de energia (Aufbau) e ganham os rótulos (3d¹⁰) */
@@ -4280,6 +4430,11 @@ const Retomar = (() => {
     'audio_distribuição_8.1': () => { bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); },
     /* como o 8.1 terminou: o gráfico de níveis pronto */
     'audio_distribuição_8.2': () => { bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); Atomo.viraGrafico(0, true); },
+    /* como o 8.2 terminou: gráfico com os degraus por nível e os cartões s² p⁶ d¹⁰ f¹⁴ */
+    'audio_distribuição_8.3': () => {
+      bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); Atomo.viraGrafico(0, true); Atomo.degraus(0, true);
+      ['s', 'p', 'd', 'f'].forEach(t => { Atomo.cartao(t, true); Atomo.cartaoEletrons(t); }); Atomo.cartoesNaLetra(0, true);
+    },
   };
   function salva(){
     try {
