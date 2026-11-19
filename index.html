@@ -877,7 +877,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.64';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.65';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -3024,7 +3024,7 @@ const Atomo = (() => {
             const t = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: C.cor, transparent: true, opacity: 0, depthWrite: false, depthTest: false }));   // (o próton invisível do centro não tampa)
             t.visible = false; conj.add(t); tiras.push(t);
             const r = new THREE.Sprite(new THREE.SpriteMaterial({ map: texRotuloDegrau(i + 1, j, C.cor), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
-            r.scale.set(1.9, .95, 1); r.visible = false; r.renderOrder = 6; conj.add(r); rotulos.push(r);
+            r.scale.set(2.185, 1.0925, 1); r.visible = false; r.renderOrder = 6; conj.add(r); rotulos.push(r);   // rótulo "1s²" (15% maior que antes)
           }
           /* brilho atrás da linha (na cor do nível), usado no áudio 8.2 aos 10,8 s */
           const glow = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ map: texBrilhoLinha, color: C.cor, transparent: true, opacity: 0, depthWrite: false, depthTest: false, blending: THREE.AdditiveBlending }));
@@ -3046,7 +3046,7 @@ const Atomo = (() => {
             t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar(1 + .9 * L.p + 1.1 * hl);   // cor do nível; a do bloco quando encaixado; acende no destaque
             t.material.opacity = L.op; t.visible = L.op > .01;
             const r = L.rotulos[j];                                                            // rótulo "3d¹⁰" logo acima do degrau
-            r.position.set(xb, y + .6, .03); r.material.opacity = L.rot[j] * L.op; r.visible = r.material.opacity > .01;
+            r.position.set(xb, y + .66, .03); r.material.opacity = L.rot[j] * L.op; r.visible = r.material.opacity > .01;
           });
           /* brilho da linha (na cor do nível) */
           L.glow.position.set((GX0 + GX1) / 2, y0 + L.b, .01); L.glow.scale.set(W + 1.4, 1.5, 1);
