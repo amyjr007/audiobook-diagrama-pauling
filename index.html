@@ -339,6 +339,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   background:linear-gradient(90deg,#3ee0ff,#6f9bff,#9b5cff,#ff3bd0,#ff5a5a);background-size:var(--cheio,520px) 100%;
   box-shadow:0 0 14px rgba(155,92,255,.8)}
 .linha.linha-topo{font-size:clamp(18px,4.6vw,28px)}
+/* áudio 8: mãozinha que demonstra o arrasto das letras (posição vem do 3D, a cada quadro) */
+.mao-guia{position:absolute;left:0;top:0;z-index:4;width:46px;height:46px;pointer-events:none;opacity:0;transition:opacity .3s ease;
+  filter:drop-shadow(0 0 8px rgba(124,231,255,.8)) drop-shadow(0 4px 8px rgba(0,0,0,.6))}
+.mao-guia.on{opacity:1}
+.mao-guia svg{width:100%;height:100%;transform:translate(-14%,-2%)}
 /* áudio 7.3: frase-relâmpago do salto do elétron (pisca em sincronia com o salto) */
 .salto-frase{position:absolute;z-index:4;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;white-space:nowrap;opacity:0;
   font:700 clamp(30px,8vw,64px) "Space Grotesk",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#f4fbff;
@@ -745,6 +750,9 @@ body.editando #palco canvas{cursor:default}
     <div class="equacoes" id="equacoes" aria-hidden="true"></div>
     <div class="postulado" id="postulado" aria-hidden="true"><img src="imagens/bohr_postulados.webp" alt="Postulados de Bohr"></div>
     <div class="salto-frase" id="saltoFrase" aria-hidden="true">salto quântico</div>
+    <div class="mao-guia" id="maoGuia" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="#eef1ff" stroke="#02040a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
+    </div>
     <div class="energia" id="energia" aria-hidden="true"><span>Energia</span><div class="en-trilho"><i id="energiaFill"></i></div></div>
     <div class="dica-girar" id="dicaGirar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
@@ -841,7 +849,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.50';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.52';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -854,10 +862,13 @@ const CAPITULOS = [
   /* 6: vai direto ao 1º conceito (áudio 7.1) — câmera no Bohr, tela escura */
   { titulo: 'Os níveis de energia',        pagina: 'pagina1', audio: 'audio_distribuição_7.1', inicio: 0,
     prepara: () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); } },
+  /* 7: vai direto ao áudio 7.3 — câmera no Bohr, tela escura (aos 2 s ela volta ao Rutherford, como no caminho normal) */
+  { titulo: 'O modelo de Bohr e o salto quântico', pagina: 'pagina1', audio: 'audio_distribuição_7.3', inicio: 0,
+    prepara: () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); } },
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -873,6 +884,11 @@ function depoisDe3Saltos(){
   if (atual !== 'audio_distribuição_7.3') return;                                          // saiu da cena (Home, Sumário…)
   if (!audio.ended){ pendente7_4 = true; return; }                                         // o 7.3 ainda está tocando
   carrega('audio_distribuição_7.4'); audio.play().catch(() => {});
+}
+/* áudio 8: todas as letras K…Q no lugar → funfare + confetes, depois aplausos */
+function festaDasLetras(){
+  sfx('funfare'); Quiz.confetes();
+  setTimeout(() => sfx('applause'), 900);
 }
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
@@ -1044,6 +1060,21 @@ const EVENTOS = {
   'audio_distribuição_7.4': [
     /* fim: o play vira "Ok" verde → áudio 8 */
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8'); } },
+  ],
+  'audio_distribuição_8': [
+    { t: .05,  acao: () => Atomo.bohrToque(false) },                          // daqui em diante o toque é das letras (não salta o elétron)
+    /* 4 s → 6 s: as etiquetas "n = 1…7" somem uma a uma (TV desligando) */
+    { t: 4.0,  acao: () => Atomo.rotulosSomem(2000) },
+    /* 10,8 s: o K aparece (TV ligando) onde ficaria o "n = 8"; 11 s: a mãozinha; 12 s: ela leva o K até o n = 1 */
+    { t: 10.8, acao: () => Atomo.letra(0) },
+    { t: 11.0, acao: () => Atomo.mao(0) },
+    { t: 12.0, acao: () => Atomo.maoArrasta(0, 1200) },
+    /* 14 s: o L aparece; 15 s: a mãozinha leva o L até o n = 2 */
+    { t: 14.0, acao: () => Atomo.letra(1) },
+    { t: 14.4, acao: () => Atomo.mao(1) },
+    { t: 15.0, acao: () => Atomo.maoArrasta(1, 1200) },
+    /* fim: aparece o M e o aluno arrasta cada letra (M → n = 3 … Q → n = 7). Todas no lugar: festa */
+    { t: 'fim', acao: () => { escondePlay(true); Atomo.letrasDoAluno(2, festaDasLetras); } },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -1267,7 +1298,7 @@ const Quiz = (() => {
     timers.forEach(clearTimeout); timers = [];
     $('#quiz').hidden = true; q = null;
   }
-  return { pergunta, fecha, get ativo(){ return !!q; } };
+  return { pergunta, fecha, confetes, get ativo(){ return !!q; } };
 })();
 
 document.getElementById('toqueTela').addEventListener('click', () => {
@@ -1725,6 +1756,7 @@ const Atomo = (() => {
   let atualizaOrbita = null;   // move um elétron na órbita e acerta o rastro (definida em monta)
   /* áudio 7.3: elétron de Bohr interativo (definidos em monta) */
   let bohr = null, atualizaBohr = null, bohrSalta = null, bohrLimpa = null;
+  let letras = null;           // áudio 8: letras K…Q das camadas (definidas em monta)
   /* áudio 5.2: elétrons do carbono ganham energia (0 → 1) e o contorno das camadas some (1 → 0) */
   let energiaC = 0, contornoC = 1;
   const CORES_NEON = [0xff2bd6, 0x8a2bff, 0x00ff9c, 0xffd200, 0xff3b6b, 0x2b8cff];
@@ -1779,6 +1811,67 @@ const Atomo = (() => {
     const sx = Math.max(.001, A[1] + (B[1] - A[1]) * f), sy = Math.max(.001, A[2] + (B[2] - A[2]) * f);
     m.scale.set(sx, sy, sx);
   }
+  /* ---------- áudio 8: letras das camadas ---------- */
+  const curvaTV = (TAB, k) => {                                   // interpola uma das tabelas TV_LIGA / TV_DESLIGA
+    let j = 0; while (j < TAB.length - 2 && k > TAB[j + 1][0]) j++;
+    const A = TAB[j], B = TAB[j + 1], f = Math.min(1, Math.max(0, (k - A[0]) / (B[0] - A[0])));
+    return A.map((a, n) => a + (B[n] - a) * f);
+  };
+  /* etiqueta "n = …" desligando como TV */
+  function tvDesligaRotulo(C, k){
+    const [, sx, sy] = curvaTV(TV_DESLIGA, k);
+    C.rotulo.scale.set(1.95 * Math.max(.001, sx), .73 * Math.max(.001, sy), 1);
+    if (k >= 1) C.rotulo.visible = false;
+  }
+  /* letra ligando como TV (risco de luz → abre → treme) */
+  function tvLigaLetra(it, k){
+    const [, sx, sy, b, op] = curvaTV(TV_LIGA, k);
+    it.s.scale.set(letras.BASE.x * Math.max(.001, sx), letras.BASE.y * Math.max(.001, sy), 1);
+    it.s.material.opacity = op; it.s.material.color.setScalar(Math.min(2, b));
+  }
+  /* a letra i aparece (efeito TV) no lugar do "n = 8" */
+  function letraAparece(i, interativa = false, ja = false){
+    const it = letras.itens[i]; if (!it || it.estado !== 'oculta') return;
+    it.s.position.copy(letras.posN(8)); it.s.visible = true; it.interativa = interativa;
+    it.estado = 'esperando';
+    if (ja){ tvLigaLetra(it, 1); return; }
+    anima(700, k => tvLigaLetra(it, k), () => tvLigaLetra(it, 1), k => k);
+  }
+  /* encaixe: a letra vai para a etiqueta do nível, dá um "pulo" e a camada brilha */
+  function letraEncaixa(it, doAluno = false){
+    const alvo = letras.posN(it.i + 1), p0 = it.s.position.clone();
+    it.estado = 'encaixada';
+    const C = ruth.camadas[it.i];
+    anima(160, k => it.s.position.lerpVectors(p0, alvo, k), () => {
+      it.s.position.copy(alvo);
+      anima(450, k => { it.s.scale.set(letras.BASE.x * (1.45 - .45 * easeBack(k)), letras.BASE.y * (1.45 - .45 * easeBack(k)), 1); },
+        () => it.s.scale.set(letras.BASE.x, letras.BASE.y, 1), k => k);
+      anima(700, k => {                                                       // a camada pisca forte e volta
+        C.fio.material.color.copy(C.cor).multiplyScalar(1 + 2.5 * (1 - k));
+        C.brilhoC.material.opacity = .1 + .6 * (1 - k);
+      });
+      if (doAluno){
+        sfx('right');
+        const prox = letras.itens[it.i + 1];
+        if (prox) agenda(500, () => letraAparece(prox.i, true));                // e aparece a próxima letra
+        else if (letras.aoTerminar){ const cb = letras.aoTerminar; letras.aoTerminar = null; agenda(400, cb); }
+      }
+    });
+  }
+  /* soltou longe: a letra volta (deslizando) para onde nasceu */
+  function letraVolta(it){
+    const p0 = it.s.position.clone(), p1 = letras.posN(8);
+    it.estado = 'movendo';
+    anima(380, k => it.s.position.lerpVectors(p0, p1, k), () => { it.estado = 'esperando'; it.s.scale.set(letras.BASE.x, letras.BASE.y, 1); });
+  }
+  /* mãozinha que demonstra o arrasto: fica presa à letra i (posição calculada a cada quadro) */
+  function posicionaMao(){
+    const el = $('#maoGuia'); if (!el || letras.mao < 0 || !ruth.on) return;
+    const it = letras.itens[letras.mao], v = new THREE.Vector3();
+    it.s.getWorldPosition(v); v.project(ruth.cam);
+    const w = palco.clientWidth, h = palco.clientHeight;
+    el.style.transform = `translate(${(v.x + 1) / 2 * w - 12}px, ${(1 - v.y) / 2 * h - 4}px)`;   // a ponta do dedo na letra
+  }
   /* "salto quântico" pisca na tela (reinicia a animação a cada salto) */
   function fraseSalto(){
     const f = $('#saltoFrase'); if (!f) return;
@@ -1797,7 +1890,11 @@ const Atomo = (() => {
     /* núcleo completo de novo (4 p⁺ + 3 n⁰) e sem o elétron de Bohr */
     ruth.bolas.forEach(b => { ruth.nucleo.add(b.m); b.m.position.copy(b.pos0); b.m.rotation.set(0, 0, 0); b.m.scale.setScalar(1); b.m.visible = true; });
     if (bohrLimpa) bohrLimpa();
-    ruth.camadas.forEach(C => { C.g.visible = false; C.fio.material.opacity = C.brilhoC.material.opacity = C.rotulo.material.opacity = 0; });
+    ruth.camadas.forEach(C => { C.g.visible = false; C.fio.material.opacity = C.brilhoC.material.opacity = C.rotulo.material.opacity = 0; C.rotulo.visible = true; C.rotulo.scale.set(1.95, .73, 1); });
+    /* letras do áudio 8 escondidas, mãozinha fora, toque nos níveis liberado */
+    if (letras){ letras.itens.forEach(it => { it.estado = "oculta"; it.interativa = false; it.s.visible = false; it.s.material.opacity = 0; }); letras.mao = -1; letras.arrastando = null; letras.aoTerminar = null; }
+    { const m = $("#maoGuia"); if (m) m.classList.remove("on"); }
+    if (bohr) bohr.semToque = false;
     const e = $('#energia'); if (e) e.classList.remove('on');
   }
   const ease = k => k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
@@ -2594,7 +2691,7 @@ const Atomo = (() => {
         };
         /* nível tocado: o mais próximo do toque (meio espaço de tolerância para dentro e para fora) */
         const nivelTocado = ev => {
-          if (!bohr.ativo || !ruth.on || bohr.op < .5 && !bohr.saltando) return null;
+          if (!bohr.ativo || bohr.semToque || !ruth.on || bohr.op < .5 && !bohr.saltando) return null;   // (no áudio 8 o toque é das letras)
           const q = local(ev); if (!q) return null;
           const r = Math.hypot(q.x, q.y);
           if (r < RN(1) - .5 || r > RN(7) + .5) return null;                    // fora das camadas
@@ -2609,6 +2706,67 @@ const Atomo = (() => {
         window.addEventListener('pointermove', ev => {
           if (bohr.ativo && ruth.on && ev.target === renderer.domElement) face.style.cursor = nivelTocado(ev) ? 'pointer' : '';
         });
+
+        /* ---- áudio 8: as letras das camadas (K, L, M, N, O, P, Q) ----
+           cada letra nasce onde ficaria o "n = 8" (seguindo a diagonal das etiquetas) e é levada até a etiqueta do seu nível */
+        const ANG = THREE.MathUtils.degToRad(35);
+        const posN = n => new THREE.Vector3(RN(n) * Math.cos(ANG), RN(n) * Math.sin(ANG), .25);
+        const texLetra = (L, cor) => {
+          const c = document.createElement('canvas'); c.width = 160; c.height = 96;
+          const x = c.getContext('2d'), hex = '#' + cor.getHexString();
+          x.fillStyle = 'rgba(2,4,10,.9)'; x.strokeStyle = hex; x.lineWidth = 4;
+          x.beginPath();
+          if (x.roundRect) x.roundRect(12, 12, 136, 72, 36);
+          else { x.moveTo(48, 12); x.arcTo(148, 12, 148, 84, 36); x.arcTo(148, 84, 12, 84, 36); x.arcTo(12, 84, 12, 12, 36); x.arcTo(12, 12, 148, 12, 36); x.closePath(); }
+          x.fill(); x.stroke();
+          x.fillStyle = hex; x.textAlign = 'center'; x.textBaseline = 'middle'; x.shadowColor = hex; x.shadowBlur = 12;
+          x.font = '700 62px "Space Grotesk", sans-serif'; x.fillText(L, 80, 51);
+          return new THREE.CanvasTexture(c);
+        };
+        const BASE = new THREE.Vector2(1.45, .87);
+        const itensL = ['K', 'L', 'M', 'N', 'O', 'P', 'Q'].map((L, i) => {
+          const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: texLetra(L, ruth.camadas[i].cor), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
+          s.renderOrder = 6; s.visible = false; s.scale.set(BASE.x, BASE.y, 1); atomo.add(s);
+          return { L, i, s, estado: 'oculta' };                                  // oculta | esperando | movendo | arrastando | encaixada
+        });
+        letras = { itens: itensL, posN, BASE, mao: -1, arrastando: null, aoTerminar: null };
+
+        /* toque: segurar a letra da vez e arrastar até a etiqueta do nível dela (perto → encaixa sozinha) */
+        const pertoDe = (ev, obj) => {
+          const rc = renderer.domElement.getBoundingClientRect();
+          ruth.cam.updateMatrixWorld();
+          obj.getWorldPosition(tmp); tmp.project(ruth.cam);
+          return Math.hypot(ev.clientX - ((tmp.x + 1) / 2 * rc.width + rc.left), ev.clientY - ((1 - tmp.y) / 2 * rc.height + rc.top)) < 56;
+        };
+        face.addEventListener('pointerdown', ev => {
+          if (!ruth.on) return;
+          const it = letras.itens.find(x => x.estado === 'esperando' && x.interativa);
+          if (!it || !pertoDe(ev, it.s)) return;
+          ev.stopPropagation(); ev.preventDefault();
+          it.estado = 'arrastando'; letras.arrastando = { it, pid: ev.pointerId };
+          it.s.scale.set(BASE.x * 1.15, BASE.y * 1.15, 1);                       // "pegou" a letra
+          face.style.cursor = 'grabbing'; $('#dicaGirar').classList.add('some');
+        }, true);
+        window.addEventListener('pointermove', ev => {
+          const A = letras.arrastando;
+          if (A && ev.pointerId === A.pid){
+            const q = local(ev); if (!q) return;
+            A.it.s.position.set(q.x, q.y, .25);
+            if (A.it.s.position.distanceTo(posN(A.it.i + 1)) < .85){            // chegou perto: encaixa
+              letras.arrastando = null; face.style.cursor = '';
+              letraEncaixa(A.it, true);
+            }
+          } else if (ruth.on && ev.target === renderer.domElement){
+            const it = letras.itens.find(x => x.estado === 'esperando' && x.interativa);
+            if (it) face.style.cursor = pertoDe(ev, it.s) ? 'grab' : '';
+          }
+        });
+        const soltaLetra = ev => {
+          const A = letras.arrastando; if (!A || ev.pointerId !== A.pid) return;
+          letras.arrastando = null; face.style.cursor = '';
+          letraVolta(A.it);                                                       // longe do lugar: volta para o começo
+        };
+        window.addEventListener('pointerup', soltaLetra); window.addEventListener('pointercancel', soltaLetra);
       }
     }
 
@@ -2883,6 +3041,7 @@ const Atomo = (() => {
       ruth.escuro.material.opacity = ruth.opEscuro;
       ruth.eletrons.forEach(o => atualizaOrbita(o, dtR));
       atualizaBohr(dt);                         // elétron de Bohr: tempo real (o aluno pode arrastar mesmo com o áudio parado)
+      posicionaMao();                           // mãozinha do áudio 8 acompanha a letra
     }
     const meiaV = THREE.MathUtils.degToRad(camera.fov / 2);
     const meia = Math.min(meiaV, Math.atan(Math.tan(meiaV) * camera.aspect));
@@ -3174,6 +3333,45 @@ const Atomo = (() => {
       if (ja) B.op = 1; else anima(600, k => B.op = k);
       barraNivel(1 / 7, true);
       dica('toque num nível'); $('#dicaGirar').classList.remove('some');
+    },
+    /* ----- áudio 8: letras das camadas ----- */
+    /* tocar nos níveis (salto do elétron) liga / desliga — no áudio 8 o toque é das letras */
+    bohrToque(on){ if (bohr) bohr.semToque = !on; if (!on) $('#dicaGirar').classList.add('some'); },
+    /* as etiquetas "n = 1…7" somem uma a uma (TV desligando), em "dur" ms no total */
+    rotulosSomem(dur = 2000){
+      if (!pronto) return;
+      const cada = 420, passo = (dur - cada) / 6;
+      ruth.camadas.forEach((C, i) => agenda(i * passo, () => anima(cada, k => tvDesligaRotulo(C, k), () => tvDesligaRotulo(C, 1), k => k)));
+    },
+    /* a letra i (0 = K) aparece no lugar do "n = 8"; interativa = o aluno arrasta */
+    letra(i, interativa = false){ if (pronto) letraAparece(i, interativa); },
+    /* mãozinha sobre a letra i (on) / some */
+    mao(i, on = true){
+      const el = $('#maoGuia'); if (!el || !pronto) return;
+      if (on){ letras.mao = i; posicionaMao(); el.classList.add('on'); }
+      else { el.classList.remove('on'); agenda(350, () => { if (!el.classList.contains('on')) letras.mao = -1; }); }
+    },
+    /* a mãozinha arrasta a letra i até a etiqueta do nível dela (encaixe sem som) e depois some */
+    maoArrasta(i, dur = 1200){
+      if (!pronto) return;
+      const it = letras.itens[i]; if (!it || it.estado !== 'esperando') return;
+      it.estado = 'movendo';
+      const p0 = it.s.position.clone(), alvo = letras.posN(i + 1);
+      const fora = alvo.clone().multiplyScalar(1.03);                            // para um tiquinho antes e "encaixa"
+      anima(dur, k => it.s.position.lerpVectors(p0, fora, k), () => { letraEncaixa(it); agenda(500, () => this.mao(i, false)); });
+    },
+    /* fim do áudio 8: a partir do M, o aluno arrasta cada letra; no fim, festa */
+    letrasDoAluno(primeira = 2, aoTerminar = null){
+      if (!pronto) return;
+      letras.aoTerminar = aoTerminar;
+      letraAparece(primeira, true);
+      dica('arraste a letra até o nível dela'); $('#dicaGirar').classList.remove('some');
+    },
+    /* retomar: letras até a "ate" (exclusive) já encaixadas */
+    letrasProntas(ate){
+      if (!pronto) return;
+      for (let i = 0; i < ate; i++){ const it = letras.itens[i]; letraAparece(i, false, true); it.s.position.copy(letras.posN(i + 1)); it.estado = 'encaixada'; }
+      ruth.camadas.forEach(C => { C.rotulo.visible = false; });
     },
     /* liga a camada i (0 = mais perto do núcleo) com o efeito "TV antiga ligando" */
     camadaLiga(i, dur = 800){
@@ -3657,6 +3855,14 @@ const Retomar = (() => {
     Atomo.digita('neutro', 'Átomo neutro:', { cor: '#eef1ff' }); Atomo.quebraLinha('neutro');
     Atomo.digita('neutro', 'Nº atômico', { cor: '#6f9bff' }); Atomo.digita('neutro', '= Nº de elétrons', { cor: '#7ce7ff' });
   };
+  /* como o 7.3 terminou: átomo de Bohr montado (1 próton, 7 camadas com "n = …", barra) e o elétron no nível 1 */
+  const bohrNaTela = () => {
+    Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1);
+    Atomo.rutherfordVolta(true); Atomo.rutherfordEscuro(.8, 1); Atomo.rutherfordSemEletrons(1); Atomo.bohrNucleo();
+    Atomo.energiaBarra(0); for (let i = 0; i < 7; i++) Atomo.camadaLiga(i, 1);
+    Atomo.avancaTudo(); Atomo.bohrEletron(null, true);
+    Atomo.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 1 });
+  };
   const INICIO = {
     'audio_distribuição_1':   () => Atomo.reset(),
     'audio_distribuição_2':   () => Atomo.estadoAudio2(),
@@ -3680,13 +3886,8 @@ const Retomar = (() => {
       Atomo.digita('conceito', CONCEITO_2, { cor: '#eef1ff' });
     },
     /* como o 7.3 terminou: átomo de Bohr montado (1 próton, 7 camadas, barra) e o elétron que o aluno pode mover */
-    'audio_distribuição_7.4': () => {
-      Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1);
-      Atomo.rutherfordVolta(true); Atomo.rutherfordEscuro(.8, 1); Atomo.rutherfordSemEletrons(1); Atomo.bohrNucleo();
-      Atomo.energiaBarra(0); for (let i = 0; i < 7; i++) Atomo.camadaLiga(i, 1);
-      Atomo.avancaTudo(); Atomo.bohrEletron(null, true);
-      Atomo.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 1 });
-    },
+    'audio_distribuição_7.4': () => bohrNaTela(),
+    'audio_distribuição_8':   () => bohrNaTela(),
   };
   function salva(){
     try {
