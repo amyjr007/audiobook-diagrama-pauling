@@ -785,7 +785,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.36';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.37';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -2511,6 +2511,11 @@ const Atomo = (() => {
       /* o átomo novo já está lá, esperando a câmera */
       li.visible = false;
       grupoNovo.visible = true; grupoNovo.scale.setScalar(1);
+      /* o hélio sempre chega com a eletrosfera (camada fina) ligada — senão os 2 elétrons não aparecem */
+      if (grupoNovo === he){
+        esfera.visible = true; esfera.material.uniforms.opac.value = 1; setEsf(esfera, ESF_FINA);
+        heNucleo.scale.setScalar(1); matsHe.forEach(m => m.opacity = 1);
+      }
       maisNovo.forEach(({sprite}) => { sprite.visible = true; sprite.material.opacity = 1; });
       giroAuto = giroNucleo = true;
       camTween = true;
