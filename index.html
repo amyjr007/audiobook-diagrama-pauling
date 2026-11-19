@@ -785,7 +785,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.37';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.38';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1027,7 +1027,7 @@ window.__modoEdicao = false;
 const sonsTocados = new Set();
 const _playOriginal = HTMLMediaElement.prototype.play;
 HTMLMediaElement.prototype.play = function(){
-  if (window.__modoEdicao) return Promise.resolve();
+  if (window.__modoEdicao || window.__silencio) return Promise.resolve();   // __silencio: ao retomar depois de recarregar
   sonsTocados.add(this);
   return _playOriginal.apply(this, arguments);
 };
@@ -1232,6 +1232,7 @@ document.querySelectorAll('[data-home]').forEach(b => b.addEventListener('click'
    extras = [[ms, função], ...] → coisas que acontecem durante a pausa. */
 let pausaTimers = [], pausaPendentes = [], emPausaRoteiro = false;
 function pausaRoteiro(ms, extras = []){
+  if (window.__restaurando) return;          // ao retomar depois de recarregar, as pausas que já passaram não acontecem de novo
   emPausaRoteiro = true;
   audio.pause();
   pausaPendentes = extras.map(([, fn]) => fn);
@@ -1261,6 +1262,7 @@ let estavaCongelado = false;
       tela.getAnimations({ subtree: true }).forEach(a => {
         const alvo = a.effect && a.effect.target;
         if (alvo && alvo.closest && alvo.closest(AMBIENTE)) return;
+        if (alvo && alvo.classList && (alvo.classList.contains('tela') || alvo.classList.contains('face'))) return;   // troca de telas e escurecer não são eventos
         if (a.playState === 'running'){ a.pause(); congeladas.add(a); }
       });
     } else {
@@ -2321,6 +2323,16 @@ const Atomo = (() => {
     },
     /* zoom com duração exata (ex.: 10 s → 12,5 s = 2500 ms) */
     zoomLento(alvo, dur){ if (pronto) zoomLentoF(alvo, dur); },
+    /* conclui na hora todas as animações do roteiro (usado ao retomar depois de recarregar a página) */
+    avancaTudo(){
+      if (!pronto) return;
+      for (let i = 0; i < 60 && tweens.length; i++){ relogio += 600000; rodaTweens(relogio); }
+      if (!camTween) fatorCam = fatorCamAlvo;
+      [...protons, ...neutrons, hProton].forEach(m => { m.userData.escala = m.userData.escalaAlvo; m.scale.setScalar(m.userData.escala); });
+      ['p', 'n'].forEach(k => { brilho[k].v = brilho[k].alvo; brilho[k].ult = -1; });
+      alvoCamAtual.copy(alvoCam);
+      somDigitar.pause(); digitando = 0;
+    },
     /* voo da câmera até uma posição e um ponto de mira (coordenadas do relatório do modo câmera).
        Posição em linha reta e direção girando pelo menor caminho, suave, em "dur" ms. */
     voaCamera(pos, olha, dur = 3000){
@@ -2786,6 +2798,80 @@ const ModoCamera = (() => {
 })();
 
 if (location.hash === '#p1') mostra('pagina1');   // atalho de teste: index.html#p1
+
+/* =====================================================================
+   RETOMAR DEPOIS DE RECARREGAR (F5 / Ctrl+Shift+R)
+   A cada segundo guarda (só nesta aba) a tela, o áudio e o segundo em que está.
+   Ao recarregar: volta para a mesma tela, monta a cena do começo daquele áudio
+   e refaz, na hora e em silêncio, todos os eventos até aquele segundo.
+   O áudio fica parado ali, com o play piscando (o navegador não deixa tocar sozinho).
+   ===================================================================== */
+const Retomar = (() => {
+  const CHAVE = 'pauling-onde-parou';
+  /* cena do começo de cada áudio (o que já estava na tela quando ele começa) */
+  const neutroNaTela = () => {
+    Atomo.digita('neutro', 'Átomo neutro:', { cor: '#eef1ff' }); Atomo.quebraLinha('neutro');
+    Atomo.digita('neutro', 'Z', { cor: '#6f9bff' }); Atomo.digita('neutro', ' = Nº de elétrons', { cor: '#7ce7ff' });
+  };
+  const INICIO = {
+    'audio_distribuição_1':   () => Atomo.reset(),
+    'audio_distribuição_2':   () => Atomo.estadoAudio2(),
+    'audio_distribuição_3':   () => Atomo.estado('He', .464, 'Hélio (2He)', [7]),
+    'audio_distribuição_4':   () => Atomo.estado('H', .464, 'Hidrogênio - D'),
+    'audio_distribuição_5':   () => Atomo.estado('C', .464, 'Carbono'),
+    'audio_distribuição_5.1': () => Atomo.estado('H', 1, 'Hidrogênio - D'),
+    'audio_distribuição_5.2': () => Atomo.estado('He', 1, 'Hélio (2He)', [7]),
+    'audio_distribuição_5.3': () => { Atomo.estado('C', 1, 'Carbono'); neutroNaTela(); },
+    'audio_distribuição_6':   () => { Atomo.estado('C', 1, 'Carbono'); neutroNaTela(); },
+  };
+  function salva(){
+    try {
+      const tela = (document.querySelector('.tela.ativa') || {}).id || 'capa';
+      sessionStorage.setItem(CHAVE, JSON.stringify({
+        tela, atual, t: audio.currentTime || 0, fim: audio.ended, escolhas: !$('#escolhas').hidden, v: APP_VERSAO,
+      }));
+    } catch(e){}
+  }
+  function restaura(){
+    let s = null;
+    try { s = JSON.parse(sessionStorage.getItem(CHAVE)); } catch(e){}
+    if (!s || location.hash) return;
+    if (s.tela === 'capa'){ if (s.escolhas) mostraEscolhas(); return; }
+    mostraEscolhas();
+    if (s.tela === 'treinar'){ mostra('treinar'); return; }
+    if (s.tela !== 'pagina1') return;
+    mostra('pagina1');
+    if (!s.atual || !INICIO[s.atual]){ Atomo.reset(); Intro.inicia(); return; }   // ainda não tinha dado play
+    window.__silencio = true; window.__restaurando = true;
+    try {
+      INICIO[s.atual]();
+      carrega(s.atual, 0);
+      if (s.atual !== 'audio_distribuição_1') INICIO[s.atual]();   // carrega(1) reinicia a cena; os outros mantêm
+      const evs = EVENTOS[s.atual] || [];
+      evs.forEach((ev, i) => {
+        if (typeof ev.t === 'number' && ev.t <= s.t){ disparados.add(i); try { ev.acao(); } catch(e){ console.error(e); } }
+      });
+      if (s.fim) evs.forEach(ev => { if (ev.t === 'fim') try { ev.acao(); } catch(e){ console.error(e); } });
+      Atomo.avancaTudo();
+      /* as animações de tela dos eventos que já passaram (nomes apagando, textos sumindo…) terminam na hora */
+      $('#palco').getAnimations({ subtree: true }).forEach(a => {
+        try { if (a.effect && a.effect.getComputedTiming().iterations !== Infinity) a.finish(); } catch(e){}
+      });
+    } finally {
+      window.__silencio = false; window.__restaurando = false;
+    }
+    audio.addEventListener('loadedmetadata', () => {
+      audio.currentTime = s.fim ? audio.duration : s.t;
+      $('#barra').style.width = (audio.duration ? (audio.currentTime / audio.duration * 100) : 0) + '%';   // barra no ponto certo
+    }, { once: true });
+    if (!s.fim && !btnPlay.classList.contains('oculto')) btnPlay.classList.add('chama');
+  }
+  setInterval(salva, 1000);
+  addEventListener('pagehide', salva);
+  addEventListener('beforeunload', salva);
+  return { restaura, salva };
+})();
+Retomar.restaura();
 
 /* =====================================================================
    MODO EDIÇÃO
