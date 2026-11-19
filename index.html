@@ -319,6 +319,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 }
 .linha.linha-hnome{font-size:clamp(22px,6vw,32px)}
 .linha.linha-z{font-size:clamp(19px,calc(4.6vw + 2px),28px)}   /* "Z = 2": 2px maior */
+/* escurecedor da cena e o texto dos "conceitos" (grande, centralizado, quebra linha) */
+.escurecedor{position:absolute;inset:0;z-index:1;background:#02040a;opacity:0;pointer-events:none;transition:opacity .9s ease}
+.escurecedor.on{opacity:.93}
+.linha.linha-conceito{white-space:normal;width:min(86%,920px);text-align:center;font-size:clamp(22px,5.2vw,40px);line-height:1.32;font-weight:600}
+/* equações subindo no fundo escuro (áudio 7) */
+.equacoes{position:absolute;inset:0;z-index:2;pointer-events:none;overflow:hidden}
+.equacao{position:absolute;left:0;top:0;white-space:nowrap;font-family:"IBM Plex Mono",monospace;font-weight:500;color:var(--c);text-shadow:0 0 12px color-mix(in srgb,var(--c) 55%,transparent)}
+.equacao sub,.equacao sup{font-size:.62em}
 /* "Átomo neutro: Z = número de elétrons": no celular pode quebrar em 2 linhas, centralizado */
 .linha.linha-neutro{white-space:normal;width:min(92%,560px);text-align:center;line-height:1.25}
 .linha.linha-neutro.ao-lado{width:auto;max-width:none;white-space:nowrap;text-align:left;transform:translate(0,-50%)}
@@ -329,6 +337,9 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .btn-play.ok::before{background:#5ee08a}
 .btn-play.ok svg{display:none!important}
 .btn-play.ok .ok-texto{display:block}
+.btn-play.largo{width:auto;min-width:66px;padding:0 24px;border-radius:999px}
+.btn-play.largo::before{border-radius:999px}
+.btn-play.largo .ok-texto{font-size:17px;white-space:nowrap}
 @keyframes piscaOk{0%,100%{box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 0 rgba(140,255,106,.7);filter:brightness(1)}50%{box-shadow:0 10px 28px rgba(0,0,0,.45),0 0 0 14px rgba(140,255,106,0),0 0 26px rgba(140,255,106,.8);filter:brightness(1.25)}}
 .linha sub{font-size:.6em;line-height:0;vertical-align:-.3em}
 .linha.digitando::after{content:"";display:inline-block;width:2px;height:.95em;margin-left:3px;vertical-align:-.1em;background:currentColor;animation:cursor .6s steps(1) infinite}
@@ -690,6 +701,7 @@ body.editando #palco canvas{cursor:default}
     <!-- abertura do Aprender: cartões de subníveis subindo (atrás e na frente do átomo) -->
     <div class="cards" id="cardsTras" aria-hidden="true"></div>
     <div class="cards cards-frente" id="cardsFrente" aria-hidden="true"></div>
+    <div class="equacoes" id="equacoes" aria-hidden="true"></div>
     <div class="dica-girar" id="dicaGirar">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
       <span id="dicaTexto">arraste para girar</span>
@@ -785,7 +797,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.38';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.39';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -798,7 +810,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_5.3', 'audio_distribuição_6'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_5.3', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2'];
 
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
@@ -912,19 +924,77 @@ const EVENTOS = {
     { t: .05,  acao: () => Atomo.mostraCavaletes(true) },               // os cavaletes dos cientistas aparecem
     /* 10 s → 13 s: a câmera voa até a posição do modo câmera (de costas para os átomos, olhando a parede da frente) */
     { t: 10.0, acao: () => Atomo.voaCamera([13.64, -2.36, 24.93], [13.62, -2.02, 34.92], 3000) },
+    { t: 'fim', acao: () => tocaDepois(800, 'audio_distribuição_7') },        // o áudio 7 começa sozinho
+  ],
+  'audio_distribuição_7': [
+    /* 3 s → 4 s: a câmera desliza até o cavalete do Bohr (mesma altura e distância) */
+    { t: 3.0, acao: () => Atomo.voaCamera([-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92], 1000) },
+    { t: 7.8, acao: () => Equacoes.inicia() },                                // equações sobem pelos lados, no fundo escuro
+    /* fim: as equações terminam de subir; o play vira "1º conceito" */
+    { t: 'fim', acao: () => {
+        Equacoes.para(false); escondePlay(false);
+        botaoOk(true, () => { Atomo.escurece(true); carrega('audio_distribuição_7.1'); audio.play().catch(() => {}); }, '1º conceito');
+    } },
+  ],
+  'audio_distribuição_7.1': [
+    { t: 1.0, acao: () => Atomo.digita('conceito', 'Os elétrons se organizam em níveis discretos de energia, também conhecidos como camadas eletrônicas.', { cor: '#eef1ff', ms: 55 }) },
+    { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, 'audio_distribuição_7.2'); } },
+  ],
+  'audio_distribuição_7.2': [
+    // coreografia do áudio 7.2 — a definir
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
 /* "toque na tela": aparece no fim do áudio 2; o toque começa o áudio 3 */
-/* play no modo "Ok": verde piscando, com "Ok" dentro; o clique toca o próximo áudio */
+/* play no modo "Ok": verde piscando, com um texto dentro ("Ok", "1º conceito"…);
+   o clique toca o próximo áudio (nome) ou executa uma função */
 let proximoNoOk = null;
-function botaoOk(on, proximo){
+function botaoOk(on, proximo, texto = 'Ok'){
   const b = document.getElementById('btnPlay');
   b.classList.toggle('ok', on);
+  b.classList.toggle('largo', on && texto.length > 3);        // texto comprido: o botão vira uma pílula
+  b.querySelector('.ok-texto').textContent = texto;
   b.classList.remove('chama');
-  b.setAttribute('aria-label', on ? 'Ok, continuar' : 'Tocar narração');
+  b.setAttribute('aria-label', on ? texto : 'Tocar narração');
   proximoNoOk = on ? proximo : null;
 }
+/* =====================================================================
+   EQUAÇÕES SUBINDO NO FUNDO ESCURO (áudio 7) — pelos lados, sem cobrir o retrato
+   ===================================================================== */
+const Equacoes = (() => {
+  const LISTA = [
+    'E = h·ν', 'E<sub>n</sub> = −13,6 eV / n²', 'r<sub>n</sub> = n² · a<sub>0</sub>', 'L = n · ħ',
+    'ΔE = E<sub>2</sub> − E<sub>1</sub> = h·ν', '1/λ = R·(1/n<sub>1</sub>² − 1/n<sub>2</sub>²)', 'λ = h / (m·v)',
+    'a<sub>0</sub> = 0,529 Å', 'm·v·r = n·h / 2π', 'F = k·q<sub>1</sub>·q<sub>2</sub> / r²', 'E<sub>1</sub> = −13,6 eV',
+    'n = 1, 2, 3, …', 'h = 6,63 × 10<sup>−34</sup> J·s', 'Z = nº de prótons', 'e<sup>−</sup> → órbita estável',
+  ];
+  const CORES = ['#3ee0ff', '#ffc24a', '#9b8cff', '#8cff6a', '#ff5fa8', '#eef1ff'];
+  let timer = null;
+  function cria(){
+    if (roteiroCongelado()) return;                        // pausou o áudio: não nascem equações novas
+    const caixa = $('#equacoes'), w = caixa.clientWidth, h = caixa.clientHeight;
+    if (!w || !h) return;
+    const el = document.createElement('div'); el.className = 'equacao';
+    el.innerHTML = LISTA[Math.floor(Math.random() * LISTA.length)];
+    const prof = Math.random();                           // profundidade: perto = maior, mais forte e mais rápida
+    el.style.setProperty('--c', CORES[Math.floor(Math.random() * CORES.length)]);
+    el.style.fontSize = (13 + prof * 15) + 'px';
+    caixa.appendChild(el);
+    const lw = el.offsetWidth;
+    const esquerda = Math.random() < .5;
+    let x = esquerda ? w * .02 + Math.random() * Math.max(0, w * .3 - lw) : w * .7 + Math.random() * Math.max(0, w * .28 - lw);
+    x = Math.max(4, Math.min(w - lw - 4, x));
+    const op = .3 + prof * .55, dur = 12000 - prof * 5000;
+    el.animate([
+      { transform: `translate(${x}px, ${h + 20}px)`, opacity: 0 },
+      { opacity: op, offset: .15 }, { opacity: op, offset: .8 },
+      { transform: `translate(${x}px, -60px)`, opacity: 0 }
+    ], { duration: dur, easing: 'linear', fill: 'both' }).finished.then(() => el.remove()).catch(() => el.remove());
+  }
+  function inicia(){ para(true); cria(); timer = setInterval(cria, 600); }
+  function para(limpa){ clearInterval(timer); timer = null; if (limpa) $('#equacoes').innerHTML = ''; }
+  return { inicia, para };
+})();
 /* "toque na tela para continuar": o toque toca o áudio guardado em proximoAoTocar */
 let proximoAoTocar = 'audio_distribuição_3';
 function mostraToque(on, proximo){
@@ -1217,7 +1287,7 @@ function abreSecao(id){
   audio.pause();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
   if (id === 'pagina1'){  // a página 1 sempre começa do início
-    Atomo.reset(); atual = null; $('#barra').style.width = '0'; botaoOk(false); btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha();
+    Atomo.reset(); atual = null; $('#barra').style.width = '0'; botaoOk(false); btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha(); Equacoes.para(true);
     Intro.inicia();       // abertura: átomo escurecido + cartões de subníveis, até o play
   }
   viraCubo('capa', id);
@@ -1315,9 +1385,10 @@ function marcaAte(t){
 const ehDoAprender = () => SEQUENCIA.includes(atual);
 
 btnPlay.addEventListener('click', () => {
-  if (btnPlay.classList.contains('ok')){          // "Ok" → próximo áudio
+  if (btnPlay.classList.contains('ok')){          // "Ok" / "1º conceito" → próximo áudio (ou ação)
     const prox = proximoNoOk; botaoOk(false);
-    if (prox){ carrega(prox); audio.play().catch(() => {}); }
+    if (typeof prox === 'function') prox();
+    else if (prox){ carrega(prox); audio.play().catch(() => {}); }
     return;
   }
   /* o play encerra a abertura: cartões e átomo de fundo somem em fade
@@ -1398,7 +1469,7 @@ $('#lista').addEventListener('click', e => {
   cancelaPausaRoteiro();
   fechaSumario();
   mostra(c.pagina);
-  escondePlay(false); mostraToque(false); Quiz.fecha(); Intro.para(); botaoOk(false);
+  escondePlay(false); mostraToque(false); Quiz.fecha(); Intro.para(); botaoOk(false); Equacoes.para(true);
   carrega(c.audio, c.inicio);
   if (c.prepara) c.prepara();
   audio.play().catch(() => {});
@@ -1962,7 +2033,9 @@ const Atomo = (() => {
     /* alturas (fração da área do átomo) — eq e z ajustadas no modo edição */
     /* y = tela deitada · yR = celular em pé (quando ajustado no modo edição) */
     /* neutro: no celular embaixo do átomo (centralizado, pode quebrar linha); na tela deitada, ao lado do átomo */
-    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .5, yR: .86, xLado: .71 } }).forEach(([id, p]) => {
+    /* escurecedor da cena (fica atrás dos textos) — usado nos "conceitos" */
+    const escuro = document.createElement('div'); escuro.className = 'escurecedor'; face.appendChild(escuro);
+    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .5, yR: .86, xLado: .71 }, conceito: .45 }).forEach(([id, p]) => {
       const el = document.createElement('div'); el.className = 'linha linha-' + id;
       camLinhas.appendChild(el);
       linhas[id] = { el, timer: null, y: typeof p === 'number' ? p : p.y, yR: typeof p === 'number' ? null : p.yR, xLado: p.xLado };
@@ -2273,6 +2346,7 @@ const Atomo = (() => {
       fatorCam = fatorCamAlvo = 1; taxaCam = 3.2; camTween = false; rotX = .35; zoomGesto = 1;
       alvoCam.set(0, 0, 0); alvoCamAtual.set(0, 0, 0); camRot.on = false;
       if (galeria) galeria.visible = false;                      // cavaletes só aparecem no áudio 6
+      { const e = face.querySelector('.escurecedor'); if (e) e.classList.remove('on'); }
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
@@ -2362,6 +2436,8 @@ const Atomo = (() => {
     },
     cameraNoAtomo(){ camRot.on = false; },                       // volta à câmera que segue o átomo
     mostraCavaletes(on){ if (galeria) galeria.visible = on; },   // galeria dos cientistas (só a partir do áudio 6)
+    /* escurece a cena (os textos continuam por cima) */
+    escurece(on){ const e = face && face.querySelector('.escurecedor'); if (e) e.classList.toggle('on', on); },
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
     zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
@@ -2823,7 +2899,15 @@ const Retomar = (() => {
     'audio_distribuição_5.2': () => Atomo.estado('He', 1, 'Hélio (2He)', [7]),
     'audio_distribuição_5.3': () => { Atomo.estado('C', 1, 'Carbono'); neutroNaTela(); },
     'audio_distribuição_6':   () => { Atomo.estado('C', 1, 'Carbono'); neutroNaTela(); },
+    'audio_distribuição_7':   () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 1); },
+    'audio_distribuição_7.1': () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); },
+    'audio_distribuição_7.2': () => {
+      Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true);
+      Atomo.digita('conceito', 'Os elétrons se organizam em níveis discretos de energia, também conhecidos como camadas eletrônicas.', { cor: '#eef1ff' });
+    },
   };
+  const CAM_RUTHERFORD = [[13.64, -2.36, 24.93], [13.62, -2.02, 34.92]];
+  const CAM_BOHR = [[-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92]];
   function salva(){
     try {
       const tela = (document.querySelector('.tela.ativa') || {}).id || 'capa';
