@@ -841,7 +841,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.48';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.50';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1295,12 +1295,16 @@ document.addEventListener('play', e => { if (window.__modoEdicao && e.target.pau
 if ('mediaSession' in navigator){
   try {
     navigator.mediaSession.setActionHandler('play',  () => { if (!window.__modoEdicao) document.getElementById('narracao').play().catch(() => {}); });
-    navigator.mediaSession.setActionHandler('pause', () => document.getElementById('narracao').pause());
+    navigator.mediaSession.setActionHandler('pause', () => pausaNarracao());   // pausa pela notificação = do aluno
   } catch(e){}
 }
 
 const $ = s => document.querySelector(s);
 const audio = $('#narracao');
+/* toda pausa da narração feita pelo app ou pelo aluno passa por aqui. Uma pausa que NÃO veio daqui
+   (o celular pausando a narração quando outro som do app começa, por exemplo) é desfeita na hora */
+let pausaIntencional = false;
+function pausaNarracao(){ pausaIntencional = true; audio.pause(); }
 const pagina = $('#pagina1');
 const btnPlay = $('#btnPlay');
 let atual = null;            // nome do áudio carregado
@@ -1471,7 +1475,7 @@ function viraCubo(deId, paraId, dir = 1){
 }
 function abreSecao(id){
   cancelaPausaRoteiro();
-  audio.pause();          // corta o áudio da capa, se estiver tocando
+  pausaNarracao();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
   if (id === 'pagina1'){  // a página 1 sempre começa do início
     Atomo.reset(); atual = null; $('#barra').style.width = '0'; botaoOk(false); btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha(); Equacoes.para(true); Postulado.limpa(); pendente7_4 = false;
@@ -1482,7 +1486,7 @@ function abreSecao(id){
 $('#btnAprender').addEventListener('click', () => abreSecao('pagina1'));
 $('#btnTreinar').addEventListener('click', () => abreSecao('treinar'));
 document.querySelectorAll('[data-home]').forEach(b => b.addEventListener('click', () => {
-  cancelaPausaRoteiro(); audio.pause(); fechaSumario(); limpaCapa(); Intro.para(true); mostra('capa');
+  cancelaPausaRoteiro(); pausaNarracao(); fechaSumario(); limpaCapa(); Intro.para(true); mostra('capa');
 }));
 
 /* Pausa do roteiro: o áudio para por alguns instantes e volta sozinho.
@@ -1491,7 +1495,7 @@ let pausaTimers = [], pausaPendentes = [], emPausaRoteiro = false;
 function pausaRoteiro(ms, extras = []){
   if (window.__restaurando) return;          // ao retomar depois de recarregar, as pausas que já passaram não acontecem de novo
   emPausaRoteiro = true;
-  audio.pause();
+  pausaNarracao();
   pausaPendentes = extras.map(([, fn]) => fn);
   pausaTimers = extras.map(([t, fn], i) => setTimeout(() => { pausaPendentes[i] = null; fn(); }, t));
   pausaTimers.push(setTimeout(() => {
@@ -1594,11 +1598,12 @@ btnPlay.addEventListener('click', () => {
   } else if (audio.paused){
     audio.play().catch(() => {});
   } else {
-    audio.pause();
+    pausaNarracao();
   }
 });
 
 audio.addEventListener('play', () => {
+  pausaIntencional = false;
   cancelAnimationFrame(raf); raf = requestAnimationFrame(laco);
   if (ehDoAprender()){
     btnPlay.classList.remove('chama');
@@ -1608,6 +1613,14 @@ audio.addEventListener('play', () => {
 });
 audio.addEventListener('pause', () => {
   if (emPausaRoteiro) return;      // pausa do roteiro: o botão continua como "tocando"
+  /* pausa que não veio do app nem do aluno (no celular, outro som do app pode "roubar" o áudio
+     e pausar a narração — e aí o roteiro inteiro congela): volta a tocar sozinho */
+  if (!pausaIntencional && !audio.ended && atual && document.visibilityState === 'visible'
+      && !window.__modoEdicao && !window.__modoCamera && !window.__silencio){
+    setTimeout(() => { if (audio.paused && !audio.ended && !pausaIntencional) audio.play().catch(() => {}); }, 150);
+    return;
+  }
+  pausaIntencional = false;
   pagina.classList.remove('tocando'); pagina.classList.add('pausado');
   btnPlay.setAttribute('aria-label','Tocar narração');
 });
@@ -1748,7 +1761,10 @@ const Atomo = (() => {
     const c = document.createElement('canvas'); c.width = 256; c.height = 96;
     const g = c.getContext('2d'), hex = '#' + cor.getHexString();
     g.fillStyle = 'rgba(2,4,10,.88)'; g.strokeStyle = hex; g.lineWidth = 3;
-    g.beginPath(); g.roundRect(14, 14, 228, 68, 34); g.fill(); g.stroke();
+    g.beginPath();
+    if (g.roundRect) g.roundRect(14, 14, 228, 68, 34);                       // (celulares antigos não têm roundRect)
+    else { g.moveTo(48, 14); g.arcTo(242, 14, 242, 82, 34); g.arcTo(242, 82, 14, 82, 34); g.arcTo(14, 82, 14, 14, 34); g.arcTo(14, 14, 242, 14, 34); g.closePath(); }
+    g.fill(); g.stroke();
     g.fillStyle = hex; g.textAlign = 'center'; g.textBaseline = 'middle';
     g.shadowColor = hex; g.shadowBlur = 10;
     g.font = '700 58px "Space Grotesk", sans-serif'; g.fillText(`n = ${n}`, 128, 51);
@@ -2383,7 +2399,7 @@ const Atomo = (() => {
       const GRAD = [0x3ee0ff, 0x6f9bff, 0x9b5cff, 0xff3bd0, 0xff5a5a].map(h => new THREE.Color(h));
       const corGrad = t => { const x = t * (GRAD.length - 1), i = Math.min(GRAD.length - 2, Math.floor(x)); return GRAD[i].clone().lerp(GRAD[i + 1], x - i); };
       const camadasR = [0, 1, 2, 3, 4, 5, 6].map(i => {
-        const r = 1.6 + i * .95, cor = corGrad(i / 6);
+        const r = 1.3 + i * 1.15, cor = corGrad(i / 6);
         const g = new THREE.Group(); g.visible = false; atomo.add(g);
         /* linha bem fina (1 px) + um brilho estreito e fraco em volta */
         const pts = [];
@@ -2404,8 +2420,8 @@ const Atomo = (() => {
 
       /* ---- áudio 7.3: o elétron de Bohr (o aluno segura e solta em qualquer nível) ---- */
       {
-        const RN = n => 1.6 + (n - 1) * .95;                                   // raio do nível n (1…7), igual às camadas
-        const nivelDe = r => Math.min(7, Math.max(1, (r - 1.6) / .95 + 1));   // nível "fracionário" de um raio
+        const RN = n => 1.3 + (n - 1) * 1.15;                                   // raio do nível n (1…7), igual às camadas
+        const nivelDe = r => Math.min(7, Math.max(1, (r - 1.3) / 1.15 + 1));   // nível "fracionário" de um raio
         const aditivo = { transparent: true, depthWrite: false, blending: THREE.AdditiveBlending };
         const g = new THREE.Group(); atomo.add(g);
         const e = new THREE.Mesh(new THREE.SphereGeometry(.17, 20, 14), new THREE.MeshBasicMaterial({ color: 0xe8fbff, transparent: true, opacity: 0, depthWrite: false }));
@@ -2419,23 +2435,37 @@ const Atomo = (() => {
         bohr = { g, e, halo, rastro, hist: [], n: 1, ang: Math.PI / 2, r: RN(1), op: 0, ativo: false, arrastando: false,
                  snap: null, acum: 0, raios: [], efeitos: [], RN, nivelDe, cor: new THREE.Color(0x3ee0ff) };
 
-        /* raio elétrico (zigue-zague) saindo do elétron, na cor do nível */
-        const criaRaio = (p, cor, nivel, forca = 1) => {
-          const a = Math.random() * Math.PI * 2, comp = (.45 + .1 * nivel + Math.random() * .35) * forca;
+        /* raio elétrico (zigue-zague) saindo do elétron, na cor do nível. forca > 1: maior, mais torto, com galhos e dura mais */
+        const zigue = (p, a, comp, torto, seg) => {
           const dir = new THREE.Vector3(Math.cos(a), Math.sin(a), 0), perp = new THREE.Vector3(-dir.y, dir.x, 0);
-          const pts = [p.clone()], SEG = 7;
-          for (let s = 1; s <= SEG; s++){
-            const q = p.clone().addScaledVector(dir, comp * s / SEG);
-            if (s < SEG) q.addScaledVector(perp, (Math.random() - .5) * .3 * forca);
+          const pts = [p.clone()];
+          for (let s = 1; s <= seg; s++){
+            const q = p.clone().addScaledVector(dir, comp * s / seg);
+            if (s < seg) q.addScaledVector(perp, (Math.random() - .5) * torto);
             pts.push(q);
           }
-          const geo = new THREE.BufferGeometry().setFromPoints(pts);
+          return pts;
+        };
+        const criaRaio = (p, cor, nivel, forca = 1) => {
+          const a = Math.random() * Math.PI * 2, comp = (.45 + .1 * nivel + Math.random() * .35) * forca;
+          const pts = zigue(p, a, comp, .3 * forca, forca > 1.4 ? 10 : 7);
+          const geos = [new THREE.BufferGeometry().setFromPoints(pts)];
+          /* galhos: saem de pontos do meio do raio principal */
+          const nGalhos = forca > 1.4 ? 1 + Math.floor(Math.random() * 3) : 0;
+          for (let i = 0; i < nGalhos; i++){
+            const base = pts[2 + Math.floor(Math.random() * (pts.length - 4))];
+            geos.push(new THREE.BufferGeometry().setFromPoints(zigue(base, a + (Math.random() - .5) * 1.6, comp * (.3 + Math.random() * .3), .2 * forca, 5)));
+          }
           const mCor = new THREE.LineBasicMaterial({ color: cor, opacity: 1, ...aditivo });
           const mBranco = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: .8, ...aditivo });
-          const grupo = new THREE.Group(), l2 = new THREE.Line(geo, mCor);
-          l2.position.set(.03, .03, 0);                                          // segunda linha ao lado: o raio fica mais grosso
-          grupo.add(new THREE.Line(geo, mCor), l2, new THREE.Line(geo, mBranco)); g.add(grupo);
-          bohr.raios.push({ grupo, geo, mats: [mCor, mBranco], t: 0, vida: .14 + Math.random() * .14 });
+          const grupo = new THREE.Group();
+          geos.forEach((geo, i) => {
+            const l2 = new THREE.Line(geo, mCor); l2.position.set(.03, .03, 0);   // segunda linha ao lado: o raio fica mais grosso
+            grupo.add(new THREE.Line(geo, mCor), l2);
+            if (i === 0) grupo.add(new THREE.Line(geo, mBranco));                // miolo branco no raio principal
+          });
+          g.add(grupo);
+          bohr.raios.push({ grupo, geos, mats: [mCor, mBranco], t: 0, vida: (.14 + Math.random() * .14) * (forca > 1.4 ? 1.8 : 1) });
         };
         const tira = o => { g.remove(o); if (o.material) o.material.dispose(); if (o.geometry && !o.isSprite) o.geometry.dispose(); };
         const circulo = () => { const p = []; for (let s = 0; s <= 64; s++){ const a = s / 64 * Math.PI * 2; p.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); } return p; };
@@ -2493,14 +2523,15 @@ const Atomo = (() => {
             s.position.copy(h); s.scale.setScalar(.5 * (.3 + .7 * f));
             s.material.color.copy(B.cor); s.material.opacity = B.op * .75 * Math.pow(f, 1.5);
           });
-          /* raios: quanto mais alto o nível, mais raios (bem mais enquanto o aluno arrasta) */
+
           if (vis && B.ativo){
-            B.acum += dt * (B.arrastando ? 6 + 5 * nf : (nf - 1) * 1.3);
-            while (B.acum >= 1){ B.acum -= 1; criaRaio(p, B.cor, nf); }
+            /* raios contínuos: quanto mais alto o nível, mais raios e maiores (com galhos nos níveis altos) */
+            B.acum += dt * (nf - 1) * 2.6;
+            while (B.acum >= 1){ B.acum -= 1; criaRaio(p, B.cor, nf, 1.2 + .1 * (nf - 1)); }
           }
           B.raios = B.raios.filter(R => {
             R.t += dt; const k = R.t / R.vida;
-            if (k >= 1){ g.remove(R.grupo); R.geo.dispose(); R.mats.forEach(m => m.dispose()); return false; }
+            if (k >= 1){ g.remove(R.grupo); R.geos.forEach(x => x.dispose()); R.mats.forEach(m => m.dispose()); return false; }
             const pisca = Math.random() < .25 ? .35 : 1;
             R.mats[0].opacity = (1 - k) * pisca; R.mats[1].opacity = .8 * (1 - k) * pisca;
             return true;
@@ -2545,7 +2576,7 @@ const Atomo = (() => {
           B.aoTresSaltos = null; B.saltos = 0;                                    // (antes de encerrar os efeitos: um salto pela metade não conta)
           for (let i = 0; i < 4 && B.efeitos.length; i++){ const l = B.efeitos; B.efeitos = []; l.forEach(E => E(999)); }   // termina (e limpa) todos
           B.efeitos = [];
-          B.raios.forEach(R => { g.remove(R.grupo); R.geo.dispose(); R.mats.forEach(m => m.dispose()); }); B.raios = [];
+          B.raios.forEach(R => { g.remove(R.grupo); R.geos.forEach(x => x.dispose()); R.mats.forEach(m => m.dispose()); }); B.raios = [];
           B.op = 0; B.ativo = B.arrastando = B.saltando = false; B.snap = null; B.hist = []; B.n = 1; B.r = RN(1); B.acum = 0;
           B.rastro.forEach(s => s.visible = false); B.e.visible = false;
           if (face) face.style.cursor = '';
@@ -3105,7 +3136,7 @@ const Atomo = (() => {
        mais para baixo, deixando espaço para o título e para a barra de energia. ja = sem animação (retomar) */
     rutherfordVolta(ja = false){
       if (!pronto) return;
-      ruthPadrao(); ruth.atomo.scale.setScalar(.68); ruth.atomo.position.y = -1.3;
+      ruthPadrao(); ruth.atomo.scale.setScalar(.63); ruth.atomo.position.y = -1.4;
       ruth.on = true;
       if (ja){ ruth.opEscuro = .93; ruth.opNucleo = 1; ruth.eletrons.forEach(o => o.op = 1); return; }
       const e0 = ruth.opEscuro, n0 = ruth.opNucleo, ops = ruth.eletrons.map(o => o.op);
@@ -3563,7 +3594,7 @@ const ModoCamera = (() => {
   };
   function entra(modo = 'teclado'){
     if (!$('#pagina1').classList.contains('ativa')){ aviso('O modo câmera funciona na página do átomo.'); return; }
-    cancelaPausaRoteiro(); audio.pause();
+    cancelaPausaRoteiro(); pausaNarracao();
     window.__modoCamera = true;
     Atomo.camLivre(true);
     $('#hcAjuda').textContent = AJUDA[modo];
@@ -3756,7 +3787,7 @@ const Edicao = (() => {
     if (ativo) return;
     ativo = true;
     cancelaPausaRoteiro();       // a pausa automática não pode soltar o áudio no meio da edição
-    audio.pause();
+    pausaNarracao();
     window.__modoEdicao = true;  // bloqueia qualquer som
     calaTudo();                  // e cala o que estiver tocando (digitação, efeitos)
     mutaTudo(true);              // e deixa tudo no mudo, por garantia
