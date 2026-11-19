@@ -340,6 +340,25 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   background:linear-gradient(90deg,#3ee0ff,#6f9bff,#9b5cff,#ff3bd0,#ff5a5a);background-size:var(--cheio,520px) 100%;
   box-shadow:0 0 14px rgba(155,92,255,.8)}
 .linha.linha-topo{font-size:clamp(18px,4.6vw,28px)}
+/* áudio 8.2: cartões dos subníveis, enfileirados (tela deitada: à direita do gráfico · celular: embaixo dele).
+   Altos, com o nome dentro e o total de elétrons em cima, na diagonal direita */
+.cartoes{position:absolute;z-index:3;left:84%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:flex-end;gap:clamp(8px,1.5vw,14px);pointer-events:none}
+.cartoes.retrato{left:50%;top:89%}
+.cartoes.retrato .cartao{height:clamp(60px,9vh,96px)}
+.cartoes:not(.retrato) .cartao{font-size:clamp(12px,1.05vw,16px)}   /* tela deitada: a fileira cabe entre o gráfico e a borda */
+.cartao{position:relative;box-sizing:border-box;height:clamp(70px,13vh,118px);padding:0 clamp(8px,1.3vw,14px);display:flex;align-items:center;justify-content:center;
+  border-radius:14px;border:1.5px solid var(--c);background:rgba(8,12,28,.88);box-shadow:0 0 14px color-mix(in srgb,var(--c) 35%,transparent);
+  font:700 clamp(12px,2.5vw,18px) "Space Grotesk",sans-serif;color:var(--c);white-space:nowrap;
+  opacity:0;transition:opacity .6s ease,width .1s linear,transform .35s ease,filter .35s ease}
+.cartao.on{opacity:1}
+.cartao .cnome{display:inline-block}
+.cartao sup{position:absolute;top:-.6em;right:-.5em;font-size:1.4em;line-height:1;color:#fff;text-shadow:0 0 10px var(--c),0 0 3px var(--c);
+  opacity:0;transform:scale(.3);transition:opacity .35s ease,transform .45s cubic-bezier(.3,1.7,.5,1)}
+.cartao sup.on{opacity:1;transform:scale(1)}
+.cartao.brilha{animation:brilhaCartao .9s ease}
+@keyframes brilhaCartao{50%{filter:brightness(1.9) drop-shadow(0 0 14px var(--c))}}
+.cartao.maior{transform:scale(1.1)}
+.cartao.destaque{transform:scale(1.35);filter:brightness(1.45) drop-shadow(0 0 16px var(--c))}
 /* áudio 8: mãozinha que demonstra o arrasto das letras (posição vem do 3D, a cada quadro) */
 .mao-guia{position:absolute;left:0;top:0;z-index:4;width:46px;height:46px;pointer-events:none;opacity:0;transition:opacity .3s ease;
   filter:drop-shadow(0 0 8px rgba(124,231,255,.8)) drop-shadow(0 4px 8px rgba(0,0,0,.6))}
@@ -751,6 +770,7 @@ body.editando #palco canvas{cursor:default}
     <div class="equacoes" id="equacoes" aria-hidden="true"></div>
     <div class="postulado" id="postulado" aria-hidden="true"><img src="imagens/bohr_postulados.webp" alt="Postulados de Bohr"></div>
     <div class="salto-frase" id="saltoFrase" aria-hidden="true">salto quântico</div>
+    <div class="cartoes" id="cartoes" aria-hidden="true"></div>
     <div class="mao-guia" id="maoGuia" aria-hidden="true">
       <svg viewBox="0 0 24 24" fill="#eef1ff" stroke="#02040a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V11m0-1a1.5 1.5 0 0 1 3 0v4.5A6.5 6.5 0 0 1 11.5 21h-.6a6 6 0 0 1-4.6-2.2L3.5 15.3a1.6 1.6 0 0 1 2.4-2.1L9 15"/></svg>
     </div>
@@ -850,7 +870,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.57';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.58';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -872,7 +892,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1098,6 +1118,33 @@ const EVENTOS = {
     { t: .05, acao: () => escondePlay(false) },                                 // o play volta (estava escondido durante as letras)
     /* 4 s → 8 s: o átomo vira o diagrama de níveis de energia (eixos da esquerda, círculos → linhas, letras ao lado da seta) */
     { t: 4.0, acao: () => Atomo.viraGrafico(4000) },
+  ],
+  'audio_distribuição_8.2': [
+    /* 1 s → 5 s: a seta vertical some e sobe de novo; cada linha dá um saltinho quando a ponta passa por ela */
+    { t: 1.0,  acao: () => Atomo.setaSobe(4000) },
+    { t: 10.8, acao: () => Atomo.linhasPulsam(1000) },                          // as linhas engrossam por 1 s
+    /* 14,5 s → 17 s: cada nível se divide em degraus (um por subnível), em sequência K → Q */
+    { t: 14.5, acao: () => Atomo.degraus(2500) },
+    { t: 18.0, acao: () => Atomo.digita('sub', 'subníveis atômicos', { cor: '#eef1ff', dur: 1000 }) },
+    { t: 28.0, acao: () => Atomo.apagaLinha('sub') },
+    /* cartões dos subníveis (fade in) e o total de elétrons em cima, na diagonal direita */
+    { t: 29.0, acao: () => Atomo.cartao('s') },
+    { t: 30.6, acao: () => Atomo.cartaoEletrons('s') },
+    { t: 32.0, acao: () => Atomo.cartao('p') },
+    { t: 33.3, acao: () => Atomo.cartaoEletrons('p') },
+    { t: 34.0, acao: () => Atomo.cartao('d') },
+    { t: 35.5, acao: () => Atomo.cartaoEletrons('d') },
+    { t: 36.5, acao: () => Atomo.cartao('f') },
+    { t: 38.0, acao: () => Atomo.cartaoEletrons('f') },
+    { t: 40.0, acao: () => Atomo.cartoesBrilham() },                            // brilho
+    { t: 41.0, acao: () => Atomo.cartoesAumentam(1000) },                       // aumentam por 1 s
+    { t: 44.0, acao: () => Atomo.cartoesNaLetra(900) },                         // nomes apagados até a 1ª letra (s, p, d, f)
+    /* um de cada vez fica maior: s → p → d → f (o anterior volta) */
+    { t: 50.0, acao: () => Atomo.cartaoDestaque('s') },
+    { t: 50.6, acao: () => Atomo.cartaoDestaque('p') },
+    { t: 51.2, acao: () => Atomo.cartaoDestaque('d') },
+    { t: 52.0, acao: () => Atomo.cartaoDestaque('f') },
+    { t: 53.0, acao: () => Atomo.cartaoDestaque(null) },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -1936,6 +1983,7 @@ const Atomo = (() => {
     { const m = $("#maoGuia"); if (m) m.classList.remove("on"); }
     if (bohr) bohr.semToque = false;
     if (grafico) grafico.desfaz();                                    // círculos de volta (áudio 8.1 transforma em linhas)
+    { const c = $("#cartoes"); if (c) c.innerHTML = ""; }                // cartões do áudio 8.2
     const e = $('#energia'); if (e) e.classList.remove('on');
   }
   const ease = k => k < .5 ? 2*k*k : 1 - Math.pow(-2*k + 2, 2) / 2;
@@ -2863,7 +2911,29 @@ const Atomo = (() => {
           const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
           s.position.set(XEIXO - .65, yTopo - .2, 0); s.scale.setScalar(.8); eixos.add(s); return s;
         })();
-        /* k = 0 círculo → 1 linha */
+        /* barras de cada nível: tantas "tiras" quanto subníveis (K 1 · L 2 · M 3 · N 4 · O 4 · P 3 · Q 2).
+           Empilhadas formam UMA linha mais grossa (mais subníveis = mais grossa); no áudio 8.2 elas se
+           separam em degraus (um degrau por subnível) */
+        const SUBS = [1, 2, 3, 4, 4, 3, 2], H0 = .16, DY = .4, GAP = .2, W = GX1 - GX0;
+        const niveis = ruth.camadas.map((C, i) => {
+          const m = SUBS[i], tiras = [];
+          for (let j = 0; j < m; j++){
+            const t = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), new THREE.MeshBasicMaterial({ color: C.cor, transparent: true, opacity: 0, depthWrite: false }));
+            t.visible = false; conj.add(t); tiras.push(t);
+          }
+          return { n: i + 1, m, tiras, d: 0, b: 0, p: 0, op: 0 };            // d: degrau (0 linha → 1 degraus) · b: salto · p: pulso
+        });
+        const aplica = L => {
+          const y0 = yN(L.n), h = H0 * (1 + 1.2 * L.p);
+          L.tiras.forEach((t, j) => {
+            const xa = (GX0 + GX1) / 2, wa = W, ya = y0 + (j - (L.m - 1) / 2) * H0;          // empilhada
+            const xb = GX0 + (j + .5) * W / L.m, wb = W / L.m - GAP, yb = y0 + j * DY;        // degrau j
+            t.position.set(xa + (xb - xa) * L.d, ya + (yb - ya) * L.d + L.b, .02);
+            t.scale.set(wa + (wb - wa) * L.d, h, 1);
+            t.material.opacity = L.op; t.visible = L.op > .01;
+          });
+        };
+        /* k = 0 círculo → 1 linha; no fim a linha fina dá lugar à barra (com a espessura dos subníveis) */
         const morfa = (C, n, k) => {
           const P = C.fio.geometry.attributes.position, N = P.count, y = yN(n);
           for (let s = 0; s < N; s++){
@@ -2872,17 +2942,51 @@ const Atomo = (() => {
             P.setXYZ(s, cx + (lx - cx) * k, cy + (y - cy) * k, 0);
           }
           P.needsUpdate = true;
-          C.brilhoC.material.opacity = .1 * (1 - k);                                    // o brilho do anel some (a linha fica)
-          C.fio.material.opacity = 1 - .5 * k;                                          // linha "dobrada" (ida e volta) soma brilho: metade = mesma cor
+          const kb = Math.min(1, Math.max(0, (k - .7) / .3));                          // últimos 30%: a barra aparece
+          C.brilhoC.material.opacity = .1 * (1 - k);                                    // o brilho do anel some
+          C.fio.material.opacity = (1 - .5 * k) * (1 - kb);                             // a linha fina cede lugar à barra
           C.brilhoC.visible = k < .99;
+          const L = niveis[n - 1]; L.op = kb; aplica(L);
         };
+        /* seta vertical: some e "cresce" de baixo para cima; ao passar por cada linha, ela dá um saltinho */
+        const vert = eixos.children[0], ponta = eixos.children[1];
+        const setaAte = f => {
+          const topo = YBASE + (yTopo - YBASE) * f, P = vert.geometry.attributes.position;
+          P.setY(1, topo); P.needsUpdate = true;
+          ponta.position.y = topo - yTopo; rotE.position.y = topo - .2;
+        };
+        const saltinho = L => anima(380, k => { L.b = .38 * Math.sin(Math.PI * k); aplica(L); }, () => { L.b = 0; aplica(L); }, k => k);
         grafico = {
-          eixos, matEixo, rotE, yN, XLETRA,
+          eixos, matEixo, rotE, yN, XLETRA, niveis,
           morfa,
           letraPara: (it, k, p0) => it.s.position.lerpVectors(p0, new THREE.Vector3(XLETRA, yN(it.i + 1), .25), k),
+          /* áudio 8.2 (1 s → 5 s): a seta some e sobe de novo; cada linha salta quando a ponta passa por ela */
+          setaSobe: dur => {
+            const pulou = new Set();
+            if (vert.material === matEixo){ vert.material = ponta.material = matEixo.clone(); }   // (o eixo horizontal fica como está)
+            anima(250, k => { vert.material.opacity = ponta.material.opacity = .85 * (1 - k); }, () => {
+              setaAte(0); rotE.material.opacity = 0;
+              const vis = .85; vert.material.opacity = vis;
+              anima(dur - 250, k => {
+                setaAte(k); rotE.material.opacity = .9 * Math.min(1, k * 4);
+                const topo = YBASE + (yTopo - YBASE) * k;
+                niveis.forEach(L => { if (!pulou.has(L.n) && topo >= yN(L.n)){ pulou.add(L.n); saltinho(L); } });
+              }, () => setaAte(1), k => k);
+            });
+          },
+          /* as linhas engrossam (e voltam) — dur ms */
+          pulso: dur => niveis.forEach(L => anima(dur, k => { L.p = Math.sin(Math.PI * k); aplica(L); }, () => { L.p = 0; aplica(L); }, k => k)),
+          /* cada nível se divide em degraus (um por subnível), um nível depois do outro, terminando em "total" ms */
+          degraus: total => {
+            const cada = 900, passo = (total - cada) / 6;
+            niveis.forEach((L, i) => agenda(i * passo, () => anima(cada, k => { L.d = k; aplica(L); }, () => { L.d = 1; aplica(L); }, easeBack)));
+          },
+          degrausJa: () => niveis.forEach(L => { L.d = 1; aplica(L); }),
           desfaz: () => {                                                               // volta tudo a ser círculo (reset)
             ruth.camadas.forEach(C => { if (!C.circ) return; C.fio.geometry.attributes.position.array.set(C.circ); C.fio.geometry.attributes.position.needsUpdate = true; C.brilhoC.visible = true; C.fio.material.opacity = 0; });
             eixos.visible = false; eixos.position.x = 0; matEixo.opacity = 0; rotE.material.opacity = 0;
+            setaAte(1); vert.material = ponta.material = matEixo;
+            niveis.forEach(L => { L.d = L.b = L.p = L.op = 0; aplica(L); });
           },
         };
       }
@@ -2920,7 +3024,7 @@ const Atomo = (() => {
     /* neutro: no celular embaixo do átomo (centralizado, pode quebrar linha); na tela deitada, ao lado do átomo */
     /* escurecedor da cena (fica atrás dos textos) — usado nos "conceitos" */
     const escuro = document.createElement('div'); escuro.className = 'escurecedor'; face.appendChild(escuro);
-    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .578, yR: .86, xLado: .65, fonteLado: .065 }, conceito: .45, topo: .075 }).forEach(([id, p]) => {
+    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: .9, neutro: { y: .578, yR: .86, xLado: .65, fonteLado: .065 }, conceito: .45, topo: .075, sub: { y: .5, yR: .89, xLado: .84 } }).forEach(([id, p]) => {
       const el = document.createElement('div'); el.className = 'linha linha-' + id;
       camLinhas.appendChild(el);
       linhas[id] = { el, timer: null, y: typeof p === 'number' ? p : p.y, yR: typeof p === 'number' ? null : p.yR, xLado: p.xLado, fonteLado: p.fonteLado };
@@ -3513,6 +3617,39 @@ const Atomo = (() => {
         agenda(ini, () => anima(total - ini, k => passo(i, k), () => passo(i, 1)));
       });
     },
+    /* ----- áudio 8.2 ----- */
+    setaSobe(dur = 4000){ if (pronto && grafico) grafico.setaSobe(dur); },           // seta some e sobe; linhas saltam
+    linhasPulsam(dur = 1000){ if (pronto && grafico) grafico.pulso(dur); },          // linhas engrossam e voltam
+    degraus(total = 2500, ja = false){ if (pronto && grafico){ if (ja) grafico.degrausJa(); else grafico.degraus(total); } },
+    /* cartões dos subníveis: s = sharp, p = principal, d = diffuse, f = fundamental */
+    cartao(tipo, ja = false){
+      const caixa = $('#cartoes'); if (!caixa || caixa.querySelector(`[data-t="${tipo}"]`)) return;
+      const NOME = { s: 'sharp', p: 'principal', d: 'diffuse', f: 'fundamental' }, ELET = { s: 2, p: 6, d: 10, f: 14 };
+      caixa.classList.toggle('retrato', palco.clientWidth < palco.clientHeight);
+      const el = document.createElement('div'); el.className = 'cartao'; el.dataset.t = tipo; el.style.setProperty('--c', `var(--${tipo})`);
+      el.innerHTML = `<span class="cnome">${NOME[tipo]}</span><sup>${ELET[tipo]}</sup>`;
+      caixa.appendChild(el);
+      if (ja) el.classList.add('on'); else requestAnimationFrame(() => el.classList.add('on'));   // fade in
+    },
+    cartaoEletrons(tipo){ const s = document.querySelector(`#cartoes [data-t="${tipo}"] sup`); if (s) s.classList.add('on'); },
+    cartoesBrilham(){ document.querySelectorAll('#cartoes .cartao').forEach(c => { c.classList.remove('brilha'); void c.offsetWidth; c.classList.add('brilha'); }); },
+    cartoesAumentam(dur = 1000){
+      const cs = document.querySelectorAll('#cartoes .cartao'); cs.forEach(c => c.classList.add('maior'));
+      agenda(dur, () => cs.forEach(c => c.classList.remove('maior')));
+    },
+    /* apaga cada nome como numa digitação (de trás para a frente) até sobrar a 1ª letra; o cartão encolhe junto */
+    cartoesNaLetra(dur = 900, ja = false){
+      document.querySelectorAll('#cartoes .cartao').forEach(c => {
+        const nome = c.querySelector(".cnome"), txt = nome.textContent; if (txt.length <= 1) return;
+        const pad = c.offsetWidth - nome.offsetWidth;
+        c.style.width = c.offsetWidth + 'px';
+        const corta = n => { nome.textContent = txt.slice(0, n); c.style.width = (nome.offsetWidth + pad) + 'px'; };
+        if (ja){ corta(1); return; }
+        anima(dur, k => corta(Math.max(1, Math.round(txt.length - (txt.length - 1) * k))), () => corta(1), k => k);
+      });
+    },
+    /* só o cartão "tipo" fica aumentado e aceso (null = nenhum) */
+    cartaoDestaque(tipo){ document.querySelectorAll('#cartoes .cartao').forEach(c => c.classList.toggle('destaque', c.dataset.t === tipo)); },
     /* retomar: letras até a "ate" (exclusive) já encaixadas */
     letrasProntas(ate){
       if (!pronto) return;
@@ -4035,6 +4172,8 @@ const Retomar = (() => {
     'audio_distribuição_8':   () => bohrNaTela(),
     /* como o 8 terminou: etiquetas "n = …" fora e as 7 letras encaixadas */
     'audio_distribuição_8.1': () => { bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); },
+    /* como o 8.1 terminou: o gráfico de níveis pronto */
+    'audio_distribuição_8.2': () => { bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); Atomo.viraGrafico(0, true); },
   };
   function salva(){
     try {
