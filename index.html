@@ -351,7 +351,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 /* áudio 8.2: cartões dos subníveis, enfileirados (tela deitada: à direita do gráfico · celular: embaixo dele).
    Altos, com o nome dentro e o total de elétrons em cima, na diagonal direita */
 .cartoes{position:absolute;z-index:3;left:84%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:flex-end;gap:clamp(8px,1.5vw,14px);pointer-events:none}
-.cartoes.retrato{left:50%;top:89%}
+.cartoes.retrato{left:50%;top:89%;translate:-7.8vw 4.9vh;scale:.92}   /* celular: posição e tamanho do modo edição v0.72 (384×783) */
 .cartoes.retrato .cartao{height:clamp(46px,6.2vh,62px);font-size:clamp(14px,3.9vw,19px);padding:0 clamp(7px,2vw,12px);min-width:clamp(50px,14vw,66px)}   /* celular: mais baixos, letra maior */
 .cartoes:not(.retrato) .cartao{height:clamp(54px,7.5vh,74px);font-size:clamp(13px,1.15vw,17px);min-width:clamp(58px,4.6vw,74px)}   /* tela deitada: mais baixos; a fileira cabe entre o gráfico e a borda */
 .cartao{position:relative;box-sizing:border-box;height:clamp(70px,13vh,118px);padding:0 clamp(8px,1.3vw,14px);display:flex;align-items:center;justify-content:center;
@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.72';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.73';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1943,6 +1943,13 @@ const Atomo = (() => {
   /* posição do gráfico (deslocamento, em unidades da cena), ajustável no modo edição arrastando fora dos textos */
   const POS_GRAFICO = { deitada: { x: 0, y: 0 }, retrato: { x: -1.58, y: -.30 } };   // celular: modo edição v0.70 (384×783)
   let deslocGrafico = { ...POS_GRAFICO.deitada };
+  /* ajustes finos do gráfico no modo edição: cada letra K…Q (sozinha) e os degraus de cada nível (juntos).
+     x, y = deslocamento (unidades da cena) · s = tamanho. Índice 0 = K … 6 = Q */
+  const AJUSTE_LETRAS  = { deitada: [], retrato: [] };
+  const AJUSTE_DEGRAUS = { deitada: [], retrato: [] };
+  const ajusteDe = (tabela, i) => ({ x: 0, y: 0, s: 1, ...(tabela[i] || {}) });
+  let ajusteLetra = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_LETRAS.deitada, i));
+  let ajusteNivel = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_DEGRAUS.deitada, i));
   const graficoNaTela = () => !!(grafico && ruth && ruth.on && grafico.eixos.visible);
   function aplicaEscalaConj(){
     if (!ruth) return;
@@ -3127,31 +3134,33 @@ const Atomo = (() => {
         });
         const aplica = L => {
           const y0 = yN(L.n), h = H0, W = GX1 - GX0, Wc = W / 4;
+          const A = ajusteNivel[L.n - 1];                                                  // ajuste do modo edição (degraus deste nível)
           L.tiras.forEach((t, j) => {
             const xa = (GX0 + GX1) / 2, wa = W, ya = y0 + (j - (L.m - 1) / 2) * H0;          // empilhada (linha grossa)
             const xb = GX0 + (j + .5) * Wc, wb = Wc - GAP;                                   // degrau: coluna do subnível…
             const yb = y0 + j * DEG_IN + (yAufbau(L.n, j) - y0 - j * DEG_IN) * L.a;           // …dentro do nível → altura de energia
             const y = ya + (yb - ya) * L.d + L.b;
-            t.position.set(xa + (xb - xa) * L.d, y, .02);
+            t.position.set(xa + (xb - xa) * L.d + A.x, y + A.y, .02);
             const hl = L.hl[j];
-            t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl), h * (1 + 1.4 * hl), 1);
+            t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl) * A.s, h * (1 + 1.4 * hl) * A.s, 1);
             t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar(1 + .9 * L.p + 1.1 * hl);   // cor do nível; a do bloco quando encaixado; acende no destaque
             t.material.opacity = L.op; t.visible = L.op > .01;
             const op = L.rot[j] * L.op;                                                         // rótulo "3d¹⁰" logo acima do degrau
             L.rotulos[j].partes.forEach(P => {
               const f = 1 + .55 * P.h;                                                         // peça em destaque: maior e mais clara
-              P.s.position.set(xb + P.dx, y + .66, .03); P.s.scale.set(P.w * U * f, 96 * U * f, 1);
+              P.s.position.set(xb + P.dx * A.s + A.x, y + .66 * A.s + A.y, .03); P.s.scale.set(P.w * U * f * A.s, 96 * U * f * A.s, 1);
               P.s.material.opacity = op; P.s.visible = op > .01; P.s.material.color.setScalar(1 + .8 * P.h);
             });
           });
           /* brilho da linha (na cor do nível) */
-          L.glow.position.set((GX0 + GX1) / 2, y0 + L.b, .01); L.glow.scale.set(W + 1.4, 1.5, 1);
+          L.glow.position.set((GX0 + GX1) / 2 + A.x, y0 + L.b + A.y, .01); L.glow.scale.set(W + 1.4, 1.5 * A.s, 1);
           L.glow.material.opacity = .95 * L.p * L.op; L.glow.visible = L.p > .01 && L.op > .01;
           /* a letra fica no eixo, na altura do nível; quando os degraus flutuam (Aufbau) ela sai — os rótulos dos degraus a substituem */
           const it = letras.itens[L.n - 1];
           if (it && it.noGrafico){
-            it.s.position.set(XLETRA + (it.dx || 0), y0 + L.b, .25);
-            const f = 1 - .195 * L.d; it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
+            const AL = ajusteLetra[L.n - 1];                                               // ajuste do modo edição (esta letra)
+            it.s.position.set(XLETRA + (it.dx || 0) + AL.x, y0 + L.b + AL.y, .25);
+            const f = (1 - .195 * L.d) * AL.s; it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
             it.s.material.opacity = 1 - L.a; it.s.visible = L.a < .99;
           }
         };
@@ -3180,7 +3189,7 @@ const Atomo = (() => {
         grafico = {
           eixos, matEixo, rotE, yN, niveis, medeGrafico,
           morfa,
-          letraPara: (it, k, p0) => { it.s.position.lerpVectors(p0, new THREE.Vector3(XLETRA, yN(it.i + 1), .25), k); if (k >= 1) it.noGrafico = true; },
+          letraPara: (it, k, p0) => { const AL = ajusteLetra[it.i]; it.s.position.lerpVectors(p0, new THREE.Vector3(XLETRA + AL.x, yN(it.i + 1) + AL.y, .25), k); if (k >= 1) it.noGrafico = true; },
           /* áudio 8.2 (1 s → 5 s): a seta some e sobe de novo; cada linha salta quando a ponta passa por ela */
           setaSobe: dur => {
             const pulou = new Set();
@@ -3204,6 +3213,7 @@ const Atomo = (() => {
             niveis.forEach((L, i) => agenda(i * passo, () => anima(cada, k => { L.d = k; aplica(L); }, () => { L.d = 1; aplica(L); }, easeBack)));
           },
           degrausJa: () => niveis.forEach(L => { L.d = 1; aplica(L); }),
+          reaplica: L => aplica(L),
           /* destaque de um degrau (cresce e brilha) — h de 0 a 1 */
           hlDegrau: (n, j, h) => { const L = niveis[n - 1]; if (!L || j >= L.m) return; L.hl[j] = h; aplica(L); },
           /* destaque de uma peça do rótulo do degrau j do nível n (k: 0 número · 1 letra · 2 expoente) */
@@ -3246,7 +3256,7 @@ const Atomo = (() => {
           /* coloca o "2e⁻" à direita da letra K; a letra se afasta para a esquerda enquanto ele é digitado */
           eletronsK(dur = 700, ja = false){
             const it = letras.itens[0], E = this.eK, L = niveis[0];
-            const posiciona = () => { E.s.position.set(XLETRA + (it.dx || 0) + letras.BASE.x * .4 + 1.05, yN(1) + L.b, .3); };
+            const posiciona = () => { const AL = ajusteLetra[0]; E.s.position.set(XLETRA + (it.dx || 0) + AL.x + letras.BASE.x * .4 * AL.s + 1.05, yN(1) + L.b + AL.y, .3); };
             E.s.visible = true; E.op = 1; E.s.material.opacity = 1 - L.a;
             if (ja){ it.dx = -.45; E.desenha(3); aplica(L); posiciona(); return; }
             E.desenha(0);
@@ -3282,8 +3292,8 @@ const Atomo = (() => {
               tex.needsUpdate = true;
             };
             C.posiciona = () => {
-              const it = letras.itens[n - 1], esq = XLETRA + (it.dx || 0) + letras.BASE.x * .4 + 1.05 - EK_W / 2;   // mesma borda esquerda do "2e⁻"
-              s.position.set(esq + s.scale.x / 2, yN(n) + niveis[n - 1].b, .3);
+              const it = letras.itens[n - 1], AL = ajusteLetra[n - 1], esq = XLETRA + (it.dx || 0) + AL.x + letras.BASE.x * .4 * AL.s + 1.05 - EK_W / 2;   // mesma borda esquerda do "2e⁻"
+              s.position.set(esq + s.scale.x / 2, yN(n) + niveis[n - 1].b + AL.y, .3);
             };
             return C;
           },
@@ -3512,6 +3522,10 @@ const Atomo = (() => {
       escalaCamadas = w < h ? ESCALA_CAMADAS.retrato : ESCALA_CAMADAS.deitada;
       escalaGrafico = w < h ? ESCALA_GRAFICO.retrato : ESCALA_GRAFICO.deitada;
       deslocGrafico = { ...(w < h ? POS_GRAFICO.retrato : POS_GRAFICO.deitada) };
+      const ori = w < h ? "retrato" : "deitada";
+      ajusteLetra = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_LETRAS[ori], i));
+      ajusteNivel = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_DEGRAUS[ori], i));
+      if (grafico) grafico.niveis.forEach(L => grafico.reaplica(L));
     }
     aplicaEscalaConj();
     posLinhas();
@@ -4625,6 +4639,49 @@ const Atomo = (() => {
     get escalaCamadas(){ return escalaCamadas; },
     get escalaGrafico(){ return escalaGrafico; },
     get posGrafico(){ return { ...deslocGrafico }; },
+    /* ----- modo edição: letras K…Q (cada uma) e degraus (por nível) ----- */
+    /* o que está sob o ponto (x, y da tela): { tipo: 'letra', i } · { tipo: 'degraus', n } · null */
+    alvoGrafico(cx, cy){
+      if (!graficoNaTela()) return null;
+      const rc = renderer.domElement.getBoundingClientRect(), v = new THREE.Vector3(), w = new THREE.Vector3();
+      ruth.cam.updateMatrixWorld();
+      const tela = (obj, dx, dy) => {                                        // retângulo do objeto na tela (dx, dy = meia largura/altura na cena)
+        obj.updateWorldMatrix(true, false); obj.getWorldPosition(v);
+        const c = v.clone().project(ruth.cam), cxs = (c.x + 1) / 2 * rc.width + rc.left, cys = (1 - c.y) / 2 * rc.height + rc.top;
+        const sw = obj.getWorldScale(new THREE.Vector3());
+        w.copy(v).add(new THREE.Vector3(sw.x * dx, sw.y * dy, 0)).project(ruth.cam);
+        return { x: cxs, y: cys, mx: Math.abs((w.x + 1) / 2 * rc.width + rc.left - cxs), my: Math.abs((1 - w.y) / 2 * rc.height + rc.top - cys) };
+      };
+      for (let i = 0; i < 7; i++){
+        const it = letras.itens[i]; if (!it || !it.noGrafico || !it.s.visible) continue;
+        const r = tela(it.s, .5, .5); if (Math.abs(cx - r.x) <= r.mx + 4 && Math.abs(cy - r.y) <= r.my + 4) return { tipo: 'letra', i };
+      }
+      for (const L of grafico.niveis){
+        if (!(L.op > .5)) continue;
+        for (const t of L.tiras){ const r = tela(t, .5, .5); if (Math.abs(cx - r.x) <= r.mx + 4 && Math.abs(cy - r.y) <= r.my + 14) return { tipo: 'degraus', n: L.n }; }
+      }
+      return null;
+    },
+    /* move o alvo (dx, dy em px da tela) */
+    moveAlvoPx(alvo, dx, dy){
+      if (!alvo || !graficoNaTela()) return false;
+      const tg = Math.tan(THREE.MathUtils.degToRad(20));
+      const porPx = 2 * tg * ruth.cam.position.z / palco.clientHeight / ruth.atomo.scale.x / ruth.conj.scale.x;
+      const A = alvo.tipo === 'letra' ? ajusteLetra[alvo.i] : ajusteNivel[alvo.n - 1];
+      A.x += dx * porPx; A.y -= dy * porPx;
+      grafico.reaplica(grafico.niveis[(alvo.tipo === 'letra' ? alvo.i + 1 : alvo.n) - 1]);
+      return true;
+    },
+    /* muda o tamanho do alvo (fator f) */
+    escalaAlvo(alvo, f){
+      if (!alvo || !graficoNaTela()) return false;
+      const A = alvo.tipo === 'letra' ? ajusteLetra[alvo.i] : ajusteNivel[alvo.n - 1];
+      A.s = Math.max(.3, Math.min(3, A.s * f));
+      grafico.reaplica(grafico.niveis[(alvo.tipo === 'letra' ? alvo.i + 1 : alvo.n) - 1]);
+      return true;
+    },
+    /* foto dos ajustes (para o relatório do modo edição) */
+    get ajustes(){ return { letras: ajusteLetra.map(a => ({ ...a })), niveis: ajusteNivel.map(a => ({ ...a })) }; },
     /* modo edição: arrastar fora dos textos com o gráfico na tela move o gráfico inteiro (dx, dy em px da tela) */
     moveGraficoPx(dx, dy){
       if (!graficoNaTela()) return false;
@@ -4928,6 +4985,7 @@ const Edicao = (() => {
     mutaTudo(true);              // e deixa tudo no mudo, por garantia
     document.body.classList.add('editando');
     zoomAntes = Atomo.zoom; camadasAntes = Atomo.escalaCamadas; graficoAntes = Atomo.escalaGrafico; posAntes = Atomo.posGrafico;
+    ajustesAntes = Atomo.ajustes;
     { const c = $("#cartoes"); if (c) cartoesAntes = { t: c.style.translate || "", s: parseFloat(c.style.scale) || 1 }; }
     const lista = candidatos();
     lista.forEach(el => {
@@ -4966,6 +5024,13 @@ const Edicao = (() => {
     if (Math.abs(Atomo.escalaCamadas - camadasAntes) > .005) linhas.push(`• tamanho das camadas (conjunto): ${camadasAntes.toFixed(2)} → ${Atomo.escalaCamadas.toFixed(2)}`);
     if (Math.abs(Atomo.escalaGrafico - graficoAntes) > .005) linhas.push(`• tamanho do gráfico (conjunto): ${graficoAntes.toFixed(2)} → ${Atomo.escalaGrafico.toFixed(2)}`);
     { const p = Atomo.posGrafico; if (Math.hypot(p.x - posAntes.x, p.y - posAntes.y) > .01) linhas.push(`• posição do gráfico: x ${posAntes.x.toFixed(2)} → ${p.x.toFixed(2)} · y ${posAntes.y.toFixed(2)} → ${p.y.toFixed(2)}`); }
+    { /* letras K…Q (cada uma) e degraus (por nível) */
+      const ag = Atomo.ajustes, NOMES = "KLMNOPQ", ori = innerWidth < innerHeight ? "celular" : "tela deitada";
+      const dif = (a, b) => Math.abs(a.x - b.x) > .005 || Math.abs(a.y - b.y) > .005 || Math.abs(a.s - b.s) > .005;
+      const linha = (rot, a, b) => `• ${rot} (${ori}): x ${b.x.toFixed(2)} → ${a.x.toFixed(2)} · y ${b.y.toFixed(2)} → ${a.y.toFixed(2)} · tamanho ${b.s.toFixed(2)} → ${a.s.toFixed(2)}`;
+      ag.letras.forEach((a, i) => { if (dif(a, ajustesAntes.letras[i])) linhas.push(linha(`letra ${NOMES[i]}`, a, ajustesAntes.letras[i])); });
+      ag.niveis.forEach((a, i) => { if (dif(a, ajustesAntes.niveis[i])) linhas.push(linha(`degraus do nível ${i + 1} (${NOMES[i]})`, a, ajustesAntes.niveis[i])); });
+    }
     { const c = $("#cartoes"); if (c && c.children.length){
         const t = c.style.translate || "", s = parseFloat(c.style.scale) || 1;
         if (t !== cartoesAntes.t || Math.abs(s - cartoesAntes.s) > .005){
@@ -5029,7 +5094,7 @@ const Edicao = (() => {
      · 2 dedos sobre um texto: pinça muda o tamanho
      · fora dos textos: nada chega ao app (átomo não gira, botões não funcionam) */
   const UI_EDICAO = '#barraEdicao, #painelEdicao, #versao';
-  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, moveCena = null, zoomAntes = 1, camadasAntes = 1, graficoAntes = 1, posAntes = { x: 0, y: 0 };
+  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, moveCena = null, zoomAntes = 1, camadasAntes = 1, graficoAntes = 1, posAntes = { x: 0, y: 0 }, ajustesAntes = null;
   const lerDesloc = el => { const p = (el.style.translate || '0px 0px').split(' ').map(parseFloat); return { x: p[0] || 0, y: p[1] || 0 }; };
   document.addEventListener('pointerdown', e => {
     if (!ativo || e.target.closest(UI_EDICAO)) return;
@@ -5039,8 +5104,8 @@ const Edicao = (() => {
       e.preventDefault();
       dedos.set(e.pointerId, { x: e.clientX, y: e.clientY, el: null });
       const ds = [...dedos.values()];
-      if (dedos.size === 1) moveCena = { id: e.pointerId, x: e.clientX, y: e.clientY };   // 1 dedo / mouse: arrasta o gráfico
-      if (dedos.size === 2 && ds.every(d => !d.el)){ moveCena = null; zoomTela = { d: Math.hypot(ds[0].x - ds[1].x, ds[0].y - ds[1].y) }; }
+      if (dedos.size === 1) moveCena = { id: e.pointerId, x: e.clientX, y: e.clientY, alvo: Atomo.alvoGrafico(e.clientX, e.clientY) };   // 1 dedo / mouse: arrasta a letra, os degraus ou o gráfico todo
+      if (dedos.size === 2 && ds.every(d => !d.el)){ const alvo = moveCena && moveCena.alvo; moveCena = null; zoomTela = { d: Math.hypot(ds[0].x - ds[1].x, ds[0].y - ds[1].y), alvo }; }
       return;
     }
     dedos.set(e.pointerId, { x: e.clientX, y: e.clientY, el });
@@ -5058,13 +5123,16 @@ const Edicao = (() => {
     const p = dedos.get(e.pointerId); p.x = e.clientX; p.y = e.clientY;
     e.stopPropagation();
     if (moveCena && moveCena.id === e.pointerId && dedos.size === 1){   // arrastar fora dos textos = mover o gráfico (se estiver na tela)
-      if ($("#pagina1").classList.contains("ativa")) Atomo.moveGraficoPx(e.clientX - moveCena.x, e.clientY - moveCena.y);
+      if ($("#pagina1").classList.contains("ativa")){
+        if (moveCena.alvo) Atomo.moveAlvoPx(moveCena.alvo, e.clientX - moveCena.x, e.clientY - moveCena.y);   // a letra ou os degraus daquele nível
+        else Atomo.moveGraficoPx(e.clientX - moveCena.x, e.clientY - moveCena.y);                         // o gráfico todo
+      }
       moveCena.x = e.clientX; moveCena.y = e.clientY; e.preventDefault();
     } else
     if (zoomTela && dedos.size === 2){           // pinça fora dos textos = zoom da tela
       const [a, b] = [...dedos.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
-      if (zoomTela.d && $('#pagina1').classList.contains('ativa')) Atomo.zoomPor(d / zoomTela.d);
+      if (zoomTela.d && $("#pagina1").classList.contains("ativa")){ if (zoomTela.alvo) Atomo.escalaAlvo(zoomTela.alvo, d / zoomTela.d); else Atomo.zoomPor(d / zoomTela.d); }
       zoomTela.d = d; e.preventDefault();
     } else if (pinca && dedos.size === 2){
       const [a, b] = [...dedos.values()];
@@ -5107,7 +5175,10 @@ const Edicao = (() => {
     e.preventDefault(); e.stopPropagation();
     /* roda do mouse (ou pinça do touchpad fora de um texto) = zoom da tela */
     if (el && el.id === "cartoes"){ el.style.scale = Math.max(.4, Math.min(3, (parseFloat(el.style.scale) || 1) * (e.deltaY < 0 ? 1.04 : .96))).toFixed(3); el.classList.add("mudou"); return; }
-    if (!el || !e.ctrlKey){ if ($('#pagina1').classList.contains('ativa')) Atomo.zoomPor(e.deltaY < 0 ? 1.08 : .93); return; }
+    if (!el || !e.ctrlKey){
+      if ($("#pagina1").classList.contains("ativa")){ const alvo = Atomo.alvoGrafico(e.clientX, e.clientY); if (alvo) Atomo.escalaAlvo(alvo, e.deltaY < 0 ? 1.04 : .96); else Atomo.zoomPor(e.deltaY < 0 ? 1.08 : .93); }
+      return;
+    }
     /* Ctrl + roda / pinça do touchpad sobre um texto = tamanho da fonte */
     const f = parseFloat(getComputedStyle(el).fontSize) * (e.deltaY < 0 ? 1.04 : .96);
     el.style.fontSize = Math.max(6, Math.min(220, f)) + 'px';
