@@ -543,6 +543,10 @@ body.editando [data-editavel]{
 }
 body.editando [data-editavel]:focus{outline:2px solid #ffc24a;background:rgba(255,194,74,.08)}
 body.editando [data-editavel].mudou{outline-color:#8cff6a}
+/* modo edição: a fileira de cartões é um bloco só (arrastar move · pinça/roda muda o tamanho) */
+body.editando #cartoes{outline:1px dashed #ffc24a;outline-offset:8px;border-radius:12px}
+body.editando #cartoes.mudou{outline-color:#8cff6a}
+body.editando #cartoes .cartao{pointer-events:auto;cursor:grab}
 body.editando, body.editando *{touch-action:none}
 body.editando #painelEdicao, body.editando #painelEdicao *{touch-action:auto}
 body.editando [data-editavel].arrastando{outline:2px solid #8cff6a;cursor:grabbing;opacity:.9}
@@ -885,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.71';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.72';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -4876,7 +4880,7 @@ Retomar.restaura();
 const Edicao = (() => {
   let ativo = false;
   const itens = new Map();   // elemento → { antes, fonteAntes, desc }
-  const PULAR = 'script,style,svg,canvas,textarea,#barraEdicao,#painelEdicao,.eq,.orbita';
+  const PULAR = 'script,style,svg,canvas,textarea,#barraEdicao,#painelEdicao,.eq,.orbita,#cartoes';   // (os cartões são editados como um bloco só: ver cartoesDe)
 
   const textoDe = el => el.innerText.replace(/ /g, ' ');
   function descreve(el){
@@ -4911,6 +4915,9 @@ const Edicao = (() => {
   }
   /* sobe até o texto rastreado mais "fundo" (ex.: o nome, e não a frase inteira) */
   const itemDe = alvo => { let el = alvo; while (el && !itens.has(el)) el = el.parentElement; return el; };
+  /* cartões dos subníveis: tocar em qualquer um pega a fileira inteira (move e muda o tamanho do bloco todo) */
+  const cartoesDe = alvo => (alvo && alvo.closest && alvo.closest("#cartoes .cartao")) ? document.getElementById("cartoes") : null;
+  let cartoesAntes = { t: "", s: 1 };
   function entra(){
     if (ativo) return;
     ativo = true;
@@ -4921,6 +4928,7 @@ const Edicao = (() => {
     mutaTudo(true);              // e deixa tudo no mudo, por garantia
     document.body.classList.add('editando');
     zoomAntes = Atomo.zoom; camadasAntes = Atomo.escalaCamadas; graficoAntes = Atomo.escalaGrafico; posAntes = Atomo.posGrafico;
+    { const c = $("#cartoes"); if (c) cartoesAntes = { t: c.style.translate || "", s: parseFloat(c.style.scale) || 1 }; }
     const lista = candidatos();
     lista.forEach(el => {
       if (!itens.has(el)) itens.set(el, { antes: textoDe(el), proprioAntes: textoProprio(el), fonteAntes: parseFloat(getComputedStyle(el).fontSize), posAntes: el.style.translate || '', desc: descreve(el) });
@@ -4958,6 +4966,14 @@ const Edicao = (() => {
     if (Math.abs(Atomo.escalaCamadas - camadasAntes) > .005) linhas.push(`• tamanho das camadas (conjunto): ${camadasAntes.toFixed(2)} → ${Atomo.escalaCamadas.toFixed(2)}`);
     if (Math.abs(Atomo.escalaGrafico - graficoAntes) > .005) linhas.push(`• tamanho do gráfico (conjunto): ${graficoAntes.toFixed(2)} → ${Atomo.escalaGrafico.toFixed(2)}`);
     { const p = Atomo.posGrafico; if (Math.hypot(p.x - posAntes.x, p.y - posAntes.y) > .01) linhas.push(`• posição do gráfico: x ${posAntes.x.toFixed(2)} → ${p.x.toFixed(2)} · y ${posAntes.y.toFixed(2)} → ${p.y.toFixed(2)}`); }
+    { const c = $("#cartoes"); if (c && c.children.length){
+        const t = c.style.translate || "", s = parseFloat(c.style.scale) || 1;
+        if (t !== cartoesAntes.t || Math.abs(s - cartoesAntes.s) > .005){
+          const [x, y] = (t || "0px 0px").split(" ").map(parseFloat), dx = x || 0, dy = y || 0;
+          linhas.push(`• cartões s² p⁶ d¹⁰ f¹⁴ (fileira inteira, ${c.classList.contains("retrato") ? "celular" : "tela deitada"})`);
+          linhas.push(`  posição: ${dx >= 0 ? "→" : "←"} ${Math.abs(Math.round(dx))}px, ${dy >= 0 ? "↓" : "↑"} ${Math.abs(Math.round(dy))}px  (${(dx / innerWidth * 100).toFixed(1)}% da largura, ${(dy / innerHeight * 100).toFixed(1)}% da altura)`);
+          linhas.push(`  tamanho: ${cartoesAntes.s.toFixed(2)} → ${s.toFixed(2)}`);
+        } } }
     if (!linhas.length) return '';
     return `ALTERAÇÕES DO MODO EDIÇÃO · v${APP_VERSAO} · tela ${innerWidth}×${innerHeight}\n\n` + linhas.join('\n');
   }
@@ -5017,7 +5033,7 @@ const Edicao = (() => {
   const lerDesloc = el => { const p = (el.style.translate || '0px 0px').split(' ').map(parseFloat); return { x: p[0] || 0, y: p[1] || 0 }; };
   document.addEventListener('pointerdown', e => {
     if (!ativo || e.target.closest(UI_EDICAO)) return;
-    const el = itemDe(e.target);
+    const el = itemDe(e.target) || cartoesDe(e.target);
     e.stopPropagation();                         // não deixa chegar às funções do app
     if (!el){                                    // fora de texto: só serve para o zoom da tela (2 dedos)
       e.preventDefault();
@@ -5032,7 +5048,7 @@ const Edicao = (() => {
       arrasto = null;
       const [a, b] = [...dedos.values()];
       const alvo = a.el || b.el;
-      if (alvo) pinca = { el: alvo, d0: Math.hypot(a.x - b.x, a.y - b.y), f0: parseFloat(getComputedStyle(alvo).fontSize) };
+      if (alvo) pinca = { el: alvo, d0: Math.hypot(a.x - b.x, a.y - b.y), f0: alvo.id === "cartoes" ? (parseFloat(alvo.style.scale) || 1) : parseFloat(getComputedStyle(alvo).fontSize) };
     } else if (dedos.size === 1){
       arrasto = { el, id: e.pointerId, x0: e.clientX, y0: e.clientY, base: lerDesloc(el), movendo: false };
     }
@@ -5052,8 +5068,9 @@ const Edicao = (() => {
       zoomTela.d = d; e.preventDefault();
     } else if (pinca && dedos.size === 2){
       const [a, b] = [...dedos.values()];
-      const f = Math.max(6, Math.min(220, pinca.f0 * Math.hypot(a.x - b.x, a.y - b.y) / pinca.d0));
-      pinca.el.style.fontSize = f + 'px';
+      const r = Math.hypot(a.x - b.x, a.y - b.y) / pinca.d0;
+      if (pinca.el.id === "cartoes") pinca.el.style.scale = Math.max(.4, Math.min(3, pinca.f0 * r)).toFixed(3);   // cartões: o bloco inteiro
+      else pinca.el.style.fontSize = Math.max(6, Math.min(220, pinca.f0 * r)) + "px";
       pinca.el.classList.add('mudou');
       e.preventDefault();
     } else if (arrasto && arrasto.id === e.pointerId){
@@ -5086,9 +5103,10 @@ const Edicao = (() => {
   /* Chromebook/notebook: pinça no touchpad (ou Ctrl + roda) sobre o texto; fora dele, a roda não faz nada */
   document.addEventListener('wheel', e => {
     if (!ativo || e.target.closest(UI_EDICAO)) return;
-    const el = itemDe(e.target);
+    const el = itemDe(e.target) || cartoesDe(e.target);
     e.preventDefault(); e.stopPropagation();
     /* roda do mouse (ou pinça do touchpad fora de um texto) = zoom da tela */
+    if (el && el.id === "cartoes"){ el.style.scale = Math.max(.4, Math.min(3, (parseFloat(el.style.scale) || 1) * (e.deltaY < 0 ? 1.04 : .96))).toFixed(3); el.classList.add("mudou"); return; }
     if (!el || !e.ctrlKey){ if ($('#pagina1').classList.contains('ativa')) Atomo.zoomPor(e.deltaY < 0 ? 1.08 : .93); return; }
     /* Ctrl + roda / pinça do touchpad sobre um texto = tamanho da fonte */
     const f = parseFloat(getComputedStyle(el).fontSize) * (e.deltaY < 0 ? 1.04 : .96);
