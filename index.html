@@ -877,7 +877,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.66';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.67';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -899,10 +899,13 @@ const CAPITULOS = [
   /* 9: vai ao começo do áudio 8.2 — o gráfico de níveis já montado */
   { titulo: 'Os subníveis atômicos', pagina: 'pagina1', audio: 'audio_distribuição_8.2', inicio: 0,
     prepara: () => { cenaBohr(); Atomo.bohrToque(false); Atomo.letrasProntas(7); Atomo.viraGrafico(0, true); } },
+  /* 10: vai direto ao áudio 8.3 — gráfico com degraus e cartões (o aluno vai montar o 1s²) */
+  { titulo: 'O princípio da construção', pagina: 'pagina1', audio: 'audio_distribuição_8.3', inicio: 0,
+    prepara: () => cenaGraficoCartoes() },
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.4'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.4', 'audio_distribuição_8.5'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -928,6 +931,11 @@ function cenaBohr(){
   Atomo.avancaTudo(); Atomo.bohrEletron(null, true);
   Atomo.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 1 });
 }
+/* gráfico de níveis com os degraus por nível e os cartões s² p⁶ d¹⁰ f¹⁴ (como no fim do 8.2) — retomar e Sumário */
+function cenaGraficoCartoes(){
+  cenaBohr(); Atomo.bohrToque(false); Atomo.letrasProntas(7); Atomo.viraGrafico(0, true); Atomo.degraus(0, true);
+  ['s', 'p', 'd', 'f'].forEach(t => { Atomo.cartao(t, true); Atomo.cartaoEletrons(t); }); Atomo.cartoesNaLetra(0, true);
+}
 /* áudio 8: todas as letras K…Q no lugar → funfare + confetes, depois aplausos */
 function festaDasLetras(){
   sfx('funfare'); Quiz.confetes();
@@ -943,7 +951,7 @@ let pendente8_4 = false;
 function depoisDo1s2(){
   if (atual !== 'audio_distribuição_8.3') return;
   if (!audio.ended){ pendente8_4 = true; return; }
-  tocaDepois(3000, 'audio_distribuição_8.4');                                 // 3 s: tempo da comemoração
+  tocaDepois(1200, 'audio_distribuição_8.4');                                 // um respiro depois do encaixe
 }
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
@@ -1197,6 +1205,25 @@ const EVENTOS = {
     { t: 15.0, acao: () => Atomo.realcaParte(0) },
     { t: 16.0, acao: () => Atomo.realcaParte(1) },
     { t: 17.0, acao: () => Atomo.realcaParte(2, 1, 0, 2000) },                 // o "2" fica aumentado por 2 s
+    /* fim: o play vira "Próximo" → áudio 8.5 */
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8.5', 'Próximo'); } },
+  ],
+  'audio_distribuição_8.5': [
+    /* desde o começo (e depois do fim), o aluno pode arrastar qualquer cartão até os degraus do nível L */
+    { t: .05,  acao: () => Atomo.montaNivel(2, 8) },
+    { t: 1.0,  acao: () => Atomo.destacaNivel(2, 1000) },                       // L e seus degraus aumentam com brilho (1 s)
+    { t: 2.5,  acao: () => Atomo.textoCamada(2) },                              // "2ª camada" digitado à direita dos degraus
+    { t: 6.0,  acao: () => Atomo.eletronsNivel(2, 8) },                         // "8e⁻" à direita do L
+    /* 8,5 s → 10 s: os 4 cartões aumentam em sequência (o anterior diminui); o último fica 1 s */
+    { t: 8.5,  acao: () => Atomo.cartaoDestaque('s') },
+    { t: 8.67, acao: () => Atomo.cartaoDestaque('p') },
+    { t: 8.83, acao: () => Atomo.cartaoDestaque('d') },
+    { t: 9.0,  acao: () => Atomo.cartaoDestaque('f') },
+    { t: 10.0, acao: () => Atomo.cartaoDestaque(null) },
+    { t: 11.0, acao: () => Atomo.cartoesAumentam(1000) },                       // os 4 aumentam por 1 s
+    { t: 17.5, acao: () => Atomo.circuloContador(2, true) },                    // círculo amarelo em volta do "8e⁻"
+    { t: 19.0, acao: () => Atomo.circuloContador(2, false) },
+    { t: 21.0, acao: () => Atomo.destacaNivel(2, 1000, false) },                // os 2 degraus do L aumentam com brilho (1 s)
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -1888,7 +1915,7 @@ const Atomo = (() => {
     if (!arraste) return;
     clearInterval(arraste.timer); arraste.solta && arraste.solta();
     if (arraste.clone) arraste.clone.remove(); arraste.fantasmas.forEach(f => f.remove());
-    arraste.card.classList.remove("vazio", "arrastavel");
+    (arraste.cards || [arraste.card]).forEach(c => { if (c) c.classList.remove("vazio", "arrastavel"); });
     { const m = $("#maoGuia"); if (m) m.classList.remove("on"); }
     arraste = null;
   }
@@ -3204,6 +3231,102 @@ const Atomo = (() => {
             const E = this.eK, f = h => { E.s.scale.set(EK_W * (1 + .45 * h), EK_H * (1 + .45 * h), 1); E.s.material.color.setScalar(1 + .8 * h); };
             anima(250, k => f(k), () => { f(1); agenda(dur, () => anima(300, k => f(1 - k), () => f(0))); });
           },
+          /* ---- áudio 8.5 em diante: montar um nível (contador "8e⁻", "2ª camada", círculo, destaques) ---- */
+          contadores: {},
+          /* contador "Ne⁻" do nível n, à direita da letra do nível (como o "2e⁻" do K) */
+          contador(n){
+            if (this.contadores[n]) return this.contadores[n];
+            const c = document.createElement('canvas'); c.width = 260; c.height = 100;
+            const tex = new THREE.CanvasTexture(c);
+            const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
+            s.scale.set(EK_W * 260 / 200, EK_H, 1); s.renderOrder = 7; s.visible = false; conj.add(s);
+            const C = this.contadores[n] = { s, c, tex, valor: 0 };
+            C.desenha = (v, nCar = 99) => {                                            // nCar: quantos caracteres já digitados
+              C.valor = v;
+              const x = c.getContext('2d'), cor = '#' + niveis[n - 1].cor.getHexString(), num = String(v) + 'e';
+              x.clearRect(0, 0, 260, 100); x.shadowColor = cor; x.shadowBlur = 10; x.fillStyle = '#eef1ff'; x.textBaseline = 'alphabetic';
+              x.font = '700 58px "Space Grotesk", sans-serif'; x.fillText(num.slice(0, Math.min(nCar, num.length)), 14, 72);
+              if (nCar > num.length){ const w = x.measureText(num).width; x.font = '700 40px "Space Grotesk", sans-serif'; x.fillText('−', 14 + w + 2, 40); }
+              tex.needsUpdate = true;
+            };
+            C.posiciona = () => {
+              const it = letras.itens[n - 1], esq = XLETRA + (it.dx || 0) + letras.BASE.x * .4 + 1.05 - EK_W / 2;   // mesma borda esquerda do "2e⁻"
+              s.position.set(esq + s.scale.x / 2, yN(n) + niveis[n - 1].b, .3);
+            };
+            return C;
+          },
+          /* digita "Ne⁻" à direita da letra do nível n; a letra se afasta para a esquerda */
+          eletronsNivel(n, total, dur = 700, ja = false){
+            const it = letras.itens[n - 1], C = this.contador(n), L = niveis[n - 1], nCar = String(total).length + 2;
+            C.s.visible = true; C.s.material.opacity = 1;
+            if (ja){ it.dx = -.45; C.desenha(total); aplica(L); C.posiciona(); return; }
+            C.desenha(total, 0);
+            anima(dur, k => { it.dx = -.45 * k; C.desenha(total, Math.ceil(k * nCar)); aplica(L); C.posiciona(); }, () => { C.desenha(total); C.posiciona(); }, k => k);
+          },
+          contadorValor(n, v){ const C = this.contador(n); C.desenha(v); C.posiciona(); },
+          /* "Ne⁻" pulsa (cresce e brilha) */
+          pulsaContador(n){
+            const C = this.contador(n), w0 = EK_W * 260 / 200;
+            anima(500, k => { const p = Math.sin(Math.PI * k); C.s.scale.set(w0 * (1 + .35 * p), EK_H * (1 + .35 * p), 1); C.s.material.color.setScalar(1 + p); C.posiciona(); },
+              () => { C.s.scale.set(w0, EK_H, 1); C.s.material.color.setScalar(1); C.posiciona(); }, k => k);
+          },
+          /* texto "2ª camada" digitado à direita dos degraus do nível n */
+          textosCamada: {},
+          textoCamada(n, dur = 900){
+            let T = this.textosCamada[n];
+            if (!T){
+              const c = document.createElement('canvas'); c.width = 300; c.height = 80;
+              const tex = new THREE.CanvasTexture(c);
+              const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 1, depthWrite: false, depthTest: false }));
+              s.scale.set(300 * U, 80 * U, 1); s.renderOrder = 7; conj.add(s);
+              T = this.textosCamada[n] = { s, c, tex };
+            }
+            const txt = n + 'ª camada', hex = '#' + niveis[n - 1].cor.getHexString();
+            const desenha = q => {
+              const x = T.c.getContext('2d'); x.clearRect(0, 0, 300, 80);
+              x.font = '700 44px "Space Grotesk", sans-serif'; x.textBaseline = 'middle'; x.shadowColor = hex; x.shadowBlur = 10; x.fillStyle = '#eef1ff';
+              x.fillText(txt.slice(0, q), 10, 42); T.tex.needsUpdate = true;
+            };
+            const L = niveis[n - 1], Wc = (GX1 - GX0) / 4, xDir = GX0 + L.m * Wc - GAP / 2;
+            T.s.position.set(xDir + .35 + T.s.scale.x / 2, yN(n) + (L.m - 1) * DEG_IN / 2, .3);
+            T.s.visible = true; T.s.material.opacity = 1;
+            desenha(0);
+            anima(dur, k => desenha(Math.ceil(k * txt.length)), () => desenha(txt.length), k => k);
+          },
+          /* círculo amarelo desenhado em volta do contador do nível n (some com fade) */
+          circulos: {},
+          circulo(n, on = true, dur = 500){
+            const C = this.contador(n);
+            let O = this.circulos[n];
+            if (!O){
+              const pts = []; for (let s = 0; s <= 96; s++){ const a = Math.PI / 2 + s / 96 * Math.PI * 2.08; pts.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); }
+              const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0xffc24a, transparent: true, opacity: 1, depthWrite: false, depthTest: false }));
+              l.renderOrder = 8; l.visible = false; conj.add(l);
+              O = this.circulos[n] = { l, n: pts.length };
+            }
+            if (on){
+              O.l.position.copy(C.s.position); O.l.scale.set(C.s.scale.x * .42, C.s.scale.y * .62, 1);
+              O.l.visible = true; O.l.material.opacity = 1;
+              anima(dur, k => O.l.geometry.setDrawRange(0, Math.max(2, Math.ceil(O.n * k))), () => O.l.geometry.setDrawRange(0, O.n), k => k);   // desenhado à mão
+            } else {
+              anima(dur, k => { O.l.material.opacity = 1 - k; }, () => { O.l.visible = false; });
+            }
+          },
+          /* letra do nível n e seus degraus aumentam e brilham por "dur" ms */
+          destacaNivel(n, dur = 1000, comLetra = true){
+            const L = niveis[n - 1], it = letras.itens[n - 1];
+            const f = h => {
+              L.hl = L.hl.map(() => h); aplica(L);
+              if (comLetra && it && it.noGrafico){ const e = (1 - .195 * L.d) * (1 + .35 * h); it.s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); it.s.material.color.setScalar(1 + .8 * h); }
+            };
+            anima(250, k => f(k), () => agenda(Math.max(0, dur - 500), () => anima(250, k => f(1 - k), () => f(0))));
+          },
+          /* nível completo: contador, círculo e "Nª camada" somem */
+          limpaNivel(n, dur = 500){
+            const C = this.contadores[n], T = this.textosCamada[n], O = this.circulos[n];
+            anima(dur, k => { [C && C.s, T && T.s, O && O.l].forEach(o => { if (o && o.visible) o.material.opacity = Math.min(o.material.opacity, 1 - k); }); },
+              () => [C && C.s, T && T.s, O && O.l].forEach(o => { if (o) o.visible = false; }));
+          },
           /* a letra i pulsa (cresce e volta) */
           pulsaLetra(i){
             const it = letras.itens[i]; if (!it) return;
@@ -3238,6 +3361,8 @@ const Atomo = (() => {
             setaAte(1); vert.material = ponta.material = matEixo;
             if (letras) letras.itens.forEach(it => { it.noGrafico = false; it.dx = 0; });
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
+            [grafico.contadores, grafico.textosCamada].forEach(M => Object.values(M).forEach(o => { o.s.visible = false; o.s.material.opacity = 0; }));
+            Object.values(grafico.circulos).forEach(O => { O.l.visible = false; });
             niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; } });   // "1º nível"…
           },
@@ -3965,7 +4090,7 @@ const Atomo = (() => {
         card.classList.remove('vazio', 'arrastavel');                                // o cartão de baixo volta (s²)
         grafico.encaixaBloco(n, j, 250);
         grafico.flutua(n, n === 1 ? 500 : 1600);                                    // aparece o rótulo "1s²" no degrau
-        sfx('right'); Quiz.comemora();
+        sfx('right');                                                                 // só o "right" (sem comemoração de quiz)
         aoEncaixar && aoEncaixar();
       };
       const desce = e => {
@@ -3989,6 +4114,81 @@ const Atomo = (() => {
       card.addEventListener('pointerdown', desce);
       window.addEventListener('pointermove', move); window.addEventListener('pointerup', sobe); window.addEventListener('pointercancel', sobe);
       st.solta = () => { card.removeEventListener('pointerdown', desce); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', sobe); window.removeEventListener('pointercancel', sobe); };
+    },
+    /* ----- montar um nível (áudio 8.5 em diante) ----- */
+    /* nível n já montado pelo aluno? (aí os avisos do roteiro sobre ele não aparecem mais) */
+    nivelCompleto(n){ return !!(grafico && (grafico.niveis[n - 1].a > 0 || (arraste && arraste.n === n && arraste.feito))); },
+    /* "Ne⁻": se o aluno já colocou subníveis, mostra o que ainda falta */
+    eletronsNivel(n, total, dur = 700, ja = false){
+      if (!pronto || !grafico || this.nivelCompleto(n)) return;
+      grafico.eletronsNivel(n, arraste && arraste.n === n ? arraste.restante : total, dur, ja);
+    },
+    textoCamada(n, dur = 900){ if (pronto && grafico && !this.nivelCompleto(n)) grafico.textoCamada(n, dur); },
+    circuloContador(n, on = true){ if (pronto && grafico && (!on || !this.nivelCompleto(n))) grafico.circulo(n, on); },
+    destacaNivel(n, dur = 1000, comLetra = true){ if (pronto && grafico) grafico.destacaNivel(n, dur, comLetra); },
+    /* o aluno arrasta QUALQUER cartão (s, p, d, f) até os degraus do nível n. Só encaixa (snap + "right") o subnível
+       que existe no nível e ainda não foi colocado; o contador "Ne⁻" diminui. Quando zera: contador, círculo e
+       "Nª camada" somem, os degraus flutuam até a altura de energia e ganham os rótulos (2s², 2p⁶…).
+       Soltar perto do nível com um subnível que não cabe → "error" e o cartão volta. */
+    montaNivel(n, total, aoCompletar = null){
+      if (!pronto || !grafico) return;
+      arrasteLimpa();
+      const cards = [...document.querySelectorAll('#cartoes .cartao')]; if (!cards.length) return;
+      const L = grafico.niveis[n - 1], TIPOS = 'spdf', ELET = { s: 2, p: 6, d: 10, f: 14 };
+      const st = arraste = { n, card: null, cards, feito: false, arrastando: false, clone: null, timer: null, fantasmas: [], restante: total, postos: new Set() };
+      cards.forEach(c => c.classList.add('arrastavel'));
+      const noPalco = (x, y) => { const p = palco.getBoundingClientRect(); return { x: x - p.left, y: y - p.top }; };
+      const centroDe = c => { const r = c.getBoundingClientRect(); return noPalco(r.left + r.width / 2, r.top + r.height / 2); };
+      const poe = (el, x, y, esc = 1) => { el.style.transform = `translate(${x}px, ${y}px) translate(-50%, -50%) scale(${esc})`; };
+      const clona = card => {
+        const c = card.cloneNode(true); c.classList.remove('destaque', 'brilha', 'maior', 'arrastavel', 'vazio');
+        c.classList.add('cartao-clone', 'arrastado'); c.style.width = card.offsetWidth + 'px'; c.style.height = card.offsetHeight + 'px';
+        c.style.fontSize = getComputedStyle(card).fontSize; palco.appendChild(c); return c;
+      };
+      const pertoDoNivel = p => Array.from({ length: L.m }, (_, j) => grafico.telaDoDegrau(n, j)).some(b => Math.hypot(p.x - b.x, p.y - b.y) < 90);
+      const devolve = (card, c, erro) => {
+        const a = centroDe(card);
+        if (erro){ sfx('error'); c.animate([{ transform: c.style.transform }, { transform: c.style.transform + ' translateX(-10px)' }, { transform: c.style.transform + ' translateX(10px)' }, { transform: c.style.transform }], { duration: 260 }); }
+        c.animate([{ transform: c.style.transform }, { transform: `translate(${a.x}px, ${a.y}px) translate(-50%, -50%) scale(1)` }],
+          { duration: 320, delay: erro ? 260 : 0, easing: 'ease-out', fill: 'forwards' }).finished.then(() => { c.remove(); card.classList.remove('vazio'); }).catch(() => c.remove());
+      };
+      const encaixa = (card, j) => {
+        const tipo = card.dataset.t, c = st.clone, b = grafico.telaDoDegrau(n, j);
+        st.arrastando = false; st.clone = null; st.card = null; st.postos.add(tipo);
+        c.animate([{ transform: c.style.transform, opacity: 1 }, { transform: `translate(${b.x}px, ${b.y}px) translate(-50%, -50%) scale(.3)`, opacity: 0 }],
+          { duration: 280, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'forwards' }).finished.then(() => c.remove()).catch(() => c.remove());
+        card.classList.remove('vazio');                                              // o cartão de baixo volta
+        grafico.encaixaBloco(n, j, 250); sfx('right');
+        st.restante -= ELET[tipo]; grafico.contadorValor(n, st.restante); grafico.pulsaContador(n);   // o contador diminui
+        if (st.restante === 0){                                                      // nível completo
+          st.feito = true; cards.forEach(c2 => c2.classList.remove('arrastavel'));
+          agenda(500, () => { grafico.limpaNivel(n); grafico.flutua(n); aoCompletar && aoCompletar(); });
+        }
+      };
+      const desce = e => {
+        if (st.feito || st.arrastando) return;
+        const card = e.currentTarget; e.preventDefault();
+        st.arrastando = true; st.card = card; st.clone = clona(card); card.classList.add('vazio');
+        move(e);
+      };
+      const move = e => {
+        if (!st.arrastando) return;
+        const p = noPalco(e.clientX, e.clientY); poe(st.clone, p.x, p.y, 1.05);
+        const tipo = st.card.dataset.t, j = TIPOS.indexOf(tipo);
+        if (j < L.m && !st.postos.has(tipo) && ELET[tipo] <= st.restante){           // cabe neste nível: snap quando chega perto do degrau dele
+          const b = grafico.telaDoDegrau(n, j);
+          if (Math.hypot(p.x - b.x, p.y - b.y) < 70) encaixa(st.card, j);
+        }
+      };
+      const sobe = e => {
+        if (!st.arrastando) return;
+        const p = noPalco(e.clientX, e.clientY), card = st.card, c = st.clone;
+        st.arrastando = false; st.clone = null; st.card = null;
+        devolve(card, c, pertoDoNivel(p));                                            // soltou no nível com um subnível que não cabe: erro
+      };
+      cards.forEach(c => c.addEventListener('pointerdown', desce));
+      window.addEventListener('pointermove', move); window.addEventListener('pointerup', sobe); window.addEventListener('pointercancel', sobe);
+      st.solta = () => { cards.forEach(c => c.removeEventListener('pointerdown', desce)); window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', sobe); window.removeEventListener('pointercancel', sobe); };
     },
     /* mecânica da soma (a montar): bloco do subnível j (0 s · 1 p · 2 d · 3 f) encaixado no nível n → o degrau ganha a cor do bloco */
     blocoNoDegrau(n, j){ if (pronto && grafico) grafico.encaixaBloco(n, j); },
@@ -4554,14 +4754,15 @@ const Retomar = (() => {
     'audio_distribuição_8.2': () => { bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); Atomo.viraGrafico(0, true); },
     /* como o 8.2 terminou: gráfico com os degraus por nível e os cartões s² p⁶ d¹⁰ f¹⁴ */
     'audio_distribuição_8.3': () => {
-      bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); Atomo.viraGrafico(0, true); Atomo.degraus(0, true);
-      ['s', 'p', 'd', 'f'].forEach(t => { Atomo.cartao(t, true); Atomo.cartaoEletrons(t); }); Atomo.cartoesNaLetra(0, true);
+      cenaGraficoCartoes();
     },
     /* como o 8.3 terminou: o 1s² já encaixado (degrau na cor do s, rótulo "1s²", K fora do eixo) */
     'audio_distribuição_8.4': () => {
       INICIO['audio_distribuição_8.3']();
       Atomo.eletronsK(0, true); Atomo.blocoNoDegrau(1, 0); Atomo.nivelFlutua(1, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
     },
+    /* como o 8.4 terminou: "1º nível" no lugar do K */
+    "audio_distribuição_8.5": () => { INICIO["audio_distribuição_8.4"](); Atomo.textoNivel(1); Atomo.avancaTudo(); },
   };
   function salva(){
     try {
