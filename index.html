@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.73';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.74';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1950,6 +1950,9 @@ const Atomo = (() => {
   const ajusteDe = (tabela, i) => ({ x: 0, y: 0, s: 1, ...(tabela[i] || {}) });
   let ajusteLetra = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_LETRAS.deitada, i));
   let ajusteNivel = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_DEGRAUS.deitada, i));
+  /* eixos do gráfico (seta E e linha de baixo): deslocamento próprio, independente das letras e dos degraus */
+  const POS_EIXOS = { deitada: { x: 0, y: 0 }, retrato: { x: 0, y: 0 } };
+  let ajusteEixos = { ...POS_EIXOS.deitada };
   const graficoNaTela = () => !!(grafico && ruth && ruth.on && grafico.eixos.visible);
   function aplicaEscalaConj(){
     if (!ruth) return;
@@ -3525,6 +3528,7 @@ const Atomo = (() => {
       const ori = w < h ? "retrato" : "deitada";
       ajusteLetra = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_LETRAS[ori], i));
       ajusteNivel = Array.from({ length: 7 }, (_, i) => ajusteDe(AJUSTE_DEGRAUS[ori], i));
+      ajusteEixos = { ...POS_EIXOS[ori] }; if (grafico && grafico.eixos.visible) grafico.eixos.position.set(ajusteEixos.x, ajusteEixos.y, 0);
       if (grafico) grafico.niveis.forEach(L => grafico.reaplica(L));
     }
     aplicaEscalaConj();
@@ -4045,12 +4049,13 @@ const Atomo = (() => {
       const passo = (i, k) => { const C = ruth.camadas[i], it = letras.itens[i]; G.morfa(C, i + 1, k); if (it.p0g) G.letraPara(it, k, it.p0g); };
       letras.itens.forEach(it => { it.p0g = it.s.position.clone(); });
       if (ja){
-        G.eixos.position.x = 0; G.matEixo.opacity = .85; G.rotE.material.opacity = .9;
+        G.eixos.position.set(ajusteEixos.x, ajusteEixos.y, 0); G.matEixo.opacity = .85; G.rotE.material.opacity = .9;
         ruth.opNucleo = 0; bohr.op = 0; ruth.opEscuro = 1;                       // (retrato do Bohr fora)
         ruth.camadas.forEach((C, i) => passo(i, 1));
         return;
       }
-      anima(1200, k => { G.eixos.position.x = -22 * (1 - k); G.matEixo.opacity = .85 * k; G.rotE.material.opacity = .9 * k; });   // eixos deslizam da esquerda
+      G.eixos.position.y = ajusteEixos.y;
+      anima(1200, k => { G.eixos.position.x = ajusteEixos.x - 22 * (1 - k); G.matEixo.opacity = .85 * k; G.rotE.material.opacity = .9 * k; });   // eixos deslizam da esquerda
       anima(total, k => { fatorGrafico = k; aplicaEscalaConj(); });            // o conjunto vai para o tamanho do gráfico
       anima(1000, k => { ruth.opNucleo = n0 * (1 - k); bohr.op = e0 * (1 - k); });                                                  // núcleo e elétron somem
       { const e0s = ruth.opEscuro; anima(1500, k => { ruth.opEscuro = e0s + (1 - e0s) * k; }); }                                 // o retrato do Bohr some de vez (o gráfico fica sozinho)
@@ -4681,12 +4686,13 @@ const Atomo = (() => {
       return true;
     },
     /* foto dos ajustes (para o relatório do modo edição) */
-    get ajustes(){ return { letras: ajusteLetra.map(a => ({ ...a })), niveis: ajusteNivel.map(a => ({ ...a })) }; },
+    get ajustes(){ return { letras: ajusteLetra.map(a => ({ ...a })), niveis: ajusteNivel.map(a => ({ ...a })), eixos: { ...ajusteEixos } }; },
     /* modo edição: arrastar fora dos textos com o gráfico na tela move o gráfico inteiro (dx, dy em px da tela) */
+    /* modo edição: arrastar fora das letras e dos degraus move só os eixos do gráfico (seta E e linha de baixo) */
     moveGraficoPx(dx, dy){
       if (!graficoNaTela()) return false;
-      const tg = Math.tan(THREE.MathUtils.degToRad(20)), porPx = 2 * tg * ruth.cam.position.z / palco.clientHeight / ruth.atomo.scale.x;
-      deslocGrafico.x += dx * porPx; deslocGrafico.y -= dy * porPx; fatorGrafico = 1; aplicaEscalaConj();
+      const tg = Math.tan(THREE.MathUtils.degToRad(20)), porPx = 2 * tg * ruth.cam.position.z / palco.clientHeight / ruth.atomo.scale.x / ruth.conj.scale.x;
+      ajusteEixos.x += dx * porPx; ajusteEixos.y -= dy * porPx; grafico.eixos.position.set(ajusteEixos.x, ajusteEixos.y, 0);
       return true;
     },
   };
@@ -5030,6 +5036,7 @@ const Edicao = (() => {
       const linha = (rot, a, b) => `• ${rot} (${ori}): x ${b.x.toFixed(2)} → ${a.x.toFixed(2)} · y ${b.y.toFixed(2)} → ${a.y.toFixed(2)} · tamanho ${b.s.toFixed(2)} → ${a.s.toFixed(2)}`;
       ag.letras.forEach((a, i) => { if (dif(a, ajustesAntes.letras[i])) linhas.push(linha(`letra ${NOMES[i]}`, a, ajustesAntes.letras[i])); });
       ag.niveis.forEach((a, i) => { if (dif(a, ajustesAntes.niveis[i])) linhas.push(linha(`degraus do nível ${i + 1} (${NOMES[i]})`, a, ajustesAntes.niveis[i])); });
+      if (dif({ ...ag.eixos, s: 1 }, { ...ajustesAntes.eixos, s: 1 })) linhas.push(`• eixos do gráfico — seta E e linha de baixo (${ori}): x ${ajustesAntes.eixos.x.toFixed(2)} → ${ag.eixos.x.toFixed(2)} · y ${ajustesAntes.eixos.y.toFixed(2)} → ${ag.eixos.y.toFixed(2)}`);
     }
     { const c = $("#cartoes"); if (c && c.children.length){
         const t = c.style.translate || "", s = parseFloat(c.style.scale) || 1;
