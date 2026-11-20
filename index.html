@@ -280,6 +280,14 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .cabeca h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(24px,6.2vw,42px);line-height:1.05;letter-spacing:-.01em}
 .cabeca .elemento{margin-top:6px;font:500 13px "IBM Plex Mono",monospace;color:var(--ink-2);letter-spacing:.06em}
 .cabeca .elemento b{color:var(--s);font-weight:500}
+/* celular em pé: barra de cima mínima — sem "Aprender / Página 1" e sem o título; só o botão Home, pequeno,
+   flutuando no canto (o palco do átomo ganha a altura toda) */
+@media (orientation:portrait) and (max-width:700px){
+  #pagina1 .topo-info,#pagina1 .cabeca{display:none}
+  #pagina1 .topo{position:absolute;top:0;right:0;left:auto;padding:calc(6px + var(--safe-t)) 10px 0}
+  #pagina1 .btn-home{flex-direction:row;gap:5px;padding:5px 9px;border-radius:11px;font-size:10px}
+  #pagina1 .btn-home svg{width:16px;height:16px}
+}
 .legenda{display:flex;flex-wrap:wrap;justify-content:center;gap:6px 14px;margin-top:10px;font-size:12.5px;color:var(--ink-2)}
 .legenda span{display:inline-flex;align-items:center;gap:6px}
 .legenda i{width:10px;height:10px;border-radius:50%;background:var(--c);box-shadow:0 0 8px var(--c)}
@@ -877,7 +885,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.69';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.70';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1928,8 +1936,16 @@ const Atomo = (() => {
      Multiplica o tamanho das camadas enquanto o gráfico está na tela (fatorGrafico: 0 átomo → 1 gráfico) */
   const ESCALA_GRAFICO = { deitada: 1, retrato: 1 };
   let escalaGrafico = ESCALA_GRAFICO.deitada, fatorGrafico = 0, orientacaoRetrato = null;
+  /* posição do gráfico (deslocamento, em unidades da cena), ajustável no modo edição arrastando fora dos textos */
+  const POS_GRAFICO = { deitada: { x: 0, y: 0 }, retrato: { x: 0, y: 0 } };
+  let deslocGrafico = { ...POS_GRAFICO.deitada };
   const graficoNaTela = () => !!(grafico && ruth && ruth.on && grafico.eixos.visible);
-  function aplicaEscalaConj(){ if (!ruth) return; ruth.conj.scale.setScalar(escalaCamadas * (1 + (escalaGrafico - 1) * fatorGrafico)); ruth.conj.updateMatrixWorld(true); }
+  function aplicaEscalaConj(){
+    if (!ruth) return;
+    ruth.conj.scale.setScalar(escalaCamadas * (1 + (escalaGrafico - 1) * fatorGrafico));
+    ruth.conj.position.set(deslocGrafico.x * fatorGrafico, deslocGrafico.y * fatorGrafico, 0);   // (o átomo fica no lugar; o gráfico vai para a posição ajustada)
+    ruth.conj.updateMatrixWorld(true);
+  }
   /* áudio 5.2: elétrons do carbono ganham energia (0 → 1) e o contorno das camadas some (1 → 0) */
   let energiaC = 0, contornoC = 1;
   const CORES_NEON = [0xff2bd6, 0x8a2bff, 0x00ff9c, 0xffd200, 0xff3b6b, 0x2b8cff];
@@ -3000,6 +3016,9 @@ const Atomo = (() => {
         const GY0 = -6.2, GY1 = 6.0, YBASE = GY0 - .8;
         /* até onde sobem os degraus: tela deitada GY1 + 3,6 · celular em pé (mais alto) GY1 + 6,5 — ver medeGrafico */
         let TOPO_DEG = GY1 + 3.6, yTopo = TOPO_DEG + .9;
+        /* seta do eixo 15% mais baixa; os degraus mais altos ficam sempre abaixo da ponta dela */
+        const ajustaTopo = () => { yTopo = YBASE + (TOPO_DEG + .9 - YBASE) * .85; TOPO_DEG = Math.min(TOPO_DEG, yTopo - .45); };
+        ajustaTopo();
         const yN = n => { const q = .86; return GY0 + (GY1 - GY0) * (1 - Math.pow(q, n - 1)) / (1 - Math.pow(q, 6)); };   // mais juntas no alto
         /* subníveis em ordem crescente de energia (princípio de Aufbau / regra de Madelung): 4s fica abaixo de 3d etc. */
         const AUFBAU = ['1s', '2s', '2p', '3s', '3p', '4s', '3d', '4p', '5s', '4d', '5p', '6s', '4f', '5d', '6p', '7s', '5f', '6d', '7p'];
@@ -3045,7 +3064,7 @@ const Atomo = (() => {
               TOPO_DEG = GY1 + 6.5;                                                  // no celular há mais espaço acima: degraus mais afastados
             }
           }
-          yTopo = TOPO_DEG + .9;                                                     // a seta acompanha a altura dos degraus
+          ajustaTopo();                                                              // a seta acompanha a altura dos degraus
           posEixos();
         };
         /* barras de cada nível: tantas "tiras" quanto subníveis (K 1 · L 2 · M 3 · N 4 · O 4 · P 3 · Q 2).
@@ -3368,7 +3387,7 @@ const Atomo = (() => {
           desfaz: () => {                                                               // volta tudo a ser círculo (reset)
             ruth.camadas.forEach(C => { if (!C.circ) return; C.fio.geometry.attributes.position.array.set(C.circ); C.fio.geometry.attributes.position.needsUpdate = true; C.brilhoC.visible = true; C.fio.material.opacity = 0; });
             eixos.visible = false; eixos.position.x = 0; matEixo.opacity = 0; rotE.material.opacity = 0;
-            ({ GX0, GX1, XEIXO, XLETRA } = PADRAO); TOPO_DEG = GY1 + 3.6; yTopo = TOPO_DEG + .9; posEixos();
+            ({ GX0, GX1, XEIXO, XLETRA } = PADRAO); TOPO_DEG = GY1 + 3.6; ajustaTopo(); posEixos();
             fatorGrafico = 0; aplicaEscalaConj();                                     // tamanho do átomo de novo
             setaAte(1); vert.material = ponta.material = matEixo;
             if (letras) letras.itens.forEach(it => { it.noGrafico = false; it.dx = 0; });
@@ -3488,6 +3507,7 @@ const Atomo = (() => {
       orientacaoRetrato = w < h;
       escalaCamadas = w < h ? ESCALA_CAMADAS.retrato : ESCALA_CAMADAS.deitada;
       escalaGrafico = w < h ? ESCALA_GRAFICO.retrato : ESCALA_GRAFICO.deitada;
+      deslocGrafico = { ...(w < h ? POS_GRAFICO.retrato : POS_GRAFICO.deitada) };
     }
     aplicaEscalaConj();
     posLinhas();
@@ -3994,8 +4014,10 @@ const Atomo = (() => {
     viraGrafico(total = 5000, ja = false){
       if (!pronto || !grafico) return;
       const G = grafico;
-      fatorGrafico = 1; aplicaEscalaConj();                                    // mede já no tamanho final do gráfico…
+      const dg = deslocGrafico; deslocGrafico = { x: 0, y: 0 };                 // mede sem o deslocamento do modo edição…
+      fatorGrafico = 1; aplicaEscalaConj();                                    // …e já no tamanho final do gráfico
       G.medeGrafico();                                                          // (celular: estica até as bordas)
+      deslocGrafico = dg; aplicaEscalaConj();
       if (!ja){ fatorGrafico = 0; aplicaEscalaConj(); }                          // …e começa no tamanho do átomo
       G.eixos.visible = true;
       { const e = $('#energia'); if (e) e.classList.remove('on'); }                // a barra de energia e o título saem em fade
@@ -4598,6 +4620,14 @@ const Atomo = (() => {
     get zoom(){ return zoomGesto; },
     get escalaCamadas(){ return escalaCamadas; },
     get escalaGrafico(){ return escalaGrafico; },
+    get posGrafico(){ return { ...deslocGrafico }; },
+    /* modo edição: arrastar fora dos textos com o gráfico na tela move o gráfico inteiro (dx, dy em px da tela) */
+    moveGraficoPx(dx, dy){
+      if (!graficoNaTela()) return false;
+      const tg = Math.tan(THREE.MathUtils.degToRad(20)), porPx = 2 * tg * ruth.cam.position.z / palco.clientHeight / ruth.atomo.scale.x;
+      deslocGrafico.x += dx * porPx; deslocGrafico.y -= dy * porPx; fatorGrafico = 1; aplicaEscalaConj();
+      return true;
+    },
   };
 })();
 document.addEventListener('visibilitychange', () => {
@@ -4890,7 +4920,7 @@ const Edicao = (() => {
     calaTudo();                  // e cala o que estiver tocando (digitação, efeitos)
     mutaTudo(true);              // e deixa tudo no mudo, por garantia
     document.body.classList.add('editando');
-    zoomAntes = Atomo.zoom; camadasAntes = Atomo.escalaCamadas; graficoAntes = Atomo.escalaGrafico;
+    zoomAntes = Atomo.zoom; camadasAntes = Atomo.escalaCamadas; graficoAntes = Atomo.escalaGrafico; posAntes = Atomo.posGrafico;
     const lista = candidatos();
     lista.forEach(el => {
       if (!itens.has(el)) itens.set(el, { antes: textoDe(el), proprioAntes: textoProprio(el), fonteAntes: parseFloat(getComputedStyle(el).fontSize), posAntes: el.style.translate || '', desc: descreve(el) });
@@ -4927,6 +4957,7 @@ const Edicao = (() => {
     if (Math.abs(Atomo.zoom - zoomAntes) > .01) linhas.push(`• zoom da tela (átomo 3D): ${zoomAntes.toFixed(2)} → ${Atomo.zoom.toFixed(2)}`);
     if (Math.abs(Atomo.escalaCamadas - camadasAntes) > .005) linhas.push(`• tamanho das camadas (conjunto): ${camadasAntes.toFixed(2)} → ${Atomo.escalaCamadas.toFixed(2)}`);
     if (Math.abs(Atomo.escalaGrafico - graficoAntes) > .005) linhas.push(`• tamanho do gráfico (conjunto): ${graficoAntes.toFixed(2)} → ${Atomo.escalaGrafico.toFixed(2)}`);
+    { const p = Atomo.posGrafico; if (Math.hypot(p.x - posAntes.x, p.y - posAntes.y) > .01) linhas.push(`• posição do gráfico: x ${posAntes.x.toFixed(2)} → ${p.x.toFixed(2)} · y ${posAntes.y.toFixed(2)} → ${p.y.toFixed(2)}`); }
     if (!linhas.length) return '';
     return `ALTERAÇÕES DO MODO EDIÇÃO · v${APP_VERSAO} · tela ${innerWidth}×${innerHeight}\n\n` + linhas.join('\n');
   }
@@ -4982,7 +5013,7 @@ const Edicao = (() => {
      · 2 dedos sobre um texto: pinça muda o tamanho
      · fora dos textos: nada chega ao app (átomo não gira, botões não funcionam) */
   const UI_EDICAO = '#barraEdicao, #painelEdicao, #versao';
-  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, zoomAntes = 1, camadasAntes = 1, graficoAntes = 1;
+  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, moveCena = null, zoomAntes = 1, camadasAntes = 1, graficoAntes = 1, posAntes = { x: 0, y: 0 };
   const lerDesloc = el => { const p = (el.style.translate || '0px 0px').split(' ').map(parseFloat); return { x: p[0] || 0, y: p[1] || 0 }; };
   document.addEventListener('pointerdown', e => {
     if (!ativo || e.target.closest(UI_EDICAO)) return;
@@ -4992,7 +5023,8 @@ const Edicao = (() => {
       e.preventDefault();
       dedos.set(e.pointerId, { x: e.clientX, y: e.clientY, el: null });
       const ds = [...dedos.values()];
-      if (dedos.size === 2 && ds.every(d => !d.el)) zoomTela = { d: Math.hypot(ds[0].x - ds[1].x, ds[0].y - ds[1].y) };
+      if (dedos.size === 1) moveCena = { id: e.pointerId, x: e.clientX, y: e.clientY };   // 1 dedo / mouse: arrasta o gráfico
+      if (dedos.size === 2 && ds.every(d => !d.el)){ moveCena = null; zoomTela = { d: Math.hypot(ds[0].x - ds[1].x, ds[0].y - ds[1].y) }; }
       return;
     }
     dedos.set(e.pointerId, { x: e.clientX, y: e.clientY, el });
@@ -5009,6 +5041,10 @@ const Edicao = (() => {
     if (!ativo || !dedos.has(e.pointerId)) return;
     const p = dedos.get(e.pointerId); p.x = e.clientX; p.y = e.clientY;
     e.stopPropagation();
+    if (moveCena && moveCena.id === e.pointerId && dedos.size === 1){   // arrastar fora dos textos = mover o gráfico (se estiver na tela)
+      if ($("#pagina1").classList.contains("ativa")) Atomo.moveGraficoPx(e.clientX - moveCena.x, e.clientY - moveCena.y);
+      moveCena.x = e.clientX; moveCena.y = e.clientY; e.preventDefault();
+    } else
     if (zoomTela && dedos.size === 2){           // pinça fora dos textos = zoom da tela
       const [a, b] = [...dedos.values()];
       const d = Math.hypot(a.x - b.x, a.y - b.y);
@@ -5041,6 +5077,7 @@ const Edicao = (() => {
     if (!dedos.has(e.pointerId)) return;
     dedos.delete(e.pointerId);
     if (dedos.size < 2){ pinca = null; zoomTela = null; }
+    if (moveCena && moveCena.id === e.pointerId) moveCena = null;
     if (arrasto && arrasto.id === e.pointerId){ arrasto.el.classList.remove('arrastando'); arrasto = null; }
     e.stopPropagation();
   };
