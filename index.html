@@ -877,7 +877,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.67';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.68';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1924,6 +1924,12 @@ const Atomo = (() => {
   const ESCALA_CAMADAS = { deitada: 1.15, retrato: 1.42 };
   let escalaCamadas = ESCALA_CAMADAS.deitada;
   const camadasNaTela = () => !!(ruth && ruth.on && ruth.camadas.some(C => C.g.visible));
+  /* tamanho do gráfico de níveis (áudios 8.1 em diante), ajustável no modo edição com a pinça; 1 = original.
+     Multiplica o tamanho das camadas enquanto o gráfico está na tela (fatorGrafico: 0 átomo → 1 gráfico) */
+  const ESCALA_GRAFICO = { deitada: 1, retrato: 1 };
+  let escalaGrafico = ESCALA_GRAFICO.deitada, fatorGrafico = 0, orientacaoRetrato = null;
+  const graficoNaTela = () => !!(grafico && ruth && ruth.on && grafico.eixos.visible);
+  function aplicaEscalaConj(){ if (!ruth) return; ruth.conj.scale.setScalar(escalaCamadas * (1 + (escalaGrafico - 1) * fatorGrafico)); ruth.conj.updateMatrixWorld(true); }
   /* áudio 5.2: elétrons do carbono ganham energia (0 → 1) e o contorno das camadas some (1 → 0) */
   let energiaC = 0, contornoC = 1;
   const CORES_NEON = [0xff2bd6, 0x8a2bff, 0x00ff9c, 0xffd200, 0xff3b6b, 0x2b8cff];
@@ -3342,6 +3348,8 @@ const Atomo = (() => {
           },
           /* mecânica da soma (a montar): o bloco s/p/d/f encaixado pinta o degrau j do nível n com a cor dele */
           encaixaBloco: (n, j, dur = 400) => { const L = niveis[n - 1]; if (!L || j >= L.m) return; const c0 = L.corSub[j]; anima(dur, k => { L.corSub[j] = c0 + (1 - c0) * k; aplica(L); }); },
+          /* o rótulo do degrau (1s², 2p⁶…) aparece assim que o bloco encaixa */
+          mostraRotulo: (n, j, dur = 350) => { const L = niveis[n - 1]; if (!L || j >= L.m) return; const r0 = L.rot[j]; anima(dur, k => { L.rot[j] = r0 + (1 - r0) * k; aplica(L); }); },
           /* soma fechada: os degraus do nível flutuam até a altura de energia (Aufbau), a letra sai do eixo
              e cada degrau ganha o rótulo "nl" com o expoente (1s², 2p⁶…) */
           flutua: (n, dur = 1600) => {
@@ -3358,6 +3366,7 @@ const Atomo = (() => {
             ruth.camadas.forEach(C => { if (!C.circ) return; C.fio.geometry.attributes.position.array.set(C.circ); C.fio.geometry.attributes.position.needsUpdate = true; C.brilhoC.visible = true; C.fio.material.opacity = 0; });
             eixos.visible = false; eixos.position.x = 0; matEixo.opacity = 0; rotE.material.opacity = 0;
             ({ GX0, GX1, XEIXO, XLETRA } = PADRAO); TOPO_DEG = GY1 + 3.6; yTopo = TOPO_DEG + .9; posEixos();
+            fatorGrafico = 0; aplicaEscalaConj();                                     // tamanho do átomo de novo
             setaAte(1); vert.material = ponta.material = matEixo;
             if (letras) letras.itens.forEach(it => { it.noGrafico = false; it.dx = 0; });
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
@@ -3471,8 +3480,13 @@ const Atomo = (() => {
     /* átomo em construção: menor no celular em pé, para caber na largura */
     if (constr) constr.g.scale.setScalar(.8 * Math.min(1, camera.aspect * 1.15));
     /* camadas de Bohr: o tamanho combinado para a tela deitada ou para o celular em pé */
-    escalaCamadas = w < h ? ESCALA_CAMADAS.retrato : ESCALA_CAMADAS.deitada;
-    if (ruth) ruth.conj.scale.setScalar(escalaCamadas);
+    /* (só quando a orientação muda: assim o ajuste feito na pinça do modo edição não se perde num redimensionamento) */
+    if ((w < h) !== orientacaoRetrato){
+      orientacaoRetrato = w < h;
+      escalaCamadas = w < h ? ESCALA_CAMADAS.retrato : ESCALA_CAMADAS.deitada;
+      escalaGrafico = w < h ? ESCALA_GRAFICO.retrato : ESCALA_GRAFICO.deitada;
+    }
+    aplicaEscalaConj();
     posLinhas();
   }
   const retrato = () => palco && palco.clientWidth < palco.clientHeight;
@@ -3977,7 +3991,9 @@ const Atomo = (() => {
     viraGrafico(total = 5000, ja = false){
       if (!pronto || !grafico) return;
       const G = grafico;
+      fatorGrafico = 1; aplicaEscalaConj();                                    // mede já no tamanho final do gráfico…
       G.medeGrafico();                                                          // (celular: estica até as bordas)
+      if (!ja){ fatorGrafico = 0; aplicaEscalaConj(); }                          // …e começa no tamanho do átomo
       G.eixos.visible = true;
       { const e = $('#energia'); if (e) e.classList.remove('on'); }                // a barra de energia e o título saem em fade
       { const L = linhas.topo; if (L){ if (ja){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.innerHTML = ''; L.el.classList.remove('digitando'); } else if (L.el.textContent) this.apagaLinha('topo'); } }
@@ -3992,6 +4008,7 @@ const Atomo = (() => {
         return;
       }
       anima(1200, k => { G.eixos.position.x = -22 * (1 - k); G.matEixo.opacity = .85 * k; G.rotE.material.opacity = .9 * k; });   // eixos deslizam da esquerda
+      anima(total, k => { fatorGrafico = k; aplicaEscalaConj(); });            // o conjunto vai para o tamanho do gráfico
       anima(1000, k => { ruth.opNucleo = n0 * (1 - k); bohr.op = e0 * (1 - k); });                                                  // núcleo e elétron somem
       { const e0s = ruth.opEscuro; anima(1500, k => { ruth.opEscuro = e0s + (1 - e0s) * k; }); }                                 // o retrato do Bohr some de vez (o gráfico fica sozinho)
       ruth.camadas.forEach((C, i) => {
@@ -4088,7 +4105,7 @@ const Atomo = (() => {
         c.animate([{ transform: c.style.transform, opacity: 1 }, { transform: `translate(${b.x}px, ${b.y}px) translate(-50%, -50%) scale(.3)`, opacity: 0 }],
           { duration: 280, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'forwards' }).finished.then(() => c.remove()).catch(() => c.remove());
         card.classList.remove('vazio', 'arrastavel');                                // o cartão de baixo volta (s²)
-        grafico.encaixaBloco(n, j, 250);
+        grafico.encaixaBloco(n, j, 250); grafico.mostraRotulo(n, j);
         grafico.flutua(n, n === 1 ? 500 : 1600);                                    // aparece o rótulo "1s²" no degrau
         sfx('right');                                                                 // só o "right" (sem comemoração de quiz)
         aoEncaixar && aoEncaixar();
@@ -4158,7 +4175,7 @@ const Atomo = (() => {
         c.animate([{ transform: c.style.transform, opacity: 1 }, { transform: `translate(${b.x}px, ${b.y}px) translate(-50%, -50%) scale(.3)`, opacity: 0 }],
           { duration: 280, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'forwards' }).finished.then(() => c.remove()).catch(() => c.remove());
         card.classList.remove('vazio');                                              // o cartão de baixo volta
-        grafico.encaixaBloco(n, j, 250); sfx('right');
+        grafico.encaixaBloco(n, j, 250); grafico.mostraRotulo(n, j); sfx("right");     // o rótulo (2s², 2p⁶…) aparece já no encaixe
         st.restante -= ELET[tipo]; grafico.contadorValor(n, st.restante); grafico.pulsaContador(n);   // o contador diminui
         if (st.restante === 0){                                                      // nível completo
           st.feito = true; cards.forEach(c2 => c2.classList.remove('arrastavel'));
@@ -4571,11 +4588,13 @@ const Atomo = (() => {
     /* zoom da tela (só o modo edição usa) */
     /* com as camadas de Bohr na tela, a pinça muda só o tamanho do conjunto das camadas (o núcleo fica igual) */
     zoomPor(f){
-      if (camadasNaTela()){ escalaCamadas = Math.min(2.5, Math.max(.4, escalaCamadas * f)); ruth.conj.scale.setScalar(escalaCamadas); return; }
+      if (graficoNaTela()){ escalaGrafico = Math.min(2.5, Math.max(.4, escalaGrafico * f)); fatorGrafico = 1; aplicaEscalaConj(); return; }   // gráfico: tudo junto (degraus, eixos, letras)
+      if (camadasNaTela()){ escalaCamadas = Math.min(2.5, Math.max(.4, escalaCamadas * f)); aplicaEscalaConj(); return; }
       zoomGesto = Math.min(2.5, Math.max(.5, zoomGesto * f));
     },
     get zoom(){ return zoomGesto; },
     get escalaCamadas(){ return escalaCamadas; },
+    get escalaGrafico(){ return escalaGrafico; },
   };
 })();
 document.addEventListener('visibilitychange', () => {
@@ -4868,7 +4887,7 @@ const Edicao = (() => {
     calaTudo();                  // e cala o que estiver tocando (digitação, efeitos)
     mutaTudo(true);              // e deixa tudo no mudo, por garantia
     document.body.classList.add('editando');
-    zoomAntes = Atomo.zoom; camadasAntes = Atomo.escalaCamadas;
+    zoomAntes = Atomo.zoom; camadasAntes = Atomo.escalaCamadas; graficoAntes = Atomo.escalaGrafico;
     const lista = candidatos();
     lista.forEach(el => {
       if (!itens.has(el)) itens.set(el, { antes: textoDe(el), proprioAntes: textoProprio(el), fonteAntes: parseFloat(getComputedStyle(el).fontSize), posAntes: el.style.translate || '', desc: descreve(el) });
@@ -4904,6 +4923,7 @@ const Edicao = (() => {
     });
     if (Math.abs(Atomo.zoom - zoomAntes) > .01) linhas.push(`• zoom da tela (átomo 3D): ${zoomAntes.toFixed(2)} → ${Atomo.zoom.toFixed(2)}`);
     if (Math.abs(Atomo.escalaCamadas - camadasAntes) > .005) linhas.push(`• tamanho das camadas (conjunto): ${camadasAntes.toFixed(2)} → ${Atomo.escalaCamadas.toFixed(2)}`);
+    if (Math.abs(Atomo.escalaGrafico - graficoAntes) > .005) linhas.push(`• tamanho do gráfico (conjunto): ${graficoAntes.toFixed(2)} → ${Atomo.escalaGrafico.toFixed(2)}`);
     if (!linhas.length) return '';
     return `ALTERAÇÕES DO MODO EDIÇÃO · v${APP_VERSAO} · tela ${innerWidth}×${innerHeight}\n\n` + linhas.join('\n');
   }
@@ -4959,7 +4979,7 @@ const Edicao = (() => {
      · 2 dedos sobre um texto: pinça muda o tamanho
      · fora dos textos: nada chega ao app (átomo não gira, botões não funcionam) */
   const UI_EDICAO = '#barraEdicao, #painelEdicao, #versao';
-  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, zoomAntes = 1, camadasAntes = 1;
+  const dedos = new Map(); let pinca = null, arrasto = null, zoomTela = null, zoomAntes = 1, camadasAntes = 1, graficoAntes = 1;
   const lerDesloc = el => { const p = (el.style.translate || '0px 0px').split(' ').map(parseFloat); return { x: p[0] || 0, y: p[1] || 0 }; };
   document.addEventListener('pointerdown', e => {
     if (!ativo || e.target.closest(UI_EDICAO)) return;
