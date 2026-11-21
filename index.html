@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.79';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.80';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -917,7 +917,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.4', 'audio_distribuição_8.5'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.6'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -964,6 +964,13 @@ function depoisDo1s2(){
   if (atual !== 'audio_distribuição_8.3') return;
   if (!audio.ended){ pendente8_4 = true; return; }
   tocaDepois(1200, 'audio_distribuição_8.4');                                 // um respiro depois do encaixe
+}
+/* áudio 8.5: o 2º nível ficou completo → começa o 8.6 depois que os degraus flutuam (se o 8.5 ainda tocar, espera ele acabar) */
+let pendente8_6 = false;
+function depoisDoNivel2(){
+  if (atual !== 'audio_distribuição_8.5') return;
+  if (!audio.ended){ pendente8_6 = true; return; }
+  tocaDepois(2200, 'audio_distribuição_8.6');
 }
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
 const EVENTOS = {
@@ -1226,7 +1233,7 @@ const EVENTOS = {
   ],
   'audio_distribuição_8.5': [
     /* desde o começo (e depois do fim), o aluno pode arrastar qualquer cartão até os degraus do nível L */
-    { t: .05,  acao: () => Atomo.montaNivel(2, 8) },
+    { t: .05,  acao: () => Atomo.montaNivel(2, 8, depoisDoNivel2) },             // completo → 8.6
     { t: 1.0,  acao: () => Atomo.destacaNivel(2, 1000) },                       // L e seus degraus aumentam com brilho (1 s)
     { t: 2.5,  acao: () => Atomo.textoNivel(2) },                               // o L apaga e "2º nível" é digitado no lugar dele (como o 1º)
     { t: 6.0,  acao: () => Atomo.eletronsNivel(2, 8) },                         // "8e⁻" à direita do L
@@ -1240,6 +1247,17 @@ const EVENTOS = {
     { t: 17.5, acao: () => Atomo.circuloContador(2, true) },                    // círculo amarelo em volta do "8e⁻"
     { t: 19.0, acao: () => Atomo.circuloContador(2, false) },
     { t: 21.0, acao: () => Atomo.destacaNivel(2, 1000, false) },                // os 2 degraus do L aumentam com brilho (1 s)
+    /* fim: se o aluno já completou o nível, o 8.6 começa (senão, começa quando ele completar) */
+    { t: 'fim', acao: () => { if (pendente8_6){ pendente8_6 = false; tocaDepois(1500, 'audio_distribuição_8.6'); } else escondePlay(true); } },
+  ],
+  'audio_distribuição_8.6': [
+    { t: .05,  acao: () => escondePlay(false) },
+    /* rótulos 2s² e 2p⁶: destaca uma peça por vez (a anterior diminui) */
+    { t: 4.0,  acao: () => Atomo.realcaPartes(2, [[0, 2]]) },                   // o "2" de cima do s
+    { t: 5.0,  acao: () => Atomo.realcaPartes(2, [[0, 1]]) },                   // o "s"
+    { t: 6.0,  acao: () => Atomo.realcaPartes(2, [[1, 2]]) },                   // o "6" de cima do p
+    { t: 7.7,  acao: () => Atomo.realcaPartes(2, [[1, 1]]) },                   // o "p"
+    { t: 9.0,  acao: () => Atomo.realcaPartes(2, [[0, 0], [1, 0]], 2000) },     // o "2" da frente dos dois subníveis (2 s)
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -1676,7 +1694,7 @@ function abreSecao(id){
   pausaNarracao();          // corta o áudio da capa, se estiver tocando
   limpaCapa();
   if (id === 'pagina1'){  // a página 1 sempre começa do início
-    Atomo.reset(); atual = null; $('#barra').style.width = '0'; botaoOk(false); btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha(); Equacoes.para(true); Postulado.limpa(); pendente7_4 = false; pendente8_4 = false;
+    Atomo.reset(); atual = null; $('#barra').style.width = '0'; botaoOk(false); btnPlay.classList.add('chama'); escondePlay(false); mostraToque(false); Quiz.fecha(); Equacoes.para(true); Postulado.limpa(); pendente7_4 = false; pendente8_4 = false; pendente8_6 = false;
     Intro.inicia();       // abertura: átomo escurecido + cartões de subníveis, até o play
   }
   viraCubo('capa', id);
@@ -1867,7 +1885,7 @@ $('#lista').addEventListener('click', e => {
   cancelaPausaRoteiro();
   fechaSumario();
   mostra(c.pagina);
-  escondePlay(false); mostraToque(false); Quiz.fecha(); Intro.para(); botaoOk(false); Equacoes.para(true); Postulado.limpa(); pendente7_4 = false; pendente8_4 = false;
+  escondePlay(false); mostraToque(false); Quiz.fecha(); Intro.para(); botaoOk(false); Equacoes.para(true); Postulado.limpa(); pendente7_4 = false; pendente8_4 = false; pendente8_6 = false;
   carrega(c.audio, c.inicio);
   if (c.prepara) c.prepara();
   audio.play().catch(() => {});
@@ -4139,6 +4157,16 @@ const Atomo = (() => {
     textoNivel(n = 1, ja = false){ if (pronto && grafico) grafico.textoNivel(n, 900, ja); },   // a letra apaga e "1º nível" é digitado no lugar
     /* a peça k do rótulo do degrau (0 o número · 1 a letra · 2 o expoente) aumenta e as outras diminuem.
        segura = null: fica aumentada · número: volta ao normal depois de "segura" ms */
+    /* destaca as peças [j, k] listadas dos rótulos do nível n (as outras do nível diminuem); segura: ms até as listadas diminuírem */
+    realcaPartes(n, lista, segura = null){
+      if (!pronto || !grafico) return;
+      const L = grafico.niveis[n - 1]; if (!L) return;
+      for (let j = 0; j < L.m; j++) for (let q = 0; q < 3; q++){
+        const h0 = grafico.parteH(n, j, q), alvo = lista.some(([a, b]) => a === j && b === q) ? 1 : 0;
+        if (Math.abs(h0 - alvo) > .001) anima(250, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t));
+      }
+      if (segura !== null) agenda(250 + segura, () => lista.forEach(([j, q]) => anima(250, t => grafico.parteRotulo(n, j, q, 1 - t))));
+    },
     realcaParte(k, n = 1, j = 0, segura = null){
       if (!pronto || !grafico) return;
       [0, 1, 2].forEach(q => {
@@ -4268,16 +4296,17 @@ const Atomo = (() => {
         st.arrastando = false; st.clone = null; st.card = null; st.postos.add(tipo);
         c.animate([{ transform: c.style.transform, opacity: 1 }, { transform: `translate(${b.x}px, ${b.y}px) translate(-50%, -50%) scale(.3)`, opacity: 0 }],
           { duration: 280, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'forwards' }).finished.then(() => c.remove()).catch(() => c.remove());
-        card.classList.remove('vazio');                                              // o cartão de baixo volta
+        /* o cartão de baixo fica vazio (sem outro s² na origem) até o nível inteiro ficar pronto */
         grafico.encaixaBloco(n, j, 250); grafico.mostraRotulo(n, j); sfx("right");     // o rótulo (2s², 2p⁶…) aparece já no encaixe
         st.restante -= ELET[tipo]; grafico.contadorValor(n, st.restante); grafico.pulsaContador(n);   // o contador diminui
         if (st.restante === 0){                                                      // nível completo
           st.feito = true; cards.forEach(c2 => c2.classList.remove('arrastavel'));
           agenda(500, () => { grafico.limpaNivel(n); grafico.flutua(n); aoCompletar && aoCompletar(); });
+          agenda(2100, () => cards.forEach(c2 => c2.classList.remove('vazio')));     // os cartões voltam depois que os degraus flutuam
         }
       };
       const desce = e => {
-        if (st.feito || st.arrastando) return;
+        if (st.feito || st.arrastando || st.postos.has(e.currentTarget.dataset.t)) return;   // cartão já usado (vazio) não arrasta
         const card = e.currentTarget; e.preventDefault();
         st.arrastando = true; st.card = card; st.clone = clona(card); card.classList.add('vazio');
         move(e);
@@ -4928,6 +4957,11 @@ const Retomar = (() => {
     },
     /* como o 8.4 terminou: "1º nível" no lugar do K */
     "audio_distribuição_8.5": () => { INICIO["audio_distribuição_8.4"](); },
+    /* como o 8.5 terminou: o 2º nível montado (2s², 2p⁶ nas alturas de energia) e "2º nível" no lugar do L */
+    'audio_distribuição_8.6': () => {
+      INICIO['audio_distribuição_8.5']();
+      Atomo.textoNivel(2, true); Atomo.blocoNoDegrau(2, 0); Atomo.blocoNoDegrau(2, 1); Atomo.nivelFlutua(2, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
+    },
   };
   function salva(){
     try {
