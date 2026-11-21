@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.85';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.86';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1212,7 +1212,7 @@ const EVENTOS = {
     { t: 40.0, acao: () => Atomo.cartaoDestaque('d') },
     { t: 41.4, acao: () => Atomo.cartaoDestaque('f') },
     { t: 43.4, acao: () => Atomo.cartaoDestaque(null) },
-    { t: 45.0, acao: () => Atomo.destacaTextoNivel(1, 1000) },                 // o "1º nível" aumenta
+    { t: 45.0, acao: () => { Atomo.destacaTextoNivel(1, 1000); Atomo.focoNivel(1); } },   // o "1º nível" aumenta; do 2º nível para cima escurece (foco no 1º)
     { t: 47.8, acao: () => Atomo.destacaTextoNivel(1, 1450) },                 // aumenta de novo e diminui aos 49 s…
     { t: 49.0, acao: () => Atomo.seguraTotal(1) },                             // …quando o "2e⁻" aumenta (fica assim até o s² encaixar)
     /* 52 s: o aluno já pode arrastar o s² até o degrau do 1º nível; 55 s: a mãozinha aparece e aos 55,5 s finge arrastar (repete a cada 3 s) */
@@ -1243,6 +1243,7 @@ const EVENTOS = {
   'audio_distribuição_8.5': [
     /* desde o começo (e depois do fim), o aluno pode arrastar qualquer cartão até os degraus do nível L */
     { t: .05,  acao: () => Atomo.montaNivel(2, 8, depoisDoNivel2) },             // completo → 8.6
+    { t: .05,  acao: () => Atomo.focoNivel(0) },                                 // o gráfico inteiro volta a acender
     { t: 1.0,  acao: () => Atomo.destacaNivel(2, 1000) },                       // L e seus degraus aumentam com brilho (1 s)
     { t: 2.5,  acao: () => Atomo.textoNivel(2) },                               // o L apaga e "2º nível" é digitado no lugar dele (como o 1º)
     { t: 6.0,  acao: () => Atomo.seguraTotal(2) },                              // o "8e⁻" embaixo do "2º nível" aumenta (fica assim até o nível ficar completo)
@@ -3188,6 +3189,7 @@ const Atomo = (() => {
         const aplica = L => {
           const y0 = yN(L.n), h = H0, W = GX1 - GX0, Wc = W / 4;
           const A = ajusteNivel[L.n - 1];                                                  // ajuste do modo edição (degraus deste nível)
+          const esc = 1 - .8 * (L.dim || 0);                                              // escurecido (foco em outro nível)
           L.tiras.forEach((t, j) => {
             const xa = (GX0 + GX1) / 2, wa = W, ya = y0 + (j - (L.m - 1) / 2) * H0;          // empilhada (linha grossa)
             const xb = GX0 + (j + .5) * Wc, wb = Wc - GAP;                                   // degrau: coluna do subnível…
@@ -3196,19 +3198,19 @@ const Atomo = (() => {
             t.position.set(xa + (xb - xa) * L.d + A.x, y + A.y, .02);
             const hl = L.hl[j];
             t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl) * A.s, h * (1 + 1.4 * hl) * A.s, 1);
-            t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar(1 + .9 * L.p + 1.1 * hl);   // cor do nível; a do bloco quando encaixado; acende no destaque
+            t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar((1 + .9 * L.p + 1.1 * hl) * esc);   // cor do nível; a do bloco quando encaixado; acende no destaque
             t.material.opacity = L.op; t.visible = L.op > .01;
             const op = L.rot[j] * L.op;                                                         // rótulo "3d¹⁰" logo acima do degrau
             L.rotulos[j].partes.forEach(P => {
               const f = 1 + .55 * P.h;                                                         // peça em destaque: maior e mais clara
               const R = ROT_ESC * A.s;                                                         // rótulo um pouco maior (+3 px na tela, v0.77)
               P.s.position.set(xb + P.dx * R + A.x, y + .7 * A.s + A.y, .03); P.s.scale.set(P.w * U * f * R, 96 * U * f * R, 1);
-              P.s.material.opacity = op; P.s.visible = op > .01; P.s.material.color.setScalar(1 + .8 * P.h);
+              P.s.material.opacity = op; P.s.visible = op > .01; P.s.material.color.setScalar((1 + .8 * P.h) * esc);
             });
           });
           /* brilho da linha (na cor do nível) */
           L.glow.position.set((GX0 + GX1) / 2 + A.x, y0 + L.b + A.y, .01); L.glow.scale.set(W + 1.4, 1.5 * A.s, 1);
-          L.glow.material.opacity = .95 * L.p * L.op; L.glow.visible = L.p > .01 && L.op > .01;
+          L.glow.material.opacity = .95 * L.p * L.op * esc; L.glow.visible = L.p > .01 && L.op > .01;
           /* a letra fica no eixo, na altura do nível; quando os degraus flutuam (Aufbau) ela sai — os rótulos dos degraus a substituem */
           const it = letras.itens[L.n - 1];
           if (it && it.noGrafico){
@@ -3314,8 +3316,8 @@ const Atomo = (() => {
             const dir = Math.min(cx + wL / 2, XEIXO + ajusteEixos.x - .12), esqL = cx - wL / 2;
             let w = dir - esqL, h = w / T.asp; if (h > hL){ h = hL; w = h * T.asp; }
             const g = .85 * tamNivel() * (1 + .25 * (T.h || 0));                                       // 85% do espaço (sobra para o destaque crescer em volta do centro) · destaque +25% e brilho
-            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w * .85 * tamNivel() / 2, yN(n) + AL.y, .3);   /* borda direita (sem destaque) antes do eixo */ T.s.material.color.setScalar(1 + .8 * (T.h || 0));
-            T.bx = dir - w * .85 * tamNivel() / 2; T.by = yN(n) + AL.y; T.bh = h * .85 * tamNivel();                        // posição/altura sem destaque (o total fica embaixo)
+            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w * .85 * tamNivel() / 2, yN(n) + AL.y, .3);   /* borda direita (sem destaque) antes do eixo */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[n - 1].dim || 0)));
+            T.n = n; T.bx = dir - w * .85 * tamNivel() / 2; T.by = yN(n) + AL.y; T.bh = h * .85 * tamNivel();                        // posição/altura sem destaque (o total fica embaixo)
           },
           /* total de elétrons que cabem no nível n ("2e⁻", "8e⁻", "18e⁻"…), digitado embaixo do "Nº nível" */
           totais: [],
@@ -3349,7 +3351,7 @@ const Atomo = (() => {
           },
           posTotal(T, TN){
             const hT = TN.bh * 1.25, g = 1 + .35 * (T.h || 0);
-            T.s.scale.set(hT * 2.6 * g, hT * g, 1); T.s.position.set(TN.bx, TN.by - TN.bh * 1.05 - (g - 1) * hT * .5, .3);   /* cresce para baixo (não cobre o "Nº nível") */ T.s.material.color.setScalar(1 + .8 * (T.h || 0));
+            T.s.scale.set(hT * 2.6 * g, hT * g, 1); T.s.position.set(TN.bx, TN.by - TN.bh * 1.05 - (g - 1) * hT * .5, .3);   /* cresce para baixo (não cobre o "Nº nível") */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[TN.n - 1].dim || 0)));
           },
           /* degraus de baixo para cima (pela altura na tela) */
           degrausDeBaixo: () => niveis.flatMap(L => L.tiras.map((t, j) => ({ n: L.n, j, y: t.position.y }))).sort((a, b) => a.y - b.y),
@@ -3559,6 +3561,7 @@ const Atomo = (() => {
             niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; T.h = 0; } });   // "1º nível"…
             grafico.totais.forEach(T => { if (T){ T.s.visible = false; T.h = 0; } });      // totais "2e⁻"… embaixo dos níveis
+            niveis.forEach(L => { L.dim = 0; });                                           // sem escurecimento
           },
         };
       }
@@ -4249,6 +4252,15 @@ const Atomo = (() => {
       grafico.textoNivel(n, 900, ja);
     },
     /* ----- áudio 8.3 (novo roteiro) ----- */
+    /* foco no nível n: os outros níveis escurecem (degraus, rótulos, "Nº nível" e totais). n = 0: todos voltam ao normal */
+    focoNivel(n = 0, dur = 600, ja = false){
+      if (!pronto || !grafico) return;
+      grafico.niveis.forEach(L => {
+        const d0 = L.dim || 0, alvo = n && L.n !== n ? 1 : 0; if (Math.abs(d0 - alvo) < .001) return;
+        if (ja){ L.dim = alvo; grafico.reaplica(L); return; }
+        anima(dur, k => { L.dim = d0 + (alvo - d0) * k; grafico.reaplica(L); });
+      });
+    },
     /* onda nos cartões s → p → d → f (e volta, se vaiVolta): o próximo aumenta, o anterior volta ao normal */
     ondaCartoes(total = 2000, vaiVolta = true){
       const seq = vaiVolta ? ['s', 'p', 'd', 'f', 'd', 'p', 's'] : ['s', 'p', 'd', 'f'], passo = total / seq.length;
@@ -5121,7 +5133,7 @@ const Retomar = (() => {
     /* como o 8.3 terminou: "1º nível"… no lugar das letras, os totais embaixo (menos o do 1º) e o 1s² encaixado */
     'audio_distribuição_8.4': () => {
       INICIO['audio_distribuição_8.3']();
-      Atomo.niveisNoLugar(0, true); Atomo.totaisNiveis(0, true); Atomo.blocoNoDegrau(1, 0); Atomo.nivelFecha(1, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
+      Atomo.niveisNoLugar(0, true); Atomo.totaisNiveis(0, true); Atomo.focoNivel(1, 0, true); Atomo.blocoNoDegrau(1, 0); Atomo.nivelFecha(1, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
     },
     /* como o 8.4 terminou: "1º nível" no lugar do K */
     "audio_distribuição_8.5": () => { INICIO["audio_distribuição_8.4"](); },
