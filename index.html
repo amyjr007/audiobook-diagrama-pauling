@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.75';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.76';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1193,6 +1193,7 @@ const EVENTOS = {
     { t: 7.0,  acao: () => Atomo.destacaDegrau("primeiro", 1200) },            // o de baixo (1s) aumenta e brilha
     { t: 8.5,  acao: () => Atomo.destacaDegrau("ultimo", 1200) },              // o mais energético (o mais alto) aumenta e brilha
     { t: 15.8, acao: () => Atomo.pulsaLetra(0) },                              // a letra K (no eixo) pulsa
+    { t: 17.0, acao: () => Atomo.textoNivel(1) },                              // o K apaga e "1º nível" é digitado no lugar dele
     { t: 19.0, acao: () => Atomo.eletronsK(700) },                             // "2e⁻" digitado à direita do K (o K se afasta)
     { t: 22.5, acao: () => Atomo.pulsaEletronsK(2) },                          // o "2e⁻" pulsa 2 vezes
     { t: 26.0, acao: () => Atomo.cartaoDestaque('s') },                        // o cartão s² aumenta por 2 s
@@ -1206,7 +1207,6 @@ const EVENTOS = {
   ],
   'audio_distribuição_8.4': [
     { t: .05,  acao: () => escondePlay(false) },
-    { t: 2.0,  acao: () => Atomo.textoNivel(1) },                              // "1º nível" onde ficava o K
     /* rótulo 1s²: aumenta o "1", depois o "s", depois o "2" (o anterior diminui; o último aumenta e diminui em 0,5 s) */
     { t: 4.5,  acao: () => Atomo.realcaParte(0) },
     { t: 5.0,  acao: () => Atomo.realcaParte(1) },
@@ -3166,8 +3166,9 @@ const Atomo = (() => {
             const AL = ajusteLetra[L.n - 1];                                               // ajuste do modo edição (esta letra)
             it.s.position.set(XLETRA + (it.dx || 0) + AL.x, y0 + L.b + AL.y, .25);
             const f = (1 - .195 * L.d) * AL.s; it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
-            it.s.material.opacity = 1 - L.a; it.s.visible = L.a < .99;
+            it.s.material.opacity = (1 - L.a) * (1 - (it.apaga || 0)); it.s.visible = it.s.material.opacity > .01;   // apaga: a letra deu lugar ao "1º nível"
           }
+          if (grafico && grafico.posExtras) grafico.posExtras(L);                          // "2e⁻", "Nª camada", "1º nível" acompanham o nível
         };
         /* k = 0 círculo → 1 linha; no fim a linha fina dá lugar à barra (com a espessura dos subníveis) */
         const morfa = (C, n, k) => {
@@ -3231,20 +3232,37 @@ const Atomo = (() => {
           parteH: (n, j, k) => { const L = niveis[n - 1]; return L && j < L.m ? L.rotulos[j].partes[k].h : 0; },
           /* "1º nível" (na cor da camada), no lugar onde ficava a letra do nível, à esquerda do eixo */
           textosNivel: [],
-          textoNivel(n, dur = 600){
+          /* a letra do nível n some e "Nº nível" é digitado no lugar dela (com som de digitação) */
+          textoNivel(n, dur = 900, ja = false){
+            const it = letras.itens[n - 1], L = niveis[n - 1];
             let T = this.textosNivel[n - 1];
             if (!T){
-              const c = document.createElement('canvas'), x = c.getContext('2d'), hex = '#' + niveis[n - 1].cor.getHexString(), txt = n + 'º nível';
-              x.font = '700 46px "Space Grotesk", sans-serif'; c.width = Math.ceil(x.measureText(txt).width) + 24; c.height = 80;
-              x.font = '700 46px "Space Grotesk", sans-serif'; x.textBaseline = 'middle'; x.shadowColor = hex; x.shadowBlur = 10; x.fillStyle = hex; x.fillText(txt, 12, 42);
-              const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
-              s.renderOrder = 7; conj.add(s);
-              T = this.textosNivel[n - 1] = { s, w: c.width * U, h: c.height * U };
+              const c = document.createElement('canvas'), x = c.getContext('2d'), hex = '#' + L.cor.getHexString(), txt = n + 'º nível';
+              x.font = '700 64px "Space Grotesk", sans-serif'; c.width = Math.ceil(x.measureText(txt).width) + 24; c.height = 92;
+              const tex = new THREE.CanvasTexture(c);
+              const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 1, depthWrite: false, depthTest: false }));
+              s.renderOrder = 7; s.visible = false; conj.add(s);
+              const desenha = q => {
+                x.clearRect(0, 0, c.width, c.height); x.font = '700 64px "Space Grotesk", sans-serif'; x.textBaseline = 'middle';
+                x.shadowColor = hex; x.shadowBlur = 10; x.fillStyle = hex; x.fillText(txt.slice(0, q), 12, 48); tex.needsUpdate = true;
+              };
+              T = this.textosNivel[n - 1] = { s, desenha, txt, asp: c.width / c.height };
             }
-            T.s.scale.set(T.w, T.h, 1);
-            T.s.position.set(XEIXO - .3 - T.w / 2, yN(n), .3);                           // termina um pouco antes do eixo
-            T.s.visible = true;
-            anima(dur, k => { T.s.material.opacity = k; });
+            T.s.visible = true; T.s.material.opacity = 1;
+            if (ja){ if (it) it.apaga = 1; T.desenha(T.txt.length); aplica(L); return; }
+            T.desenha(0); aplica(L);
+            anima(250, k => { if (it){ it.apaga = k; aplica(L); } }, () => {             // a letra apaga…
+              comecaSom();                                                               // …e o texto é digitado
+              anima(dur, k => T.desenha(Math.ceil(k * T.txt.length)), () => { T.desenha(T.txt.length); paraSom(); }, k => k);
+            });
+          },
+          /* "Nº nível" ocupa o espaço da letra: da borda esquerda dela até pouco antes do eixo, sem passar da altura dela */
+          medeTextoNivel(n, T){
+            const L = niveis[n - 1], AL = ajusteLetra[n - 1], f = (1 - .195 * L.d) * AL.s;
+            const wL = letras.BASE.x * f, hL = letras.BASE.y * f, cx = XLETRA + AL.x;
+            const dir = Math.min(cx + wL / 2, XEIXO + ajusteEixos.x - .12), esqL = cx - wL / 2;
+            let w = dir - esqL, h = w / T.asp; if (h > hL){ h = hL; w = h * T.asp; }
+            T.s.scale.set(w, h, 1); T.s.position.set(dir - w / 2, yN(n) + AL.y, .3);
           },
           /* degraus de baixo para cima (pela altura na tela) */
           degrausDeBaixo: () => niveis.flatMap(L => L.tiras.map((t, j) => ({ n: L.n, j, y: t.position.y }))).sort((a, b) => a.y - b.y),
@@ -3263,14 +3281,27 @@ const Atomo = (() => {
             };
             return { s, desenha, op: 0 };
           })(),
-          /* coloca o "2e⁻" à direita da letra K; a letra se afasta para a esquerda enquanto ele é digitado */
+          /* à direita dos degraus do nível n (borda direita do último degrau + folga), na altura dele */
+          ladoDir(n){
+            const L = niveis[n - 1], A = ajusteNivel[n - 1], Wc = (GX1 - GX0) / 4, t = L.tiras[L.m - 1];
+            return { x: GX0 + (L.m - .5) * Wc + A.x + (Wc - GAP) * A.s / 2 + .3, y: t.position.y };
+          },
+          /* posiciona o que fica ao lado do nível: "2e⁻"/"Ne⁻" e "Nª camada" à direita dos degraus; "1º nível" no lugar da letra */
+          posExtras(L){
+            const n = L.n, P = this.ladoDir(n), esq = s => P.x + s.scale.x / 2;         // borda esquerda fixa (o número cresce para a direita)
+            if (n === 1 && this.eK) this.eK.s.position.set(esq(this.eK.s), P.y, .3);
+            const C = this.contadores[n]; if (C) C.s.position.set(esq(C.s), P.y, .3);
+            const O = this.circulos[n]; if (O && C) O.l.position.copy(C.s.position);
+            const T = this.textosCamada[n]; if (T) T.s.position.set(P.x + EK_W * 1.3 + .2 + T.s.scale.x / 2, P.y, .3);   // depois do lugar do contador
+            const TN = this.textosNivel && this.textosNivel[n - 1]; if (TN) this.medeTextoNivel(n, TN);
+          },
+          /* coloca o "2e⁻" à direita dos degraus do K (a letra K não se mexe) */
           eletronsK(dur = 700, ja = false){
-            const it = letras.itens[0], E = this.eK, L = niveis[0];
-            const posiciona = () => { const AL = ajusteLetra[0]; E.s.position.set(XLETRA + (it.dx || 0) + AL.x + letras.BASE.x * .4 * AL.s + 1.05, yN(1) + L.b + AL.y, .3); };
+            const E = this.eK, L = niveis[0];
             E.s.visible = true; E.op = 1; E.s.material.opacity = 1 - L.a;
-            if (ja){ it.dx = -.45; E.desenha(3); aplica(L); posiciona(); return; }
-            E.desenha(0);
-            anima(dur, k => { it.dx = -.45 * k; E.desenha(Math.ceil(k * 3)); aplica(L); posiciona(); }, () => { E.desenha(3); posiciona(); }, k => k);
+            if (ja){ E.desenha(3); aplica(L); return; }
+            E.desenha(0); aplica(L);
+            anima(dur, k => E.desenha(Math.ceil(k * 3)), () => E.desenha(3), k => k);
           },
           /* "2e⁻" pulsa (cresce e brilha) "vezes" vezes seguidas */
           pulsaEletronsK(vezes = 1){
@@ -3301,19 +3332,16 @@ const Atomo = (() => {
               if (nCar > num.length){ const w = x.measureText(num).width; x.font = '700 40px "Space Grotesk", sans-serif'; x.fillText('−', 14 + w + 2, 40); }
               tex.needsUpdate = true;
             };
-            C.posiciona = () => {
-              const it = letras.itens[n - 1], AL = ajusteLetra[n - 1], esq = XLETRA + (it.dx || 0) + AL.x + letras.BASE.x * .4 * AL.s + 1.05 - EK_W / 2;   // mesma borda esquerda do "2e⁻"
-              s.position.set(esq + s.scale.x / 2, yN(n) + niveis[n - 1].b + AL.y, .3);
-            };
+            C.posiciona = () => grafico.posExtras(niveis[n - 1]);                       // à direita dos degraus do nível
             return C;
           },
-          /* digita "Ne⁻" à direita da letra do nível n; a letra se afasta para a esquerda */
+          /* digita "Ne⁻" à direita dos degraus do nível n (a letra não se mexe) */
           eletronsNivel(n, total, dur = 700, ja = false){
-            const it = letras.itens[n - 1], C = this.contador(n), L = niveis[n - 1], nCar = String(total).length + 2;
+            const C = this.contador(n), L = niveis[n - 1], nCar = String(total).length + 2;
             C.s.visible = true; C.s.material.opacity = 1;
-            if (ja){ it.dx = -.45; C.desenha(total); aplica(L); C.posiciona(); return; }
-            C.desenha(total, 0);
-            anima(dur, k => { it.dx = -.45 * k; C.desenha(total, Math.ceil(k * nCar)); aplica(L); C.posiciona(); }, () => { C.desenha(total); C.posiciona(); }, k => k);
+            if (ja){ C.desenha(total); aplica(L); return; }
+            C.desenha(total, 0); aplica(L);
+            anima(dur, k => C.desenha(total, Math.ceil(k * nCar)), () => C.desenha(total), k => k);
           },
           contadorValor(n, v){ const C = this.contador(n); C.desenha(v); C.posiciona(); },
           /* "Ne⁻" pulsa (cresce e brilha) */
@@ -3339,9 +3367,7 @@ const Atomo = (() => {
               x.font = '700 44px "Space Grotesk", sans-serif'; x.textBaseline = 'middle'; x.shadowColor = hex; x.shadowBlur = 10; x.fillStyle = '#eef1ff';
               x.fillText(txt.slice(0, q), 10, 42); T.tex.needsUpdate = true;
             };
-            const L = niveis[n - 1], Wc = (GX1 - GX0) / 4, xDir = GX0 + L.m * Wc - GAP / 2;
-            T.s.position.set(xDir + .35 + T.s.scale.x / 2, yN(n) + (L.m - 1) * DEG_IN / 2, .3);
-            T.s.visible = true; T.s.material.opacity = 1;
+            T.s.visible = true; T.s.material.opacity = 1; aplica(niveis[n - 1]);       // à direita dos degraus, depois do lugar do "Ne⁻"
             desenha(0);
             anima(dur, k => desenha(Math.ceil(k * txt.length)), () => desenha(txt.length), k => k);
           },
@@ -3414,7 +3440,7 @@ const Atomo = (() => {
             ({ GX0, GX1, XEIXO, XLETRA } = PADRAO); TOPO_DEG = GY1 + 3.6; ajustaTopo(); posEixos();
             fatorGrafico = 0; aplicaEscalaConj();                                     // tamanho do átomo de novo
             setaAte(1); vert.material = ponta.material = matEixo;
-            if (letras) letras.itens.forEach(it => { it.noGrafico = false; it.dx = 0; });
+            if (letras) letras.itens.forEach(it => { it.noGrafico = false; it.dx = 0; it.apaga = 0; });
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
             [grafico.contadores, grafico.textosCamada].forEach(M => Object.values(M).forEach(o => { o.s.visible = false; o.s.material.opacity = 0; }));
             Object.values(grafico.circulos).forEach(O => { O.l.visible = false; });
@@ -4102,7 +4128,7 @@ const Atomo = (() => {
     },
     seguraEletronsK(dur = 2000){ if (pronto && grafico) grafico.seguraEletronsK(dur); },
     /* ----- áudio 8.4 ----- */
-    textoNivel(n = 1){ if (pronto && grafico) grafico.textoNivel(n); },                // "1º nível" no lugar do K
+    textoNivel(n = 1, ja = false){ if (pronto && grafico) grafico.textoNivel(n, 900, ja); },   // a letra apaga e "1º nível" é digitado no lugar
     /* a peça k do rótulo do degrau (0 o número · 1 a letra · 2 o expoente) aumenta e as outras diminuem.
        segura = null: fica aumentada · número: volta ao normal depois de "segura" ms */
     realcaParte(k, n = 1, j = 0, segura = null){
@@ -4885,10 +4911,10 @@ const Retomar = (() => {
     /* como o 8.3 terminou: o 1s² já encaixado (degrau na cor do s, rótulo "1s²", K fora do eixo) */
     'audio_distribuição_8.4': () => {
       INICIO['audio_distribuição_8.3']();
-      Atomo.eletronsK(0, true); Atomo.blocoNoDegrau(1, 0); Atomo.nivelFlutua(1, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
+      Atomo.textoNivel(1, true); Atomo.eletronsK(0, true); Atomo.blocoNoDegrau(1, 0); Atomo.nivelFlutua(1, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
     },
     /* como o 8.4 terminou: "1º nível" no lugar do K */
-    "audio_distribuição_8.5": () => { INICIO["audio_distribuição_8.4"](); Atomo.textoNivel(1); Atomo.avancaTudo(); },
+    "audio_distribuição_8.5": () => { INICIO["audio_distribuição_8.4"](); },
   };
   function salva(){
     try {
