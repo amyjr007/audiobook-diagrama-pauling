@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.87';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.88';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -4261,12 +4261,15 @@ const Atomo = (() => {
     rotuloDestaque(n, j, on = true, dur = 250){
       if (!pronto || !grafico) return;
       [0, 1, 2].forEach(q => { const h0 = grafico.parteH(n, j, q), alvo = on ? 1 : 0; anima(dur, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t)); });
+      const d0 = grafico.niveis[n - 1].hl[j], dA = on ? 1 : 0; anima(dur, t => grafico.hlDegrau(n, j, d0 + (dA - d0) * t));   // o degrau aumenta junto
     },
     /* rótulo do degrau j do nível n pulsa (aumenta e volta) */
     pulsaRotulo(n, j, dur = 700){
       if (!pronto || !grafico) return;
       const h0 = [0, 1, 2].map(q => grafico.parteH(n, j, q));
-      anima(dur, t => { const p = Math.sin(Math.PI * t); [0, 1, 2].forEach(q => grafico.parteRotulo(n, j, q, Math.max(h0[q], p))); }, () => [0, 1, 2].forEach(q => grafico.parteRotulo(n, j, q, h0[q])), t => t);
+      const d0 = grafico.niveis[n - 1].hl[j];                                         // o degrau pulsa junto
+      anima(dur, t => { const p = Math.sin(Math.PI * t); [0, 1, 2].forEach(q => grafico.parteRotulo(n, j, q, Math.max(h0[q], p))); grafico.hlDegrau(n, j, Math.max(d0, p)); },
+        () => { [0, 1, 2].forEach(q => grafico.parteRotulo(n, j, q, h0[q])); grafico.hlDegrau(n, j, d0); }, t => t);
     },
     focoNivel(n = 0, dur = 600, ja = false){
       if (!pronto || !grafico) return;
