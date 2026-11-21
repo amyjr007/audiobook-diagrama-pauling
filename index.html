@@ -384,7 +384,6 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   font:700 clamp(30px,8vw,59px) "Space Grotesk",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#f4fbff;
   text-shadow:0 0 6px #fff,0 0 18px #7ce7ff,0 0 40px #9b5cff,0 0 70px #ff3bd0}
 .salto-frase.on{animation:relampago .7s linear both}
-@media (orientation:portrait) and (max-width:700px){ .salto-frase{font-size:64px;white-space:normal;text-align:center;line-height:1.05;width:92vw} }   /* celular: modo edição v0.88 (31 → 64 px), em 2 linhas para caber */
 @keyframes relampago{
   0%  {opacity:0;transform:translate(-50%,-50%) scale(.92) skewX(-8deg);filter:brightness(3)}
   6%  {opacity:1;transform:translate(-50%,-50%) scale(1.06) skewX(6deg)}
@@ -1008,12 +1007,11 @@ const EVENTOS = {
     } },
   ],
   'audio_distribuição_2': [
-    { t: .1,   acao: () => Atomo.zoomLento(1 / 1.24, 1500) },              // zoom discreto no átomo (modo edição v0.88: 1,24×)
     { t: 4.9,  acao: () => Atomo.mostraNomes(2100) },                  // nomes em sequência até 7 s
     { t: 8.0,  acao: () => Atomo.brilhaNomes(1000) },
     { t: 12.0, acao: () => Atomo.apagaNomes() },                       // "TV desligando"
-    { t: 15.0, acao: () => { Atomo.eletrosferaFina(); Atomo.digita('eq', 'nº de prótons', { cor: '#6f9bff' }); } },
-    { t: 16.0, acao: () => Atomo.zoomDiscreto() },
+    { t: 15.0, acao: () => { Atomo.digita('eq', 'nº de prótons', { cor: '#6f9bff' }); } },
+    { t: 16.0, acao: () => { Atomo.zoomDiscreto(); Atomo.someEletrosfera(900); } },   // zoom in: a eletrosfera inteira some (esfera, órbitas e elétrons)
     { t: 19.0, acao: () => Atomo.digita('eq', ' = nº atômico', { cor: '#eef1ff' }) },
     { t: 22.0, acao: () => Atomo.digita('eq', ' (Z)', { cor: '#6f9bff' }) },          // Z na cor dos prótons
     { t: 24.5, acao: () => { Atomo.zoomDiscreto2(); Atomo.apagaLinha('eq'); } },   // mais um zoom discreto; texto some
@@ -4611,7 +4609,7 @@ const Atomo = (() => {
     escurece(on){ const e = face && face.querySelector('.escurecedor'); if (e) e.classList.toggle('on', on); },
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
-    zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = Math.min(fatorCamAlvo, .82); },   // (nunca afasta: o áudio 2 já começa com um zoom de 1,24×)
+    zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
     /* cenas do número atômico e dos quizzes: o MESMO zoom suave do áudio 1 (~14 s) —
        a eletrosfera some e o foco fica nas partículas do núcleo (e assim continua no H e no C) */
     zoomDiscreto2(){ this.zoomLento(.464, 2200); },
@@ -4742,6 +4740,12 @@ const Atomo = (() => {
       });
     },
     /* eletrosfera quase toda transparente: sobra só a linha da borda */
+    /* a eletrosfera do hélio some inteira (os elétrons e as órbitas somem junto com ela) */
+    someEletrosfera(dur = 900){
+      if (!pronto || !esfera.visible) return;
+      const u = esfera.material.uniforms.opac, ini = u.value;
+      anima(dur, k => { u.value = ini * (1 - k); }, () => { esfera.visible = false; });
+    },
     eletrosferaFina(){
       if (!pronto) return;
       const u = esfera.material.uniforms, ini = { pot: u.pot.value, rim: u.rim.value, base: u.base.value, opac: u.opac.value };
