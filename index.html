@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.83';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.84';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1245,7 +1245,7 @@ const EVENTOS = {
     { t: .05,  acao: () => Atomo.montaNivel(2, 8, depoisDoNivel2) },             // completo → 8.6
     { t: 1.0,  acao: () => Atomo.destacaNivel(2, 1000) },                       // L e seus degraus aumentam com brilho (1 s)
     { t: 2.5,  acao: () => Atomo.textoNivel(2) },                               // o L apaga e "2º nível" é digitado no lugar dele (como o 1º)
-    { t: 6.0,  acao: () => Atomo.eletronsNivel(2, 8) },                         // "8e⁻" à direita do L
+    { t: 6.0,  acao: () => Atomo.seguraTotal(2) },                              // o "8e⁻" embaixo do "2º nível" aumenta (fica assim até o nível ficar completo)
     /* 8,5 s → 10 s: os 4 cartões aumentam em sequência (o anterior diminui); o último fica 1 s */
     { t: 8.5,  acao: () => Atomo.cartaoDestaque('s') },
     { t: 8.67, acao: () => Atomo.cartaoDestaque('p') },
@@ -1275,7 +1275,7 @@ const EVENTOS = {
     { t: .05,  acao: () => Atomo.montaNivel(3, 18) },
     { t: 1.9,  acao: () => Atomo.pulsaLetra(2) },                              // a letra M aumenta
     { t: 3.0,  acao: () => Atomo.textoNivel(3) },                               // o M apaga e "3º nível" é digitado no lugar dele
-    { t: 5.5,  acao: () => Atomo.eletronsNivel(3, 18) },                        // "18e⁻" à direita dos degraus do M
+    { t: 5.5,  acao: () => Atomo.seguraTotal(3) },                              // o "18e⁻" embaixo do "3º nível" aumenta (fica assim até o nível ficar completo)
     /* 8 s → 9 s: os 4 cartões aumentam em sequência (o anterior diminui) */
     { t: 8.0,  acao: () => Atomo.cartaoDestaque('s') },
     { t: 8.25, acao: () => Atomo.cartaoDestaque('p') },
@@ -3148,6 +3148,7 @@ const Atomo = (() => {
         /* rótulo de um degrau, em 3 peças para poderem ser destacadas separadamente (áudio 8.4):
            o número do nível e a letra do subnível na cor da camada, e o total de elétrons como expoente
            (mesmo estilo dos cartões). U = tamanho de 1 px do desenho em unidades da cena */
+        const TAM_NIVEL = 1.2;                                                       // "Nº nível" e o total embaixo dele: +20% (v0.84)
         const U = 2.185 / 192, ROT_ESC = 1.15;                                     // ROT_ESC: tamanho dos rótulos dos degraus (1s², 2p⁶…)
         const parteTex = (txt, px, cor, base, brilho) => {
           const c = document.createElement('canvas'), x = c.getContext('2d');
@@ -3312,9 +3313,9 @@ const Atomo = (() => {
             const wL = letras.BASE.x * f, hL = letras.BASE.y * f, cx = XLETRA + AL.x;
             const dir = Math.min(cx + wL / 2, XEIXO + ajusteEixos.x - .12), esqL = cx - wL / 2;
             let w = dir - esqL, h = w / T.asp; if (h > hL){ h = hL; w = h * T.asp; }
-            const g = .85 * (1 + .25 * (T.h || 0));                                       // 85% do espaço (sobra para o destaque crescer em volta do centro) · destaque +25% e brilho
-            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w / 2, yN(n) + AL.y, .3); T.s.material.color.setScalar(1 + .8 * (T.h || 0));
-            T.bx = dir - w / 2; T.by = yN(n) + AL.y; T.bh = h * .85;                        // posição/altura sem destaque (o total fica embaixo)
+            const g = .85 * TAM_NIVEL * (1 + .25 * (T.h || 0));                                       // 85% do espaço (sobra para o destaque crescer em volta do centro) · destaque +25% e brilho
+            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w * .85 * TAM_NIVEL / 2, yN(n) + AL.y, .3);   /* borda direita (sem destaque) antes do eixo */ T.s.material.color.setScalar(1 + .8 * (T.h || 0));
+            T.bx = dir - w * .85 * TAM_NIVEL / 2; T.by = yN(n) + AL.y; T.bh = h * .85 * TAM_NIVEL;                        // posição/altura sem destaque (o total fica embaixo)
           },
           /* total de elétrons que cabem no nível n ("2e⁻", "8e⁻", "18e⁻"…), digitado embaixo do "Nº nível" */
           totais: [],
@@ -3348,7 +3349,7 @@ const Atomo = (() => {
           },
           posTotal(T, TN){
             const hT = TN.bh * 1.25, g = 1 + .35 * (T.h || 0);
-            T.s.scale.set(hT * 2.6 * g, hT * g, 1); T.s.position.set(TN.bx, TN.by - TN.bh * 1.05, .3); T.s.material.color.setScalar(1 + .8 * (T.h || 0));
+            T.s.scale.set(hT * 2.6 * g, hT * g, 1); T.s.position.set(TN.bx, TN.by - TN.bh * 1.05 - (g - 1) * hT * .5, .3);   /* cresce para baixo (não cobre o "Nº nível") */ T.s.material.color.setScalar(1 + .8 * (T.h || 0));
           },
           /* degraus de baixo para cima (pela altura na tela) */
           degrausDeBaixo: () => niveis.flatMap(L => L.tiras.map((t, j) => ({ n: L.n, j, y: t.position.y }))).sort((a, b) => a.y - b.y),
@@ -3390,7 +3391,7 @@ const Atomo = (() => {
                 const t = L.tiras[L.m - 1]; C.s.position.set(t.position.x + .25, P.y + 1.75 * ajusteNivel[n - 1].s, .3);
               }
             }
-            const O = this.circulos[n]; if (O && C) O.l.position.copy(C.s.position);
+            const O = this.circulos[n]; if (O && O.alvo) O.l.position.copy(O.alvo.position);   // o círculo acompanha o número que ele marca
             const T = this.textosCamada[n]; if (T) T.s.position.set(P.x + EK_W * 1.3 + .2 + T.s.scale.x / 2, P.y, .3);   // depois do lugar do contador
             const TN = this.textosNivel && this.textosNivel[n - 1]; if (TN) this.medeTextoNivel(n, TN);
             const TT = this.totais && this.totais[n - 1]; if (TT && TN && TN.bh) this.posTotal(TT, TN);   // total embaixo do "Nº nível"
@@ -3483,7 +3484,8 @@ const Atomo = (() => {
               O = this.circulos[n] = { l, n: pts.length };
             }
             if (on){
-              O.l.position.copy(C.s.position); O.l.scale.set(C.s.scale.x * .42, C.s.scale.y * .62, 1);
+              const TT = this.totais[n - 1], A = C.s.visible || !(TT && TT.s.visible) ? C.s : TT.s;   // marca o contador da direita ou, sem ele, o total embaixo do "Nº nível"
+              O.alvo = A; O.l.position.copy(A.position); O.l.scale.set(A.scale.x * (A === C.s ? .42 : .3), A.scale.y * (A === C.s ? .62 : .5), 1);   /* (o total é centrado: círculo mais justo) */
               O.l.visible = true; O.l.material.opacity = 1;
               anima(dur, k => O.l.geometry.setDrawRange(0, Math.max(2, Math.ceil(O.n * k))), () => O.l.geometry.setDrawRange(0, O.n), k => k);   // desenhado à mão
             } else {
