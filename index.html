@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.81';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.82';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -3479,6 +3479,15 @@ const Atomo = (() => {
           mostraRotulo: (n, j, dur = 350) => { const L = niveis[n - 1]; if (!L || j >= L.m) return; const r0 = L.rot[j]; anima(dur, k => { L.rot[j] = r0 + (1 - r0) * k; aplica(L); }); },
           /* soma fechada: os degraus do nível flutuam até a altura de energia (Aufbau), a letra sai do eixo
              e cada degrau ganha o rótulo "nl" com o expoente (1s², 2p⁶…) */
+          /* nível completo (montado pelo aluno): os degraus ficam no nível, com a cor do bloco e o rótulo; o "2e⁻" do K sai */
+          fecha: (n, dur = 500) => {
+            const L = niveis[n - 1]; if (!L) return; L.fechado = true;
+            const c0 = L.corSub.slice(), r0 = L.rot.slice(), e0 = grafico.eK.s.material.opacity;
+            anima(dur, k => {
+              L.corSub = c0.map(c => Math.max(c, k)); L.rot = r0.map(r => Math.max(r, k)); aplica(L);
+              if (n === 1 && grafico.eK.s.visible) grafico.eK.s.material.opacity = e0 * (1 - k);
+            }, () => { if (n === 1) grafico.eK.s.visible = false; });
+          },
           flutua: (n, dur = 1600) => {
             const L = niveis[n - 1]; if (!L) return;
             anima(dur, k => {
@@ -3499,7 +3508,7 @@ const Atomo = (() => {
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
             [grafico.contadores, grafico.textosCamada].forEach(M => Object.values(M).forEach(o => { o.s.visible = false; o.s.material.opacity = 0; }));
             Object.values(grafico.circulos).forEach(O => { O.l.visible = false; });
-            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
+            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; } });   // "1º nível"…
           },
         };
@@ -4257,7 +4266,7 @@ const Atomo = (() => {
           { duration: 280, easing: 'cubic-bezier(.3,1.4,.5,1)', fill: 'forwards' }).finished.then(() => c.remove()).catch(() => c.remove());
         card.classList.remove('vazio', 'arrastavel');                                // o cartão de baixo volta (s²)
         grafico.encaixaBloco(n, j, 250); grafico.mostraRotulo(n, j);
-        grafico.flutua(n, n === 1 ? 500 : 1600);                                    // aparece o rótulo "1s²" no degrau
+        grafico.fecha(n);                                                             // o "2e⁻" sai (o degrau fica no nível; a reorganização por energia vem depois)
         sfx('right');                                                                 // só o "right" (sem comemoração de quiz)
         aoEncaixar && aoEncaixar();
       };
@@ -4285,7 +4294,7 @@ const Atomo = (() => {
     },
     /* ----- montar um nível (áudio 8.5 em diante) ----- */
     /* nível n já montado pelo aluno? (aí os avisos do roteiro sobre ele não aparecem mais) */
-    nivelCompleto(n){ return !!(grafico && (grafico.niveis[n - 1].a > 0 || (arraste && arraste.n === n && arraste.feito))); },
+    nivelCompleto(n){ return !!(grafico && (grafico.niveis[n - 1].fechado || grafico.niveis[n - 1].a > 0 || (arraste && arraste.n === n && arraste.feito))); },
     /* "Ne⁻": se o aluno já colocou subníveis, mostra o que ainda falta */
     eletronsNivel(n, total, dur = 700, ja = false){
       if (!pronto || !grafico || this.nivelCompleto(n)) return;
@@ -4338,7 +4347,7 @@ const Atomo = (() => {
         st.restante -= ELET[tipo]; grafico.contadorValor(n, st.restante); grafico.pulsaContador(n);   // o contador diminui
         if (st.restante === 0){                                                      // nível completo
           st.feito = true; cards.forEach(c2 => c2.classList.remove('arrastavel'));
-          agenda(500, () => { grafico.limpaNivel(n); grafico.flutua(n); aoCompletar && aoCompletar(); });
+          agenda(500, () => { grafico.limpaNivel(n); grafico.fecha(n); aoCompletar && aoCompletar(); });
           agenda(2100, () => cards.forEach(c2 => c2.classList.remove('vazio')));     // os cartões voltam depois que os degraus flutuam
         }
       };
@@ -4371,6 +4380,10 @@ const Atomo = (() => {
     blocoNoDegrau(n, j){ if (pronto && grafico) grafico.encaixaBloco(n, j); },
     /* soma do nível n fechada → os degraus flutuam até a altura de energia (Aufbau) e ganham os rótulos (3d¹⁰) */
     nivelFlutua(n, dur = 1600){ if (pronto && grafico) grafico.flutua(n, dur); },
+    /* nível completo: degraus com a cor dos blocos e os rótulos, no lugar (sem subir) */
+    nivelFecha(n, dur = 500){ if (pronto && grafico) grafico.fecha(n, dur); },
+    /* (quando o roteiro pedir) todos os níveis completos sobem juntos até a altura de energia (Aufbau) */
+    reorganizaNiveis(dur = 1600){ if (pronto && grafico) grafico.niveis.forEach(L => { if (L.fechado && L.a < 1) grafico.flutua(L.n, dur); }); },
     /* ----- áudio 8.2 ----- */
     setaSobe(dur = 4000){ if (pronto && grafico) grafico.setaSobe(dur); },           // seta some e sobe; linhas saltam
     linhasPulsam(dur = 1000){ if (pronto && grafico) grafico.pulso(dur); },          // linhas engrossam e voltam
@@ -4990,14 +5003,14 @@ const Retomar = (() => {
     /* como o 8.3 terminou: o 1s² já encaixado (degrau na cor do s, rótulo "1s²", K fora do eixo) */
     'audio_distribuição_8.4': () => {
       INICIO['audio_distribuição_8.3']();
-      Atomo.textoNivel(1, true); Atomo.eletronsK(0, true); Atomo.blocoNoDegrau(1, 0); Atomo.nivelFlutua(1, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
+      Atomo.textoNivel(1, true); Atomo.eletronsK(0, true); Atomo.blocoNoDegrau(1, 0); Atomo.nivelFecha(1, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
     },
     /* como o 8.4 terminou: "1º nível" no lugar do K */
     "audio_distribuição_8.5": () => { INICIO["audio_distribuição_8.4"](); },
     /* como o 8.5 terminou: o 2º nível montado (2s², 2p⁶ nas alturas de energia) e "2º nível" no lugar do L */
     'audio_distribuição_8.6': () => {
       INICIO['audio_distribuição_8.5']();
-      Atomo.textoNivel(2, true); Atomo.blocoNoDegrau(2, 0); Atomo.blocoNoDegrau(2, 1); Atomo.nivelFlutua(2, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
+      Atomo.textoNivel(2, true); Atomo.blocoNoDegrau(2, 0); Atomo.blocoNoDegrau(2, 1); Atomo.nivelFecha(2, 1); Atomo.avancaTudo(); Atomo.avancaTudo();
     },
     /* como o 8.6 terminou: igual ao começo dele (1º e 2º níveis montados) */
     "audio_distribuição_8.7": () => { INICIO["audio_distribuição_8.6"](); },
