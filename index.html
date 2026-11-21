@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.77';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.78';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1208,6 +1208,7 @@ const EVENTOS = {
   'audio_distribuição_8.4': [
     { t: .05,  acao: () => escondePlay(false) },
     /* rótulo 1s²: aumenta o "1", depois o "s", depois o "2" (o anterior diminui; o último aumenta e diminui em 0,5 s) */
+    { t: 2.0,  acao: () => Atomo.destacaTextoNivel(1, 1000) },                  // o "1º nível" aumenta por 1 s
     { t: 4.5,  acao: () => Atomo.realcaParte(0) },
     { t: 5.0,  acao: () => Atomo.realcaParte(1) },
     { t: 5.2,  acao: () => Atomo.realcaParte(2, 1, 0, 0) },
@@ -1217,6 +1218,9 @@ const EVENTOS = {
     { t: 15.0, acao: () => Atomo.realcaParte(0) },
     { t: 16.0, acao: () => Atomo.realcaParte(1) },
     { t: 17.0, acao: () => Atomo.realcaParte(2, 1, 0, 2000) },                 // o "2" fica aumentado por 2 s
+    { t: 21.0, acao: () => { Atomo.destacaTextoNivel(1, 1100); Atomo.realcaParte(0); } },   // "1º nível" e o "1" do 1s² aumentam…
+    { t: 22.1, acao: () => Atomo.realcaParte(2) },                             // …diminuem, e o "2" (expoente) aumenta
+    { t: 25.0, acao: () => Atomo.realcaParte(1, 1, 0, 1000) },                 // o "s" aumenta por 1 s (o "2" diminui)
     /* fim: o play vira "Próximo" → áudio 8.5 */
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8.5', 'Próximo'); } },
   ],
@@ -3257,13 +3261,16 @@ const Atomo = (() => {
               anima(dur, k => T.desenha(Math.ceil(k * T.txt.length)), () => { T.desenha(T.txt.length); paraSom(); }, k => k);
             });
           },
+          /* destaque do "Nº nível" (h de 0 a 1) */
+          textoNivelH(n, h){ const T = this.textosNivel[n - 1]; if (!T) return; T.h = h; aplica(niveis[n - 1]); },
           /* "Nº nível" ocupa o espaço da letra: da borda esquerda dela até pouco antes do eixo, sem passar da altura dela */
           medeTextoNivel(n, T){
             const L = niveis[n - 1], AL = ajusteLetra[n - 1], f = (1 - .195 * L.d) * AL.s;
             const wL = letras.BASE.x * f, hL = letras.BASE.y * f, cx = XLETRA + AL.x;
             const dir = Math.min(cx + wL / 2, XEIXO + ajusteEixos.x - .12), esqL = cx - wL / 2;
             let w = dir - esqL, h = w / T.asp; if (h > hL){ h = hL; w = h * T.asp; }
-            T.s.scale.set(w, h, 1); T.s.position.set(dir - w / 2, yN(n) + AL.y, .3);
+            const g = .85 * (1 + .25 * (T.h || 0));                                       // 85% do espaço (sobra para o destaque crescer em volta do centro) · destaque +25% e brilho
+            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w / 2, yN(n) + AL.y, .3); T.s.material.color.setScalar(1 + .8 * (T.h || 0));
           },
           /* degraus de baixo para cima (pela altura na tela) */
           degrausDeBaixo: () => niveis.flatMap(L => L.tiras.map((t, j) => ({ n: L.n, j, y: t.position.y }))).sort((a, b) => a.y - b.y),
@@ -4140,6 +4147,11 @@ const Atomo = (() => {
         anima(250, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t));
       });
       if (segura !== null) agenda(250 + segura, () => anima(250, t => grafico.parteRotulo(n, j, k, 1 - t)));
+    },
+    /* "Nº nível" aumenta e brilha por "dur" ms */
+    destacaTextoNivel(n = 1, dur = 1000){
+      if (!pronto || !grafico) return;
+      anima(250, k => grafico.textoNivelH(n, k), () => agenda(Math.max(0, dur - 500), () => anima(250, k => grafico.textoNivelH(n, 1 - k))));
     },
     /* ----- áudio 8.3 ----- */
     pulsaLetra(i){ if (pronto && grafico) grafico.pulsaLetra(i); },
