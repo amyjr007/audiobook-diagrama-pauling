@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.01';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.02';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -917,7 +917,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.7'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.7'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -960,6 +960,27 @@ function festaDasLetras(){
 }
 /* áudio 8.3: encaixou o 1s² → depois da comemoração começa o 8.4 (se o 8.3 ainda estiver tocando, espera ele acabar) */
 let pendente8_4 = false;
+/* áudio 8.3A: o s² encaixou no 1º nível → som de encaixe, aplausos com confetes e o áudio 8.4 começa na hora */
+function encaixou1s2(){
+  somEncaixe(); sfx('applause'); Quiz.confetes();
+  tocaDepois(150, 'audio_distribuição_8.4');
+}
+/* som curto de encaixe ("snap"), feito na hora com Web Audio */
+let ctxSom = null;
+function somEncaixe(){
+  try {
+    ctxSom = ctxSom || new (window.AudioContext || window.webkitAudioContext)();
+    const c = ctxSom, t = c.currentTime, n = Math.floor(c.sampleRate * .05), buf = c.createBuffer(1, n, c.sampleRate), d = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / n, 6);   // estalo: ruído que some rápido
+    const src = c.createBufferSource(); src.buffer = buf;
+    const hp = c.createBiquadFilter(); hp.type = 'highpass'; hp.frequency.value = 1800;
+    const g = c.createGain(); g.gain.setValueAtTime(.9, t);
+    const o = c.createOscillator(), go = c.createGain(); o.frequency.setValueAtTime(900, t); o.frequency.exponentialRampToValueAtTime(220, t + .06);   // "toc" grave junto
+    go.gain.setValueAtTime(.5, t); go.gain.exponentialRampToValueAtTime(.001, t + .08);
+    src.connect(hp).connect(g).connect(c.destination); o.connect(go).connect(c.destination);
+    src.start(t); o.start(t); o.stop(t + .09);
+  } catch(e){}
+}
 function depoisDo1s2(){
   if (atual !== 'audio_distribuição_8.3') return;
   if (!audio.ended){ pendente8_4 = true; return; }
@@ -1222,27 +1243,24 @@ const EVENTOS = {
     { t: .5,   acao: () => Atomo.ondaCartoes(2000, true) },
     /* 5 s → 8,5 s: os degraus aumentam e brilham em onda, de baixo para cima (só vai); o último fica aceso mais 1 s */
     { t: 5.0,  acao: () => Atomo.ondaDegraus(2500, 1000) },
-    /* 15 s → 19 s: as letras K…Q somem em sequência e "1º nível"… "7º nível" é digitado no lugar */
-    { t: 15.0, acao: () => Atomo.niveisNoLugar(540) },
-    /* 22,5 s → 28 s: o total de elétrons de cada nível aparece embaixo do "Nº nível", de baixo para cima */
-    { t: 22.5, acao: () => Atomo.totaisNiveis(800) },
-    { t: 24.9, acao: () => Atomo.demoEncaixe('s', 1, 0) },                     // a mãozinha finge levar o s² ao 1º degrau: encaixa, brilha e volta
-    { t: 30.0, acao: () => Atomo.destacaTotais(2000) },                        // os totais de todos os níveis aumentam por 2 s
-    { t: 36.0, acao: () => Atomo.cartoesAumentam(2000) },                      // os 4 cartões aumentam por 2 s
-    /* 38 s → 43,4 s: onda nos cartões (o f fica aumentado por 2 s) */
-    { t: 38.0, acao: () => Atomo.cartaoDestaque('s') },
-    { t: 39.0, acao: () => Atomo.cartaoDestaque('p') },
-    { t: 40.0, acao: () => Atomo.cartaoDestaque('d') },
-    { t: 41.4, acao: () => Atomo.cartaoDestaque('f') },
-    { t: 43.4, acao: () => Atomo.cartaoDestaque(null) },
-    { t: 45.0, acao: () => { Atomo.destacaTextoNivel(1, 1000); Atomo.focoNivel(1); } },   // o "1º nível" aumenta; do 2º nível para cima escurece (foco no 1º)
-    { t: 47.8, acao: () => Atomo.destacaTextoNivel(1, 1450) },                 // aumenta de novo e diminui aos 49 s…
-    { t: 49.0, acao: () => Atomo.seguraTotal(1) },                             // …quando o "2e⁻" aumenta (fica assim até o s² encaixar)
-    /* 52 s: o aluno já pode arrastar o s² até o degrau do 1º nível; 55 s: a mãozinha aparece e aos 55,5 s finge arrastar (repete a cada 3 s) */
-    { t: 52.0, acao: () => Atomo.arrasteBloco('s', 1, 0, depoisDo1s2, { semGuia: true }) },
-    { t: 55.0, acao: () => Atomo.guiaArraste(500) },
-    /* fim: se o aluno já encaixou o 1s², o 8.4 começa (senão, começa quando ele encaixar) */
-    { t: 'fim', acao: () => { if (pendente8_4){ pendente8_4 = false; tocaDepois(1500, 'audio_distribuição_8.4'); } else escondePlay(true); } },   // (sem play: só passa encaixando)
+    /* 20,3 s → 24 s: as letras K…Q somem em sequência e "1º nível"… "7º nível" é digitado no lugar */
+    { t: 20.3, acao: () => Atomo.niveisNoLugar(500) },
+    /* fim: o play vira "Ok" (verde, piscando) → áudio 8.3A */
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8.3A', 'Ok'); } },
+  ],
+  'audio_distribuição_8.3A': [
+    { t: .05,  acao: () => escondePlay(false) },
+    /* 8,5 s → 11 s: o total de elétrons de cada nível é digitado embaixo do "Nº nível", de baixo para cima */
+    { t: 8.5,  acao: () => Atomo.totaisNiveis(317, false, 600) },
+    /* 12,5 s → 15 s: os 4 cartões dos subníveis aumentam com brilho */
+    { t: 12.5, acao: () => { Atomo.cartoesBrilham(); Atomo.cartoesAumentam(2500); } },
+    { t: 18.0, acao: () => Atomo.focoNivel(1) },                               // do 2º nível para cima escurece
+    { t: 22.0, acao: () => Atomo.seguraTotal(1) },                             // o "2e⁻" aumenta (fica assim até o s² encaixar)
+    /* 28 s: a mãozinha leva o s² até o 1º nível e o aluno já pode arrastar; sem ação, a mãozinha repete a cada 3 s.
+       Ao encaixar: som de encaixe, aplausos com confetes e o áudio 8.4 começa na hora */
+    { t: 28.0, acao: () => Atomo.arrasteBloco('s', 1, 0, encaixou1s2, { som: false }) },
+    /* fim: sem play — só passa encaixando o s² */
+    { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(1)) escondePlay(true); } },
   ],
   'audio_distribuição_8.4': [
     { t: .05,  acao: () => escondePlay(false) },
@@ -3284,7 +3302,8 @@ const Atomo = (() => {
             conj.updateMatrixWorld(true); ruth.cam.updateMatrixWorld();
             const rc = renderer.domElement.getBoundingClientRect(), pr = palco.getBoundingClientRect();   // (o canvas 3D pode não coincidir com o palco)
             const p = (x, y, pai) => { const v = new THREE.Vector3(x, y, 0); pai.localToWorld(v); v.project(ruth.cam); return { x: rc.left - pr.left + (v.x + 1) / 2 * rc.width, y: rc.top - pr.top + (1 - v.y) / 2 * rc.height }; };
-            return { base: p(XEIXO, YBASE, eixos), topo: p(XEIXO, yTopo, eixos), k: p(XEIXO, yN(1), conj) };
+            const eC = p(rotE.position.x, rotE.position.y, eixos), eT = p(rotE.position.x, rotE.position.y + rotE.scale.y / 2, eixos);
+            return { base: p(XEIXO, YBASE, eixos), topo: p(XEIXO, yTopo, eixos), k: p(XEIXO, yN(1), conj), e: eC, eFonte: Math.abs(eC.y - eT.y) * 2 * 64 / 96 };   // eFonte: px da fonte do "E" do eixo
           },
           /* etiqueta "n = x" ao lado da linha do nível x (áudio 8.2: aparecem em sequência, a anterior some) */
           etiquetasN: [],
@@ -4298,8 +4317,28 @@ const Atomo = (() => {
             c.style.width = w + 'px'; c.style.height = h + 'px'; c.style.transform = `translate(${x - w / 2}px, ${y - h / 2}px) rotate(${-90 * e2}deg)`;
           };
           poeBarra(0);
-          anima(total, k => { const e2 = ease(k); poeBarra(e2); fi.style.width = (f0 + (fK - f0) * e2) + '%'; },
-            () => { agenda(30, () => poeBarra(1)); anima(500, k => { c.style.opacity = 1 - k; }, () => c.remove()); });   // no fim, o eixo do gráfico fica no lugar dela
+          /* a palavra "Energia" vai junto: o "nergia" some e o "E" vira o "E" do eixo vertical */
+          const sp = e.querySelector('span');
+          let poeE = () => {};
+          if (sp){
+            const rs = sp.getBoundingClientRect(), cs = getComputedStyle(sp), fs0 = parseFloat(cs.fontSize) || 18;
+            const lab = document.createElement('div'); lab.className = 'barra-eixo';
+            lab.innerHTML = '<b style="font:inherit">E</b><i style="font:inherit;font-style:normal">nergia</i>';
+            lab.style.cssText = `position:absolute;z-index:3;left:0;top:0;white-space:nowrap;pointer-events:none;color:#eef1ff;font:${cs.font};letter-spacing:${cs.letterSpacing};transform-origin:0 0;line-height:1`;
+            palco.appendChild(lab);
+            const bE = lab.querySelector('b'), resto = lab.querySelector('i'), bw = bE.getBoundingClientRect().width, lh = lab.getBoundingClientRect().height;
+            const x0 = rs.left - pr.left, y0 = rs.top - pr.top + rs.height / 2;
+            poeE = e2 => {
+              const T = G.telaEixo(), s = (fs0 + (T.eFonte - fs0) * e2) / fs0;
+              const xE = (x0 + bw / 2) + (T.e.x - (x0 + bw / 2)) * e2, yE = y0 + (T.e.y - y0) * e2;     // centro do "E"
+              lab.style.transform = `translate(${xE - bw * s / 2}px, ${yE - lh * s / 2}px) scale(${s})`;
+              resto.style.opacity = Math.max(0, 1 - e2 * 2.5);
+            };
+            poeE(0);
+            agenda(total + 30, () => { poeE(1); anima(700, k => { poeE(1); lab.style.opacity = 1 - k; }, () => lab.remove()); });   // segue o "E" do eixo enquanto some
+          }
+          anima(total, k => { const e2 = ease(k); poeBarra(e2); poeE(e2); fi.style.width = (f0 + (fK - f0) * e2) + '%'; },
+            () => { agenda(30, () => poeBarra(1)); anima(700, k => { poeBarra(1); c.style.opacity = 1 - k; }, () => c.remove()); });   // no fim, o eixo do gráfico fica no lugar dela
         }
         if (e){ e.style.transition = barraVira ? 'none' : ''; e.classList.remove('on'); if (barraVira) requestAnimationFrame(() => { e.style.transition = ''; }); }   // a original sai (a cópia é que vira o eixo)
       }
@@ -4413,11 +4452,11 @@ const Atomo = (() => {
       for (let n = 1; n <= 7; n++){ if (ja) grafico.textoNivel(n, 0, true); else agenda((n - 1) * passo, () => grafico.textoNivel(n, 450)); }
     },
     /* o total de elétrons de cada nível é digitado embaixo do "Nº nível", de baixo para cima */
-    totaisNiveis(passo = 800, ja = false){
+    totaisNiveis(passo = 800, ja = false, dur = 600){
       if (!pronto || !grafico) return;
       for (let n = 1; n <= 7; n++){
         if (this.nivelCompleto(n)) continue;
-        if (ja) grafico.totalNivel(n, 0, true); else agenda((n - 1) * passo, () => grafico.totalNivel(n, 600));
+        if (ja) grafico.totalNivel(n, 0, true); else agenda((n - 1) * passo, () => grafico.totalNivel(n, dur));
       }
     },
     /* todos os totais aumentam e brilham por "dur" ms */
@@ -4537,7 +4576,7 @@ const Atomo = (() => {
         card.classList.remove('vazio', 'arrastavel');                                // o cartão de baixo volta (s²)
         grafico.encaixaBloco(n, j, 250); grafico.mostraRotulo(n, j);
         grafico.fecha(n);                                                             // o "2e⁻" sai (o degrau fica no nível; a reorganização por energia vem depois)
-        sfx('right');                                                                 // só o "right" (sem comemoração de quiz)
+        if (opc.som !== false) sfx('right');                                          // só o "right" (sem comemoração de quiz); som: false → quem chama faz o som
         aoEncaixar && aoEncaixar();
       };
       const desce = e => {
@@ -5291,6 +5330,8 @@ const Retomar = (() => {
     'audio_distribuição_8.3': () => {
       cenaGraficoCartoes();
     },
+    /* como o 8.3 terminou: "1º nível"… no lugar das letras K…Q */
+    'audio_distribuição_8.3A': () => { INICIO['audio_distribuição_8.3'](); Atomo.niveisNoLugar(0, true); Atomo.avancaTudo(); },
     /* como o 8.3 terminou: "1º nível"… no lugar das letras, os totais embaixo (menos o do 1º) e o 1s² encaixado */
     'audio_distribuição_8.4': () => {
       INICIO['audio_distribuição_8.3']();
