@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.93';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.94';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1131,26 +1131,30 @@ const EVENTOS = {
     { t: 'fim', acao: () => { Atomo.escurece(true); escondePlay(true); mostraToque(true, 'audio_distribuição_7.3'); } },
   ],
   'audio_distribuição_7.3': [
-    /* 2 s → 3 s: a câmera volta ao Rutherford; o escuro e o átomo do áudio 6 voltam (o texto do conceito sai) */
-    { t: 2.0, acao: () => {
+    /* 3,5 s: a câmera volta ao Rutherford; o átomo dele aparece com o núcleo e a eletrosfera apagados (o texto do conceito sai) */
+    { t: 3.5, acao: () => {
         Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 1000);
-        Atomo.escurece(false); Atomo.rutherfordVolta();
+        Atomo.escurece(false); Atomo.apagaLinha('conceito'); Atomo.rutherfordApagado(1000);
     } },
-    { t: 3.0, acao: () => Atomo.digita('topo', 'Modelo de Rutherford - 1911', { cor: '#eef1ff', ms: 45 }) },
-    /* 8,3 s: a eletrosfera some (fica só o núcleo) e a câmera volta para o Bohr: o átomo dele é
+    { t: 4.5, acao: () => Atomo.digita('topo', 'Modelo de Rutherford - 1911', { cor: '#eef1ff', ms: 45 }) },
+    { t: 6.0, acao: () => Atomo.rutherfordClareia('nucleo') },                // o núcleo clareia
+    { t: 8.0, acao: () => Atomo.rutherfordClareia('eletrosfera') },           // a eletrosfera clareia
+    /* 13 s: a eletrosfera some (fica só o núcleo) e a câmera vai para o Bohr: o átomo dele é
        construído em cima do retrato (o escuro clareia um pouco para o retrato aparecer atrás) */
-    { t: 8.3, acao: () => {
+    { t: 13.0, acao: () => {
         Atomo.rutherfordSemEletrons(1000);
         Atomo.bohrNucleo();                                                  // fica só 1 próton (o resto: "TV desligando")
         Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1500);                     // (o título sai junto, em fade)
         Atomo.rutherfordEscuro(.93, 1500);                                   // tão escuro quanto no átomo de Rutherford
     } },
-    { t: 9.9, acao: () => Atomo.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 45 }) },
-    /* 11 s → 17 s: 7 camadas ligam uma a uma (efeito TV) e a barra "Energia" cresce junto, terminando com a 7ª */
-    { t: 11.0, acao: () => Atomo.energiaBarra(6000) },
-    ...Array.from({ length: 7 }, (_, i) => ({ t: 11 + i * (5.2 / 6), acao: () => Atomo.camadaLiga(i, 800) })),
-    /* 27 s: 1 elétron no nível 1; a barra vai para o nível 1. Daí em diante o aluno segura e solta o elétron em qualquer nível */
-    { t: 27.0, acao: () => Atomo.bohrEletron(depoisDe3Saltos) },
+    { t: 14.6, acao: () => Atomo.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 45 }) },
+    /* 15 s → 21 s: 7 camadas ligam uma a uma (efeito TV) e a barra "Energia" cresce junto, terminando com a 7ª */
+    { t: 15.0, acao: () => Atomo.energiaBarra(6000) },
+    ...Array.from({ length: 7 }, (_, i) => ({ t: 15 + i * (5.2 / 6), acao: () => Atomo.camadaLiga(i, 800) })),
+    /* 45,5 s: a tela escurece e "Salto quântico" é escrito; 48 s: a tela volta ao normal, o texto some em fade
+       e o elétron aparece no nível 1 — daí em diante o aluno toca nos níveis */
+    { t: 45.5, acao: () => { Atomo.escurece(true); Atomo.digita('conceito', 'Salto quântico', { cor: '#eef1ff', ms: 70 }); } },
+    { t: 48.0, acao: () => { Atomo.escurece(false); Atomo.apagaLinha('conceito'); Atomo.bohrEletron(depoisDe3Saltos); } },
     /* fim: o play some — o áudio 7.4 só vem depois de 3 saltos (se já aconteceram, toca agora) */
     { t: 'fim', acao: () => { escondePlay(true); if (pendente7_4){ pendente7_4 = false; tocaDepois(600, 'audio_distribuição_7.4'); } } },
   ],
@@ -1809,7 +1813,7 @@ function cancelaPausaRoteiro(executarPendentes = false){
 /* ---------- Áudio + linha do tempo de eventos ---------- */
 function carrega(nome, inicio = 0){
   atual = nome;
-  disparados = new Set();
+  disparados = new Set(); cortado = false;
   audio.src = urlAudio(nome);
   audio.dataset.nome = nome;
   $('#barra').style.width = '0';
@@ -1817,8 +1821,12 @@ function carrega(nome, inicio = 0){
   if (inicio > 0) audio.addEventListener('loadedmetadata', () => { audio.currentTime = inicio; marcaAte(inicio); }, {once:true});
   atualizaLista();
 }
+/* áudios que terminam antes do fim do arquivo (segundos): ao chegar lá, a narração para e o "fim" roda */
+const CORTES = { 'audio_distribuição_7.1': 9.9 };
+let cortado = false;
 function verificaEventos(){
   const t = audio.currentTime;
+  if (CORTES[atual] && !cortado && t >= CORTES[atual]){ cortado = true; pausaNarracao(); fimDoAudio(); return; }   // corte do áudio
   (EVENTOS[atual] || []).forEach((ev,i) => {
     if (typeof ev.t === 'number' && !disparados.has(i) && t >= ev.t){
       disparados.add(i);
@@ -1882,11 +1890,12 @@ audio.addEventListener('pause', () => {
   pagina.classList.remove('tocando'); pagina.classList.add('pausado');
   btnPlay.setAttribute('aria-label','Tocar narração');
 });
-audio.addEventListener('ended', () => {
+function fimDoAudio(){
   (EVENTOS[atual] || []).forEach(ev => { if (ev.t === 'fim') try { ev.acao(); } catch(e){ console.error(e); } });
   if (atual === AUDIO_CAPA) limpaCapa();
   if (ehDoAprender()) btnPlay.classList.add('chama');
-});
+}
+audio.addEventListener('ended', () => { if (!cortado) fimDoAudio(); });
 audio.addEventListener('error', () => {
   if (!audio.dataset.nome) return;
   pagina.classList.remove('tocando');
@@ -4138,6 +4147,20 @@ const Atomo = (() => {
       anima(1000, k => { ruth.opEscuro = e0 + (.93 - e0) * k; ruth.opNucleo = n0 + (1 - n0) * k; ruth.eletrons.forEach((o, i) => o.op = ops[i] + (1 - ops[i]) * k); });
     },
     /* muda o quanto o fundo fica escuro atrás do átomo (0 = nada, .93 = quase preto) */
+    /* áudio 7.3: o átomo de Rutherford volta com o núcleo e a eletrosfera apagados (só um vulto), no fundo escuro */
+    rutherfordApagado(dur = 1000, nivel = .2){
+      if (!pronto) return;
+      ruthPadrao(); ruth.atomo.scale.setScalar(.63); ruth.atomo.position.y = -1.4;
+      ruth.on = true;
+      const e0 = ruth.opEscuro, n0 = ruth.opNucleo, ops = ruth.eletrons.map(o => o.op);
+      anima(dur, k => { ruth.opEscuro = e0 + (.93 - e0) * k; ruth.opNucleo = n0 + (nivel - n0) * k; ruth.eletrons.forEach((o, i) => o.op = ops[i] + (nivel - ops[i]) * k); });
+    },
+    /* clareia o núcleo ('nucleo') ou a eletrosfera ('eletrosfera') do átomo de Rutherford */
+    rutherfordClareia(parte = 'nucleo', dur = 800){
+      if (!pronto || !ruth.on) return;
+      if (parte === 'nucleo'){ const n0 = ruth.opNucleo; anima(dur, k => { ruth.opNucleo = n0 + (1 - n0) * k; }); return; }
+      const ops = ruth.eletrons.map(o => o.op); anima(dur, k => ruth.eletrons.forEach((o, i) => o.op = ops[i] + (1 - ops[i]) * k));
+    },
     rutherfordEscuro(alvo, dur = 1000){
       if (!pronto || !ruth.on) return;
       const e0 = ruth.opEscuro;
