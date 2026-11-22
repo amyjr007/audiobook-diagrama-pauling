@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.18';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.19';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1424,7 +1424,7 @@ const EVENTOS = {
         });
     } },
     /* fim: o play vira "Ok" verde piscando; o clique coloca os degraus em ordem crescente de energia */
-    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, () => { botaoOk(false); Atomo.ordemEnergia(); }, 'Ok'); } },
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, () => { botaoOk(false); escondePlay(true); Atomo.ordemEnergia(); setTimeout(() => mostraToque(true, () => { escondePlay(true); Atomo.voltaAtomo(); }), 2800); /* "toque na tela" → o gráfico volta a ser o átomo de Bohr */ }, 'Ok'); } },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -4804,6 +4804,80 @@ const Atomo = (() => {
     /* nível completo: degraus com a cor dos blocos e os rótulos, no lugar (sem subir) */
     nivelFecha(n, dur = 500){ if (pronto && grafico) grafico.fecha(n, dur); },
     /* (quando o roteiro pedir) todos os níveis completos sobem juntos até a altura de energia (Aufbau) */
+    /* caminho inverso: o gráfico volta a ser o átomo de Bohr, sem nada sumir de repente.
+       1) os rótulos encolhem e os degraus voltam para a altura do seu nível · 2) os degraus de cada nível se juntam numa barra
+       (na cor do nível) · 3) as barras viram os círculos, o eixo vira a barra "Energia" (o "E" vira "Energia"),
+       o núcleo, o elétron e as letras K…Q voltam para o lugar */
+    voltaAtomo(total = 4000){
+      if (!pronto || !grafico) return;
+      const G = grafico, N = G.niveis;
+      N.forEach(L => {
+        const a0 = L.a, r0 = L.rot.slice();
+        anima(1600, k => { const e = ease(k); L.a = a0 * (1 - e); L.rot = r0.map(r => r * Math.max(0, 1 - k * 1.6)); G.reaplica(L); });
+      });
+      agenda(1700, () => N.forEach(L => {
+        const d0 = L.d, c0 = L.corSub.slice();
+        anima(1200, k => { const e = ease(k); L.d = d0 * (1 - e); L.corSub = c0.map(c => c * (1 - k)); G.reaplica(L); });
+      }));
+      agenda(3000, () => this._graficoViraAtomo(total));
+    },
+    _graficoViraAtomo(total){
+      const G = grafico;
+      /* o eixo vertical vira a barra "Energia" (a cópia nasce em cima do eixo e volta para o lugar da barra) */
+      const e = $('#energia'), trilho = e && e.querySelector('.en-trilho'), sp = e && e.querySelector('span'), fill = $('#energiaFill');
+      if (trilho && sp){
+        const pr = palco.getBoundingClientRect(), r = trilho.getBoundingClientRect(), rs = sp.getBoundingClientRect();
+        const A = { x: r.left - pr.left + r.width / 2, y: r.top - pr.top + r.height / 2, w: r.width, h: r.height }, fFim = 100 / 7;   // energia do 1º nível
+        const c = trilho.cloneNode(true), fi = c.querySelector('i'); fi.removeAttribute('id'); c.classList.add('barra-eixo'); fi.style.transition = 'none';
+        c.style.cssText = 'position:absolute;z-index:3;left:0;top:0;margin:0;flex:none;pointer-events:none;transform-origin:50% 50%';
+        palco.appendChild(c);
+        const cs = getComputedStyle(sp), fs0 = parseFloat(cs.fontSize) || 18;
+        const lab = document.createElement('div'); lab.className = 'barra-eixo';
+        lab.innerHTML = '<b style="font:inherit">E</b><i style="font:inherit;font-style:normal">nergia</i>';
+        lab.style.cssText = `position:absolute;z-index:3;left:0;top:0;white-space:nowrap;pointer-events:none;color:#eef1ff;font:${cs.font};letter-spacing:${cs.letterSpacing};transform-origin:0 0;line-height:1`;
+        palco.appendChild(lab);
+        const bE = lab.querySelector('b'), resto = lab.querySelector('i'), bw = bE.getBoundingClientRect().width, lh = lab.getBoundingClientRect().height;
+        const x0 = rs.left - pr.left, y0 = rs.top - pr.top + rs.height / 2;
+        const poe = q => {                                                       // q: 0 = no eixo · 1 = no lugar da barra
+          const T = G.telaEixo(), comp = Math.abs(T.base.y - T.topo.y);
+          const B = { x: T.base.x, y: (T.base.y + T.topo.y) / 2, w: comp, h: 4 }, fK = Math.max(2, Math.abs(T.base.y - T.k.y) / comp * 100);
+          const w = B.w + (A.w - B.w) * q, h = B.h + (A.h - B.h) * q, x = B.x + (A.x - B.x) * q, y = B.y + (A.y - B.y) * q;
+          c.style.width = w + 'px'; c.style.height = h + 'px'; c.style.transform = `translate(${x - w / 2}px, ${y - h / 2}px) rotate(${-90 * (1 - q)}deg)`;
+          fi.style.width = (fK + (fFim - fK) * q) + '%';
+          const s = (T.eFonte + (fs0 - T.eFonte) * q) / fs0;
+          const xE = T.e.x + ((x0 + bw / 2) - T.e.x) * q, yE = T.e.y + (y0 - T.e.y) * q;
+          lab.style.transform = `translate(${xE - bw * s / 2}px, ${yE - lh * s / 2}px) scale(${s})`;
+          resto.style.opacity = Math.max(0, (q - .6) / .4);
+        };
+        poe(0);
+        anima(total, k => poe(ease(k)), () => {
+          if (fill){ fill.style.transition = 'none'; fill.style.width = fFim + '%'; }
+          e.style.transition = 'none'; e.classList.add('on'); requestAnimationFrame(() => { e.style.transition = ''; });
+          c.remove(); lab.remove();
+        });
+      }
+      /* os eixos do gráfico saem (o vertical já virou a barra) */
+      const mats = []; G.eixos.traverse(o => { if (o.material && !mats.includes(o.material)) mats.push(o.material); });
+      const ops = mats.map(m => m.opacity);
+      anima(400, k => mats.forEach((m, i) => { m.opacity = ops[i] * (1 - k); }), () => { G.eixos.visible = false; mats.forEach((m, i) => { m.opacity = ops[i]; }); G.matEixo.opacity = 0; G.rotE.material.opacity = 0; });
+      /* as barras viram os círculos (em cascata) e o conjunto volta ao tamanho do átomo */
+      ruth.camadas.forEach((C, i) => { const ini = i * 150; agenda(ini, () => anima(total - ini, k => G.morfa(C, i + 1, 1 - ease(k)), () => G.morfa(C, i + 1, 0))); });
+      const f0 = fatorGrafico; anima(total, k => { fatorGrafico = f0 * (1 - ease(k)); aplicaEscalaConj(); });
+      /* as letras K…Q voltam para as etiquetas das camadas */
+      letras.itens.forEach(it => {
+        if (!it.p0g) return;
+        it.noGrafico = false; it.apaga = 0; it.s.visible = true;
+        const p1 = it.s.position.clone(), s1 = it.s.scale.x / letras.BASE.x, s0 = it.tam || 1;
+        anima(total, k => { const q = ease(k); it.s.position.lerpVectors(p1, it.p0g, q); const f = s1 + (s0 - s1) * q; it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1); it.s.material.opacity = Math.min(1, k * 1.5); });
+      });
+      /* o núcleo, o elétron e o retrato do Bohr voltam */
+      agenda(total * .5, () => { const n0 = ruth.opNucleo, b0 = bohr.op, e0 = ruth.opEscuro;
+        anima(1200, k => { ruth.opNucleo = n0 + (1 - n0) * k; bohr.op = b0 + (1 - b0) * k; ruth.opEscuro = e0 + (.93 - e0) * k; }); });
+      agenda(total + 200, () => {
+        const L = linhas.topo; if (L){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.getAnimations().forEach(a => a.cancel()); L.el.innerHTML = ''; }   // (o título antigo, se sobrou)
+        this.digita('topo', 'Modelo de Bohr - 1913', { cor: '#eef1ff', ms: 45 });
+      });
+    },
     /* todos os degraus vão para a altura de energia (ordem crescente: 1s, 2s, 2p, 3s, 3p, 4s, 3d…); os "Nº nível" saem */
     ordemEnergia(dur = 2200){
       if (!pronto || !grafico) return;
