@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.17';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.18';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -978,6 +978,11 @@ function proximoDepoisDaFesta(deAudio, proximo){
   if (atual !== deAudio) return;                                                // (o aluno já saiu desse áudio)
   tocaDepois(2200, proximo);
 }
+/* o aluno começou a arrastar: o áudio que estiver tocando é cortado (como se tivesse terminado ali) */
+function cortaNarracao(){
+  if (!atual || audio.paused || audio.ended) return;
+  cortado = true; pausaNarracao(); fimDoAudio();
+}
 function encaixou1s2(){
   somEncaixe(); Atomo.comemoraNivel(1);                                         // pulso verde no nível + aplausos, "yes" e confetes
   tocaDepois(150, 'audio_distribuição_8.4');
@@ -1000,14 +1005,14 @@ function somEncaixe(){
 }
 function depoisDo1s2(){
   if (atual !== 'audio_distribuição_8.3') return;
-  if (!audio.ended){ pendente8_4 = true; return; }
+  if (!audio.ended && !cortado){ pendente8_4 = true; return; }
   tocaDepois(1200, 'audio_distribuição_8.4');                                 // um respiro depois do encaixe
 }
 /* áudio 8.5: o 2º nível ficou completo → começa o 8.5A depois que os degraus flutuam (se o 8.5 ainda tocar, espera ele acabar) */
 let pendente8_6 = false;
 function depoisDoNivel2(){
   if (atual !== 'audio_distribuição_8.5') return;
-  if (!audio.ended){ pendente8_6 = true; return; }
+  if (!audio.ended && !cortado){ pendente8_6 = true; return; }
   tocaDepois(2200, 'audio_distribuição_8.5A');
 }
 /* EVENTOS: o que acontece durante cada áudio.  { t: segundos, acao: () => {...} } */
@@ -1375,27 +1380,27 @@ const EVENTOS = {
      depois dela, o próximo áudio. O total embaixo do "Nº nível" diminui a cada encaixe */
   'audio_distribuição_8.7': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel([1, 2, 3, 4]); Atomo.seguraTextoNivel(4); } },   // o "4º nível" aumenta
-    { t: 1.6, acao: () => { Atomo.totalDeNovo(4); Atomo.montaNivel(4, 32, () => proximoDepoisDaFesta('audio_distribuição_8.7', 'audio_distribuição_8.8')); } },   // "32e⁻" e o arraste
+    { t: 2.7, acao: () => { Atomo.totalCresce(4); Atomo.montaNivel(4, 32, () => proximoDepoisDaFesta('audio_distribuição_8.7', 'audio_distribuição_8.8')); } },   // "32e⁻" e o arraste
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(4)) escondePlay(true); } },
   ],
   'audio_distribuição_8.8': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel([1, 2, 3, 4, 5]); Atomo.seguraTextoNivel(5); } },
-    { t: 9.5, acao: () => { Atomo.totalDeNovo(5); Atomo.montaNivel(5, 32, () => proximoDepoisDaFesta('audio_distribuição_8.8', 'audio_distribuição_8.9')); } },
+    { t: 9.5, acao: () => { Atomo.totalCresce(5); Atomo.montaNivel(5, 32, () => proximoDepoisDaFesta('audio_distribuição_8.8', 'audio_distribuição_8.9')); } },
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(5)) escondePlay(true); } },
   ],
   'audio_distribuição_8.9': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel([1, 2, 3, 4, 5, 6]); Atomo.seguraTextoNivel(6); } },
-    { t: 3.8, acao: () => { Atomo.totalDeNovo(6); Atomo.montaNivel(6, 18, () => proximoDepoisDaFesta('audio_distribuição_8.9', 'audio_distribuição_8.95')); } },
+    { t: 3.8, acao: () => { Atomo.totalCresce(6); Atomo.montaNivel(6, 18, () => proximoDepoisDaFesta('audio_distribuição_8.9', 'audio_distribuição_8.95')); } },
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(6)) escondePlay(true); } },
   ],
   'audio_distribuição_8.95': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel(0); } },
     { t: 1.0, acao: () => Atomo.seguraTextoNivel(7) },                         // o "7º nível" aumenta
-    { t: 2.5, acao: () => { Atomo.totalDeNovo(7); Atomo.montaNivel(7, 8, () => proximoDepoisDaFesta('audio_distribuição_8.95', 'audio_distribuição_9')); } },   // "8e⁻" e o arraste; completo → 9
+    { t: 2.5, acao: () => { Atomo.totalCresce(7); Atomo.montaNivel(7, 8, () => proximoDepoisDaFesta('audio_distribuição_8.95', 'audio_distribuição_9')); } },   // "8e⁻" e o arraste; completo → 9
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(7)) escondePlay(true); } },
   ],
   'audio_distribuição_9': [
-    { t: .05,  acao: () => { escondePlay(false); Atomo.focoNivel(0); } },
+    { t: .05,  acao: () => { escondePlay(false); Atomo.focoNivel(0); Atomo.cartoesSomem(); } },   // os cartões coloridos somem em fade out
     /* 5 s → 13,7 s: o total de elétrons de cada nível volta embaixo do "Nº nível", de baixo para cima */
     { t: 5.0,  acao: () => Atomo.totalDeNovo(1) },                              // 2e⁻
     { t: 7.0,  acao: () => Atomo.totalDeNovo(2) },                              // 8e⁻
@@ -4637,7 +4642,7 @@ const Atomo = (() => {
        há comemoração de quiz. Enquanto arrasta, o cartão de baixo fica vazio; ao encaixar, ele volta. */
     arrasteBloco(tipo = 's', n = 1, j = 0, aoEncaixar = null, opc = {}){
       if (!pronto || !grafico) return;
-      arrasteLimpa();
+      arrasteLimpa(); escondePlay(true);                                         // enquanto o aluno arrasta, sem botão de play
       const card = document.querySelector(`#cartoes [data-t="${tipo}"]`); if (!card) return;
       const mao = $('#maoGuia'), st = arraste = { card, feito: false, arrastando: false, clone: null, timer: null, fantasmas: [] };
       card.classList.add('arrastavel');
@@ -4683,6 +4688,7 @@ const Atomo = (() => {
       };
       const desce = e => {
         if (st.feito) return;
+        cortaNarracao();                                                             // arrastar corta o áudio que estiver tocando
         e.preventDefault(); st.arrastando = true; mao.classList.remove('on');
         if (opc.paraNoToque){ clearInterval(st.timer); clearTimeout(st.timer); st.timer = 'parado'; }   // o aluno já arrastou: o tutorial não aparece mais
         st.clone = clona('arrastado'); card.classList.add('vazio');                  // o cartão de baixo fica vazio enquanto arrasta
@@ -4728,7 +4734,7 @@ const Atomo = (() => {
        Soltar perto do nível com um subnível que não cabe → "error" e o cartão volta. */
     montaNivel(n, total, aoCompletar = null){
       if (!pronto || !grafico) return;
-      arrasteLimpa();
+      arrasteLimpa(); escondePlay(true);                                         // enquanto o aluno arrasta, sem botão de play
       const cards = [...document.querySelectorAll('#cartoes .cartao')]; if (!cards.length) return;
       const L = grafico.niveis[n - 1], TIPOS = 'spdf', ELET = { s: 2, p: 6, d: 10, f: 14 };
       const st = arraste = { n, card: null, cards, feito: false, arrastando: false, clone: null, timer: null, fantasmas: [], restante: total, postos: new Set() };
@@ -4767,6 +4773,7 @@ const Atomo = (() => {
       };
       const desce = e => {
         if (st.feito || st.arrastando || st.postos.has(e.currentTarget.dataset.t)) return;   // cartão já usado (vazio) não arrasta
+        cortaNarracao();                                                             // arrastar corta o áudio que estiver tocando
         const card = e.currentTarget; e.preventDefault();
         st.arrastando = true; st.card = card; st.clone = clona(card); card.classList.add('vazio');
         move(e);
@@ -4864,6 +4871,17 @@ const Atomo = (() => {
       if (!pronto || !grafico) return;
       grafico.totalNivel(n, dur);
       const T = grafico.textosNivel[n - 1]; if (T && T.h > .001){ const h0 = T.h; anima(250, k => grafico.textoNivelH(n, h0 * (1 - k))); }   // o "Nº nível" volta ao tamanho normal
+    },
+    /* o total embaixo da camada (já na tela) aumenta e fica aumentado até a camada ficar completa; a "Nª camada" volta ao normal */
+    totalCresce(n){
+      if (!pronto || !grafico) return;
+      const TT = grafico.totais[n - 1]; if (TT && !TT.s.visible) grafico.totalNivel(n, 0, true);   // (se não estava na tela, aparece direto)
+      this.seguraTotal(n);
+      const T = grafico.textosNivel[n - 1]; if (T && T.h > .001){ const h0 = T.h; anima(250, k => grafico.textoNivelH(n, h0 * (1 - k))); }
+    },
+    /* os 4 cartões coloridos dos subníveis somem em fade out */
+    cartoesSomem(dur = 800){
+      document.querySelectorAll('#cartoes .cartao').forEach(c => { c.style.transition = `opacity ${dur}ms ease`; c.style.opacity = 0; c.style.pointerEvents = 'none'; });
     },
     /* o "Nº nível" aumenta e fica aumentado (até o total entrar) */
     seguraTextoNivel(n){ if (pronto && grafico){ const T = grafico.textosNivel[n - 1], h0 = T ? T.h || 0 : 0; anima(250, k => grafico.textoNivelH(n, h0 + (1 - h0) * k)); } },
@@ -5547,7 +5565,7 @@ const Retomar = (() => {
     "audio_distribuição_8.8":  () => { INICIO["audio_distribuição_8.7"](); nivelPronto(4); },
     "audio_distribuição_8.9":  () => { INICIO["audio_distribuição_8.8"](); nivelPronto(5); },
     "audio_distribuição_8.95": () => { INICIO["audio_distribuição_8.9"](); nivelPronto(6); },
-    "audio_distribuição_9":    () => { INICIO["audio_distribuição_8.95"](); nivelPronto(7); },
+    "audio_distribuição_9":    () => { INICIO["audio_distribuição_8.95"](); nivelPronto(7); Atomo.cartoesSomem(0); },
   };
   function salva(){
     try {
