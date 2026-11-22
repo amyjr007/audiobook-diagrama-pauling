@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.92';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.93';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -924,7 +924,7 @@ const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áud
 const CAM_RUTHERFORD = [[13.64, -2.36, 24.93], [13.62, -2.02, 34.92]];
 const CAM_BOHR       = [[-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92]];
 /* conceitos (áudios 7.1 e 7.2) */
-const CONCEITO_1 = '1. Os elétrons se organizam em níveis discretos de energia, também conhecidos como camadas eletrônicas.';
+const CONCEITO_1 = '1. Os elétrons se organizam em níveis de energia bem definidos, também conhecidos como camadas eletrônicas.';
 const CONCEITO_2 = '2. Cada nível é representado por um número inteiro, n, e sua energia aumenta quanto mais afastado do núcleo esse nível está.';
 
 /* áudio 7.3: depois de 3 saltos do elétron, toca o 7.4 (se o 7.3 ainda estiver tocando, espera ele acabar) */
@@ -1121,7 +1121,7 @@ const EVENTOS = {
     } },
   ],
   'audio_distribuição_7.1': [
-    { t: 1.0, acao: () => Atomo.digita('conceito', CONCEITO_1, { cor: '#eef1ff', ms: 55 }) },
+    { t: .8,  acao: () => Atomo.digita('conceito', CONCEITO_1, { cor: '#eef1ff', ms: 55 }) },
     { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, 'audio_distribuição_7.2'); } },
   ],
   'audio_distribuição_7.2': [
