@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.94';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.95';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -4622,6 +4622,9 @@ const Atomo = (() => {
       if (!pronto) return;
       const C = ruth.camadas[i]; if (!C || C.g.visible) return;
       C.g.visible = true;
+      if ($('#energia') && $('#energia').classList.contains('on')){                  // energia sobe uma quantidade definida (1/7) por camada — salto, não contínua
+        const fill = $('#energiaFill'); fill.style.transition = 'width .15s ease-out'; fill.style.width = ((i + 1) / 7 * 100) + '%';
+      }
       anima(dur, k => tvLigaCamada(C, k), () => tvLigaCamada(C, 1), k => k);
     },
     /* barra "Energia": aparece vazia e enche da esquerda para a direita em "dur" ms */
@@ -4631,8 +4634,7 @@ const Atomo = (() => {
       fill.style.setProperty('--cheio', fill.parentElement.clientWidth + 'px');   // o degradê fica parado: a barra "revela" as cores
       fill.style.transition = 'none';
       if (!dur){ fill.style.width = '100%'; return; }
-      fill.style.width = '0';
-      anima(dur, k => fill.style.width = (k * 100) + '%', null, k => k);
+      fill.style.width = '0';                                                         // começa vazia: sobe um degrau (1/7) a cada camada que liga (camadaLiga)
     },
     /* áudio 5.2: em "dur" ms a câmera se afasta (até o zoom 0,65 do modo edição), o contorno das camadas
        do carbono some em fade e os elétrons aceleram aos poucos, com o rastro cada vez mais intenso.
