@@ -351,7 +351,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 /* áudio 8.2: cartões dos subníveis, enfileirados (tela deitada: à direita do gráfico · celular: embaixo dele).
    Altos, com o nome dentro e o total de elétrons em cima, na diagonal direita */
 .cartoes{position:absolute;z-index:3;left:84%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:flex-end;gap:clamp(8px,1.5vw,14px);pointer-events:none}
-.cartoes.retrato{left:50%;top:89%;translate:-7.8vw 4.9vh;scale:.92}   /* celular: posição e tamanho do modo edição v0.72 (384×783) */
+.cartoes.retrato{left:50%;top:89%;translate:-7.8vw 2.4vh;scale:.92}   /* celular: posição e tamanho do modo edição v0.72 (384×783); v1.05: ~20 px mais alto */
 .cartoes.retrato .cartao{height:clamp(46px,6.2vh,62px);font-size:clamp(14px,3.9vw,19px);padding:0 clamp(7px,2vw,12px);min-width:clamp(50px,14vw,66px)}   /* celular: mais baixos, letra maior */
 .cartoes:not(.retrato) .cartao{height:clamp(54px,7.5vh,74px);font-size:clamp(13px,1.15vw,17px);min-width:clamp(58px,4.6vw,74px)}   /* tela deitada: mais baixos; a fileira cabe entre o gráfico e a borda */
 .cartao{position:relative;box-sizing:border-box;height:clamp(70px,13vh,118px);padding:0 clamp(8px,1.3vw,14px);display:flex;align-items:center;justify-content:center;
@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.04';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.05';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
