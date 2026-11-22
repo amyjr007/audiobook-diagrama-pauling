@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '0.91';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '0.92';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1028,6 +1028,7 @@ const EVENTOS = {
     /* virada para o hidrogênio (Atomo.viraParaHidrogenio) fica guardada para depois */
   ],
   'audio_distribuição_3': [
+    { t: .9,  acao: () => Atomo.eletrosferaHFixa(true) },                       // a eletrosfera do H não some com a câmera
     { t: 1.0, acao: () => Atomo.viajaPara('H', 'Hidrogênio - D', 'elem', { inteiroAntes: true }) },  // câmera afasta, viaja até o deutério e aproxima (átomo inteiro)
     { t: 4.0, acao: () => Atomo.zoomLento(.464, 2200) },               // zoom no núcleo (a eletrosfera some)
     { t: 4.0, acao: () => Quiz.pergunta({
@@ -1040,6 +1041,7 @@ const EVENTOS = {
     }) },
   ],
   'audio_distribuição_4': [
+    { t: .05, acao: () => Atomo.eletrosferaHFixa(false) },                      // (a eletrosfera do H volta a sumir com o zoom)
     { t: 1.0, acao: () => Atomo.viajaPara('C', 'Carbono', 'elem', { inteiroAntes: true, dica: 'toque e arraste para girar o núcleo' }) },   // câmera viaja até o carbono (6 p⁺ + 6 n⁰)
     { t: 3.5, acao: () => Atomo.zoomLento(.464, 2200) },               // zoom no núcleo
     { t: 2.0, acao: () => Quiz.pergunta({                              // assim que o carbono aparece, as respostas
@@ -1091,15 +1093,20 @@ const EVENTOS = {
     { t: .05,  acao: () => { Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_CONSTRUCAO[0], CAM_CONSTRUCAO[1], 2500); Atomo.construcao(true); } },
     /* 3,5 s → 8,5 s: a cada 0,5 s entra 1 próton no núcleo e 1 elétron na eletrosfera (11 de cada) */
     ...Array.from({ length: 11 }, (_, i) => ({ t: 3.5 + i * .5, acao: () => Atomo.construcaoPasso(i) })),
-    /* 9,5 s → 13 s: a câmera vira para o cavalete do Rutherford */
-    { t: 9.5,  acao: () => Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 3500) },
-    /* 22,2 s: a tela escurece e o átomo de Rutherford aparece (núcleo 4 p⁺ + 3 n⁰, depois os 4 elétrons, até 27 s) */
-    { t: 22.2, acao: () => Atomo.rutherford(true) },
-    ...[23.0, 24.2, 25.4, 26.5].map((t, i) => ({ t, acao: () => Atomo.rutherfordEletron(i) })),
-    /* fim: não passa sozinho — o play aparece e o toque nele começa o áudio 7 */
-    { t: 'fim', acao: () => escondePlay(false) },
+    /* 14 s → 16 s: a câmera vira para o quadro do Rutherford */
+    { t: 14.0, acao: () => Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 2000) },
+    /* 24 s: o fundo escurece e o átomo de Rutherford aparece (núcleo e os 4 elétrons) */
+    { t: 24.0, acao: () => Atomo.rutherford(true) },
+    { t: 24.3, acao: () => [0, 1, 2, 3].forEach(i => Atomo.rutherfordEletron(i)) },
+    /* 35,5 s: o átomo some em fade e o quadro do Rutherford clareia de novo */
+    { t: 35.5, acao: () => Atomo.rutherford(false) },
+    /* 45 s: a tela escurece de novo e a frase é digitada */
+    { t: 45.0, acao: () => { Atomo.escurece(true); Atomo.digita('conceito', 'A forma como os elétrons estão organizados é justamente a chave para entender o comportamento químico de um átomo.', { cor: '#eef1ff', ms: 55 }); } },
+    /* fim: "Toque na tela" → áudio 7 */
+    { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, 'audio_distribuição_7'); } },
   ],
   'audio_distribuição_7': [
+    { t: .05, acao: () => { Atomo.escurece(false); Atomo.apagaLinha('conceito'); } },   // a frase do fim do áudio 6 e o escuro saem
     { t: 1.5, acao: () => Atomo.rutherford(false) },                          // o átomo de Rutherford e o escuro saem em fade
     /* 3 s → 4 s: a câmera desliza até o cavalete do Bohr (mesma altura e distância) */
     { t: 3.0, acao: () => Atomo.voaCamera([-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92], 1000) },
@@ -1967,6 +1974,7 @@ const Atomo = (() => {
   }
   /* hidrogênio */
   let hAtomo, hNucleo, hProton, maisH = [], esferaH;
+  let esfHFixa = false;   // áudio 3: a eletrosfera do H não some com o zoom
   /* carbono */
   let cAtomo, cNucleo, maisC = [], cEsferas = [];
   let opEletHe = 1;      // elétrons do hélio (áudio 1: a eletrosfera aparece sem eles e eles entram depois)
@@ -3826,7 +3834,7 @@ const Atomo = (() => {
     if (!camTween) fatorCam += (fatorCamAlvo - fatorCam) * (1 - Math.exp(-dtR * taxaCam));
     /* quanto mais perto do núcleo, mais a eletrosfera some (ela cobriria a tela toda) */
     const vis = Math.min(1, Math.max(0, (fatorCam - .5) / .3));
-    [esfera, esferaH].forEach(e => e.material.uniforms.vis.value = vis * contorno);   // contorno: borda da eletrosfera (some no áudio 5)
+    [esfera, esferaH].forEach(e => e.material.uniforms.vis.value = (e === esferaH && esfHFixa ? 1 : vis) * contorno);   // contorno: borda da eletrosfera (some no áudio 5)
     cEsferas.forEach(e => e.material.uniforms.vis.value = vis * contornoC * contorno);   // contorno do C pode sumir sozinho (áudio 5.2)
     /* elétrons circulam (no relógio do roteiro) e acompanham a camada: somem junto com ela.
        No carbono, "energiaC" (0 → 1, áudio 5.2) acelera os elétrons e deixa o rastro longo, forte e colorido */
@@ -3835,7 +3843,7 @@ const Atomo = (() => {
       const u = e.userData, en = esf.parent === cAtomo ? energiaC : 0;
       u.fase += dtR * u.vel * (1 + 3.2 * en);
       e.position.set(u.raio * Math.cos(u.fase), 0, u.raio * Math.sin(u.fase));
-      const op = esf.visible ? esf.material.uniforms.opac.value * vis * (esf === esfera ? opEletHe : 1) : 0;
+      const op = esf.visible ? esf.material.uniforms.opac.value * (esf === esferaH && esfHFixa ? 1 : vis) * (esf === esfera ? opEletHe : 1) : 0;
       e.material.opacity = op; u.halo.material.opacity = Math.min(1, .85 + .5 * be) * op; u.halo.scale.setScalar(.55 * (1 + 1.6 * be)); e.visible = op > .01;   // be: elétrons acesos (áudio 5)
       u.trilha.material.opacity = .42 * op * (1 - .5 * en); u.trilha.visible = op > .01;   // órbita (trajetória) desenhada
       if (Math.abs(en - (u.enUlt ?? 0)) > .003){                                         // cor do rastro: ciano → neon intenso
@@ -3964,7 +3972,7 @@ const Atomo = (() => {
       matsLi.forEach(m => m.opacity = m.userData.base);
       he.visible = false; heNucleo.scale.setScalar(1); heNucleo.rotation.set(0, 0, 0);
       matsHe.forEach(m => { m.opacity = 1; m.emissive.setHex(m.userData.emis); m.emissiveIntensity = .6; });
-      ['p', 'n'].forEach(k => { brilho[k].v = brilho[k].alvo = 0; brilho[k].ult = -1; }); brilho.e.v = brilho.e.alvo = 0; contorno = 1;
+      ['p', 'n'].forEach(k => { brilho[k].v = brilho[k].alvo = 0; brilho[k].ult = -1; }); brilho.e.v = brilho.e.alvo = 0; contorno = 1; esfHFixa = false;
       [...halosP, ...halosN].forEach(h => { h.visible = false; h.material.opacity = 0; });
       esfera.visible = false; esfera.material.uniforms.opac.value = 0; setEsf(esfera, ESF_PADRAO); opEletHe = 1;
       hAtomo.visible = false; cAtomo.visible = false;
@@ -4661,6 +4669,8 @@ const Atomo = (() => {
     brilhaProtons(ms){ brilho.p.alvo = 1; agenda(ms, () => { brilho.p.alvo = 0; }); },
     /* elétrons acesos (halo maior e mais forte) — ficam assim até apagar */
     acendeEletrons(on = true){ brilho.e.alvo = on ? 1 : 0; },
+    /* a eletrosfera do H (e o elétron) continua na tela mesmo com o zoom no núcleo */
+    eletrosferaHFixa(on = true){ esfHFixa = on; },
     /* tira (on) ou devolve a borda circular das eletrosferas; os elétrons e as órbitas continuam */
     semContorno(on = true, dur = 600){ const c0 = contorno, a = on ? 0 : 1; if (!dur){ contorno = a; return; } anima(dur, k => { contorno = c0 + (a - c0) * k; }); },
     /* destaque = brilho na cor da bolinha (não aumenta mais) */
@@ -5150,7 +5160,8 @@ const Retomar = (() => {
     'audio_distribuição_6':   () => { Atomo.estado('C', 1, 'Carbono'); Atomo.energizaCarbono(0); neutroNaTela(); },
     'audio_distribuição_7':   () => {
       Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 1);
-      Atomo.construcao(true, true); Atomo.rutherford(true, true);      // como o áudio 6 terminou: átomo montado e Rutherford na tela
+      Atomo.construcao(true, true); Atomo.escurece(true);               // como o áudio 6 terminou: átomo montado, tela escura e a frase final
+      Atomo.digita('conceito', 'A forma como os elétrons estão organizados é justamente a chave para entender o comportamento químico de um átomo.', { cor: '#eef1ff', ms: 1 });
     },
     'audio_distribuição_7.1': () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); },
     'audio_distribuição_7.2': () => {
