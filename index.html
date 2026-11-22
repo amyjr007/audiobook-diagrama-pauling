@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.03';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.04';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -968,7 +968,7 @@ function graficoPronto(){
   tocaDepois(1500, 'audio_distribuição_8.2');
 }
 function encaixou1s2(){
-  somEncaixe(); sfx('applause'); Quiz.confetes();
+  somEncaixe(); Atomo.comemoraNivel(1);                                         // pulso verde no nível + aplausos, "yes" e confetes
   tocaDepois(150, 'audio_distribuição_8.4');
 }
 /* som curto de encaixe ("snap"), feito na hora com Web Audio */
@@ -3202,6 +3202,7 @@ const Atomo = (() => {
           return new THREE.CanvasTexture(c);
         })();
         const SUBS = [1, 2, 3, 4, 4, 3, 2], H0 = .16, GAP = .3, DEG_IN = .32, ELET = [2, 6, 10, 14];
+        const VERDE_OK = new THREE.Color(0x46ff8c);                                 // verde do "nível completo"
         /* rótulo de um degrau, em 3 peças para poderem ser destacadas separadamente (áudio 8.4):
            o número do nível e a letra do subnível na cor da camada, e o total de elétrons como expoente
            (mesmo estilo dos cartões). U = tamanho de 1 px do desenho em unidades da cena */
@@ -3253,8 +3254,9 @@ const Atomo = (() => {
             const y = ya + (yb - ya) * L.d + L.b;
             t.position.set(xa + (xb - xa) * L.d + A.x, y + A.y, .02);
             const hl = L.hl[j];
-            t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl) * A.s, h * (1 + 1.4 * hl) * A.s, 1);
+            t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl) * A.s, h * (1 + 1.4 * hl + 1.2 * (L.verde || 0)) * A.s, 1);
             t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar((1 + .9 * L.p + 1.1 * hl) * esc);   // cor do nível; a do bloco quando encaixado; acende no destaque
+            if (L.verde){ t.material.color.lerp(VERDE_OK, L.verde); }                         // nível completo: pulso verde
             t.material.opacity = L.op; t.visible = L.op > .01;
             const op = L.rot[j] * L.op;                                                         // rótulo "3d¹⁰" logo acima do degrau
             const ps = L.rotulos[j].partes, fs = ps.map(P => 1 + .55 * P.h);                 // peça em destaque: maior e mais clara
@@ -3264,7 +3266,7 @@ const Atomo = (() => {
               if (k === 2) xx += 2; const cx = xx + lg[k] / 2; xx += lg[k]; const f = fs[k];
               const sobe = (Math.max(...fs) - 1) * 96 * U * R * .3;                          // ao crescer, sobe (não encosta no degrau)
               P.s.position.set(xb + cx * U * R + A.x, y + .7 * A.s + A.y + sobe, .03); P.s.scale.set(P.w * U * f * R, 96 * U * f * R, 1);
-              P.s.material.opacity = op; P.s.visible = op > .01; P.s.material.color.setScalar((1 + .8 * P.h) * esc);
+              P.s.material.opacity = op; P.s.visible = op > .01; P.s.material.color.setScalar((1 + .8 * P.h) * esc); if (L.verde) P.s.material.color.lerp(VERDE_OK, L.verde);
             });
           });
           /* brilho da linha (na cor do nível) */
@@ -3396,7 +3398,7 @@ const Atomo = (() => {
             const dir = Math.min(cx + wL / 2, XEIXO + ajusteEixos.x - .12), esqL = cx - wL / 2;
             let w = dir - esqL, h = w / T.asp; if (h > hL){ h = hL; w = h * T.asp; }
             const g = .85 * tamNivel() * (1 + .25 * (T.h || 0));                                       // 85% do espaço (sobra para o destaque crescer em volta do centro) · destaque +25% e brilho
-            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w * .85 * tamNivel() / 2, yN(n) + AL.y, .3);   /* borda direita (sem destaque) antes do eixo */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[n - 1].dim || 0)));
+            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w * .85 * tamNivel() / 2, yN(n) + AL.y, .3);   /* borda direita (sem destaque) antes do eixo */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[n - 1].dim || 0))); if (niveis[n - 1].verde) T.s.material.color.lerp(VERDE_OK, niveis[n - 1].verde);
             T.n = n; T.bx = dir - w * .85 * tamNivel() / 2; T.by = yN(n) + AL.y; T.bh = h * .85 * tamNivel();                        // posição/altura sem destaque (o total fica embaixo)
           },
           /* total de elétrons que cabem no nível n ("2e⁻", "8e⁻", "18e⁻"…), digitado embaixo do "Nº nível" */
@@ -3640,7 +3642,7 @@ const Atomo = (() => {
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
             [grafico.contadores, grafico.textosCamada].forEach(M => Object.values(M).forEach(o => { o.s.visible = false; o.s.material.opacity = 0; }));
             Object.values(grafico.circulos).forEach(O => { O.l.visible = false; });
-            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
+            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; T.h = 0; } });   // "1º nível"…
             grafico.totais.forEach(T => { if (T){ T.s.visible = false; T.h = 0; } });      // totais "2e⁻"… embaixo dos níveis
             niveis.forEach(L => { L.dim = 0; });                                           // sem escurecimento
@@ -4663,6 +4665,7 @@ const Atomo = (() => {
         st.restante -= ELET[tipo]; grafico.contadorValor(n, st.restante); grafico.pulsaContador(n);   // o contador diminui
         if (st.restante === 0){                                                      // nível completo
           st.feito = true; cards.forEach(c2 => c2.classList.remove('arrastavel'));
+          Atomo.comemoraNivel(n);                                                    // pulso verde + aplausos, "yes" e confetes
           agenda(500, () => { grafico.limpaNivel(n); grafico.fecha(n); aoCompletar && aoCompletar(); });
           agenda(2100, () => cards.forEach(c2 => c2.classList.remove('vazio')));     // os cartões voltam depois que os degraus flutuam
         }
@@ -4704,6 +4707,13 @@ const Atomo = (() => {
     setaSobe(dur = 4000){ if (pronto && grafico) grafico.setaSobe(dur); },           // seta some e sobe; linhas saltam
     /* etiquetas "n = 1…7" em sequência ao lado das linhas do gráfico (a anterior some quando a próxima aparece) */
     /* todas as linhas do gráfico brilham juntas (acende e apaga em "dur" ms) */
+    /* nível n completo: o nível e os subníveis pulsam em verde (2 vezes), com aplausos, "yes" e confetes */
+    comemoraNivel(n, dur = 1200){
+      if (!pronto || !grafico) return;
+      const L = grafico.niveis[n - 1]; if (!L) return;
+      sfx('applause'); sfx('yes'); Quiz.confetes();
+      anima(dur, k => { L.verde = Math.abs(Math.sin(Math.PI * 2 * k)); grafico.reaplica(L); }, () => { L.verde = 0; grafico.reaplica(L); }, k => k);
+    },
     brilhaGrafico(dur = 900){
       if (!pronto || !grafico) return;
       anima(dur, k => grafico.niveis.forEach(L => { L.p = Math.sin(Math.PI * k); grafico.reaplica(L); }), () => grafico.niveis.forEach(L => { L.p = 0; grafico.reaplica(L); }), k => k);
