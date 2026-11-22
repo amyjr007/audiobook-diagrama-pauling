@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.06';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.07';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -917,7 +917,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.7'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.7'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1328,8 +1328,19 @@ const EVENTOS = {
     { t: 26.6, acao: () => { Atomo.rotuloDestaque(2, 1, false); Atomo.cartaoDestaque('s'); Atomo.rotuloDestaque(2, 0, true); } },   // …diminuem; o cartão s e o 2s² por 1 s
     { t: 27.6, acao: () => { Atomo.cartaoDestaque(null); Atomo.rotuloDestaque(2, 0, false); } },
     { t: 29.0, acao: () => { Atomo.cartaoDestaque('p'); Atomo.rotuloDestaque(2, 1, true); } },            // o 2p⁶ e o cartão p⁶
-    /* fim: tudo volta ao normal; o play vira "Próximo" → áudio 8.7 */
-    { t: 'fim', acao: () => { Atomo.cartaoDestaque(null); Atomo.rotuloDestaque(2, 1, false); escondePlay(false); botaoOk(true, 'audio_distribuição_8.7', 'Próximo'); } },
+    /* fim: tudo volta ao normal; o play vira "Próximo" → áudio 8.6 */
+    { t: 'fim', acao: () => { Atomo.cartaoDestaque(null); Atomo.rotuloDestaque(2, 1, false); escondePlay(false); botaoOk(true, 'audio_distribuição_8.6', 'Próximo'); } },
+  ],
+  'audio_distribuição_8.6': [
+    { t: .05,  acao: () => escondePlay(false) },
+    { t: 1.6,  acao: () => Atomo.focoNivel([1, 2, 3]) },                        // mais uma camada clareia (o 3º nível)
+    { t: 3.5,  acao: () => Atomo.destacaTextoNivel(3, 1000) },                  // o "3º nível" aumenta por 1 s
+    { t: 5.8,  acao: () => Atomo.seguraTotal(3) },                              // o "18e⁻" aumenta (fica assim até zerar)
+    /* 9 s: os 4 cartões coloridos aumentam por 1 s e o aluno já pode arrastar até os degraus do 3º nível
+       (a cada encaixe o total embaixo do "3º nível" diminui: 18 → 16 → 10 → 0) */
+    { t: 9.0,  acao: () => { Atomo.cartoesAumentam(1000); Atomo.montaNivel(3, 18); } },
+    /* fim: sem play — só passa montando o nível */
+    { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(3)) escondePlay(true); } },
   ],
   'audio_distribuição_8.7': [
     /* desde o começo, o aluno pode arrastar qualquer cartão até os degraus do nível M */
@@ -3422,7 +3433,8 @@ const Atomo = (() => {
               const tex = new THREE.CanvasTexture(c);
               const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, opacity: 1, depthWrite: false, depthTest: false }));
               s.renderOrder = 7; s.visible = false; conj.add(s);
-              const cap = ELET.slice(0, SUBS[n - 1]).reduce((a, b) => a + b, 0), num = cap + 'e', hex = '#' + niveis[n - 1].cor.getHexString();
+              const cap = ELET.slice(0, SUBS[n - 1]).reduce((a, b) => a + b, 0), hex = '#' + niveis[n - 1].cor.getHexString();
+              let num = cap + 'e';
               const desenha = q => {
                 const x = c.getContext('2d'); x.clearRect(0, 0, 260, 100);
                 x.shadowColor = hex; x.shadowBlur = 10; x.fillStyle = '#eef1ff'; x.textBaseline = 'alphabetic';
@@ -3431,14 +3443,16 @@ const Atomo = (() => {
                 if (q > num.length){ x.font = '700 40px "Space Grotesk", sans-serif'; x.fillText('−', x0 + w + 2, 40); }
                 tex.needsUpdate = true;
               };
-              T = this.totais[n - 1] = { s, desenha, nCar: num.length + 1, h: 0 };
+              T = this.totais[n - 1] = { s, desenha, nCar: num.length + 1, h: 0, poe: v => { num = v + 'e'; desenha(99); }, volta: () => { num = cap + 'e'; } };   // poe: troca o número (o aluno encaixou)
             }
-            T.s.visible = true; T.s.material.opacity = 1; T.h = 0;
+            T.s.visible = true; T.s.material.opacity = 1; T.h = 0; T.volta();          // (começa de novo com o total do nível)
             if (ja){ T.desenha(99); aplica(niveis[n - 1]); return; }
             T.desenha(0); aplica(niveis[n - 1]); comecaSom();
             anima(dur, k => T.desenha(Math.ceil(k * T.nCar)), () => { T.desenha(99); paraSom(); }, k => k);
           },
           totalH(n, h){ const T = this.totais[n - 1]; if (!T) return; T.h = h; aplica(niveis[n - 1]); },
+          /* o total embaixo do "Nº nível" passa a mostrar quantos elétrons ainda faltam (atualiza a cada encaixe) */
+          totalValor(n, v){ const T = this.totais[n - 1]; if (T && T.poe && T.s.visible && v > 0) T.poe(v); },   // (no zero o total some com o nível completo)
           totalSome(n, dur = 400){
             const T = this.totais[n - 1]; if (!T || !T.s.visible) return;
             const o0 = T.s.material.opacity; anima(dur, k => { T.s.material.opacity = o0 * (1 - k); }, () => { T.s.visible = false; T.h = 0; });
@@ -4675,6 +4689,7 @@ const Atomo = (() => {
         grafico.encaixaBloco(n, j, 250); grafico.mostraRotulo(n, j); sfx("right");     // o rótulo (2s², 2p⁶…) aparece já no encaixe
         if (st.circuloAteEncaixe){ st.circuloAteEncaixe = false; grafico.circulo(n, false); }   // o círculo do contador some no 1º encaixe
         st.restante -= ELET[tipo]; grafico.contadorValor(n, st.restante); grafico.pulsaContador(n);   // o contador diminui
+        grafico.totalValor(n, st.restante);                                             // …e o total embaixo do "Nº nível" também (8e⁻ → 6e⁻ …)
         if (st.restante === 0){                                                      // nível completo
           st.feito = true; cards.forEach(c2 => c2.classList.remove('arrastavel'));
           Atomo.comemoraNivel(n);                                                    // pulso verde + aplausos, "yes" e confetes
@@ -5379,6 +5394,8 @@ const Retomar = (() => {
       Atomo.textoNivel(2, true); Atomo.blocoNoDegrau(2, 0); Atomo.blocoNoDegrau(2, 1); Atomo.nivelFecha(2, 1); Atomo.focoNivel([1, 2], 0, true); Atomo.avancaTudo(); Atomo.avancaTudo();   // do 3º nível para cima escuro
     },
     /* como o 8.5A terminou: igual ao começo dele (1º e 2º níveis montados) */
+    /* como o 8.5A terminou: 1º e 2º níveis montados */
+    "audio_distribuição_8.6": () => { INICIO["audio_distribuição_8.5A"](); },
     "audio_distribuição_8.7": () => { INICIO["audio_distribuição_8.5A"](); },
   };
   function salva(){
