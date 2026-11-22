@@ -889,7 +889,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.07';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.08';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -917,7 +917,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.7'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1338,9 +1338,23 @@ const EVENTOS = {
     { t: 5.8,  acao: () => Atomo.seguraTotal(3) },                              // o "18e⁻" aumenta (fica assim até zerar)
     /* 9 s: os 4 cartões coloridos aumentam por 1 s e o aluno já pode arrastar até os degraus do 3º nível
        (a cada encaixe o total embaixo do "3º nível" diminui: 18 → 16 → 10 → 0) */
-    { t: 9.0,  acao: () => { Atomo.cartoesAumentam(1000); Atomo.montaNivel(3, 18); } },
+    { t: 9.0,  acao: () => { Atomo.cartoesAumentam(1000); Atomo.montaNivel(3, 18, () => { if (atual === 'audio_distribuição_8.6') tocaDepois(0, 'audio_distribuição_8.6A'); }); } },   // completo → comemoração + 8.6A
     /* fim: sem play — só passa montando o nível */
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(3)) escondePlay(true); } },
+  ],
+  'audio_distribuição_8.6A': [
+    { t: .05,  acao: () => escondePlay(false) },
+    { t: 2.0,  acao: () => Atomo.destacaTextoNivel(3, 1000) },                  // o "3º nível" aumenta
+    { t: 3.5,  acao: () => Atomo.totalDeNovo(3) },                              // o "18e⁻" aparece de novo embaixo do "3º nível"
+    /* 6,9 s: os 3 subníveis do 3º nível (degraus + rótulos) e os cartões coloridos s, p, d aumentam */
+    { t: 6.9,  acao: () => { [0, 1, 2].forEach(j => Atomo.rotuloDestaque(3, j, true)); Atomo.cartoesDestaque(['s', 'p', 'd']); } },
+    /* rótulos 3s² 3p⁶ 3d¹⁰ — j = 0 s · 1 p · 2 d; peças k: 1 letra · 2 expoente. O resto volta ao normal */
+    { t: 8.0,  acao: () => { Atomo.soPartes(3, [[0, 2]]); Atomo.totalPara(3, 16); } },   // o "2" do s (18e⁻ → 16e⁻)
+    { t: 9.0,  acao: () => Atomo.soPartes(3, [[0, 1]]) },                       // o "2" diminui e o "s" do degrau aumenta
+    { t: 10.0, acao: () => { Atomo.soPartes(3, [[1, 2]]); Atomo.totalPara(3, 10); } },   // o "6" do p (16e⁻ → 10e⁻)
+    { t: 11.0, acao: () => Atomo.soPartes(3, [[1, 1]]) },                       // o "6" diminui e o "p" aumenta
+    { t: 12.0, acao: () => { Atomo.soPartes(3, [[2, 2]]); Atomo.totalPara(3, 0); } },    // o "10" do d (10e⁻ → zera e some)
+    { t: 13.0, acao: () => Atomo.soPartes(3, [[2, 1]], 1000) },                 // o "d" aumenta por 1 s
   ],
   'audio_distribuição_8.7': [
     /* desde o começo, o aluno pode arrastar qualquer cartão até os degraus do nível M */
@@ -4782,6 +4796,23 @@ const Atomo = (() => {
     },
     /* só o cartão "tipo" fica aumentado e aceso (null = nenhum) */
     cartaoDestaque(tipo){ document.querySelectorAll('#cartoes .cartao').forEach(c => c.classList.toggle('destaque', c.dataset.t === tipo)); },
+    /* vários cartões ao mesmo tempo ficam maiores (lista de tipos; [] = nenhum) */
+    cartoesDestaque(tipos = []){ document.querySelectorAll('#cartoes .cartao').forEach(c => c.classList.toggle('destaque', tipos.includes(c.dataset.t))); },
+    /* o total embaixo do "Nº nível" aparece de novo (digitado, com o total do nível) */
+    totalDeNovo(n, dur = 600){ if (pronto && grafico) grafico.totalNivel(n, dur); },
+    /* o total embaixo do "Nº nível" muda para v; em 0 ele zera e some */
+    totalPara(n, v){
+      if (!pronto || !grafico) return;
+      const T = grafico.totais[n - 1]; if (!T || !T.s.visible) return;
+      T.poe(v); if (v <= 0) agenda(700, () => grafico.totalSome(n));
+    },
+    /* só as peças listadas dos rótulos do nível n ficam aumentadas: os degraus e os cartões voltam ao normal */
+    soPartes(n, lista, segura = null){
+      if (!pronto || !grafico) return;
+      const L = grafico.niveis[n - 1]; if (!L) return;
+      for (let j = 0; j < L.m; j++){ const d0 = L.hl[j]; if (d0 > .001) anima(250, t => grafico.hlDegrau(n, j, d0 * (1 - t))); }
+      this.cartoesDestaque([]); this.realcaPartes(n, lista, segura);
+    },
     /* retomar: letras até a "ate" (exclusive) já encaixadas */
     letrasProntas(ate){
       if (!pronto) return;
@@ -5396,6 +5427,8 @@ const Retomar = (() => {
     /* como o 8.5A terminou: igual ao começo dele (1º e 2º níveis montados) */
     /* como o 8.5A terminou: 1º e 2º níveis montados */
     "audio_distribuição_8.6": () => { INICIO["audio_distribuição_8.5A"](); },
+    /* como o 8.6 terminou: o 3º nível montado */
+    "audio_distribuição_8.6A": () => { INICIO["audio_distribuição_8.5A"](); Atomo.textoNivel(3, true); [0, 1, 2].forEach(j => Atomo.blocoNoDegrau(3, j)); Atomo.nivelFecha(3, 1); Atomo.focoNivel([1, 2, 3], 0, true); Atomo.avancaTudo(); Atomo.avancaTudo(); },
     "audio_distribuição_8.7": () => { INICIO["audio_distribuição_8.5A"](); },
   };
   function salva(){
