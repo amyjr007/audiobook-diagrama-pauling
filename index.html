@@ -918,7 +918,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.24';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.25';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -949,7 +949,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.1'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1455,7 +1455,12 @@ const EVENTOS = {
     /* 31 s: o caminho de volta — o átomo 118 vira o gráfico de novo */
     { t: 31.0, acao: () => { Atomo.apagaLinha('elem'); Atomo.voltaGrafico(4500); } },
     /* fim: o play vira "Ok" verde piscando; o clique coloca os degraus em ordem crescente de energia */
-    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, () => { botaoOk(false); Atomo.ordemEnergia(); }, 'Ok'); } },
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, () => { botaoOk(false); escondePlay(true); Atomo.ordemEnergia(); tocaDepois(2700, 'audio_distribuição_9.1'); }, 'Ok'); } },   // no fim da animação: áudio 9.1
+  ],
+  'audio_distribuição_9.1': [
+    { t: .05,  acao: () => escondePlay(false) },
+    /* 27,7 s: só o 3s² e o 7s¹ ocupados (o resto fica só o degrau), "₃Li" e, de fundo, o lítio */
+    { t: 27.7, acao: () => Atomo.cenaLitio() },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -3501,6 +3506,14 @@ const Atomo = (() => {
         const saltinho = L => anima(380, k => { L.b = .38 * Math.sin(Math.PI * k); aplica(L); }, () => { L.b = 0; aplica(L); }, k => k);
         grafico = {
           eixos, matEixo, rotE, yN, niveis, medeGrafico,
+          /* troca o expoente do rótulo do degrau j do nível n (ex.: o "2" do 7s² vira "1") */
+          expoenteDegrau(n, j, txt){
+            const L = niveis[n - 1]; if (!L || j >= L.m) return;
+            const P = L.rotulos[j].partes[2], hex = '#' + L.cor.getHexString(), t = parteTex(String(txt), 34, '#ffffff', 44, hex);
+            if (P.s.material.map) P.s.material.map.dispose();
+            P.s.material.map = t.tex; P.s.material.needsUpdate = true; P.w = t.w; P.mudou = String(txt) !== String(ELET[j]);
+            aplica(L);
+          },
           /* ordem de energia: a seta vertical sobe "extra" (unidades) e os degraus ganham esse espaço (0 = volta ao normal) */
           sobeSeta(extra, dur = 1200){
             const y0 = yTopo, e0 = aufExtra, alvoY = y0 - e0 + extra;                  // (a altura normal da seta + o espaço a mais)
@@ -3848,6 +3861,7 @@ const Atomo = (() => {
             niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; T.h = 0; } });   // "1º nível"…
             grafico.totais.forEach(T => { if (T){ T.s.visible = false; T.h = 0; } });      // totais "2e⁻"… embaixo dos níveis
+            niveis.forEach(L => L.rotulos.forEach((r, j) => { if (r.partes[2].mudou) grafico.expoenteDegrau(L.n, j, ELET[j]); }));   // expoentes trocados voltam
             niveis.forEach(L => { L.dim = 0; });                                           // sem escurecimento
           },
         };
@@ -5145,7 +5159,21 @@ const Atomo = (() => {
     escurece(on){ const e = face && face.querySelector('.escurecedor'); if (e) e.classList.toggle('on', on); },
     /* áudio 9: átomo 118 (oganessônio) no modelo das camadas — núcleo e 7 camadas nas cores dos níveis,
        com 2, 8, 18, 32, 32, 18 e 8 elétrons girando. Desenhado por cima do escuro (atrás dos textos) */
-    atomo118(on = true, dur = 900){
+    /* áudio 9.1 (27,7 s): os subníveis encaixados somem (fica só o degrau), menos o 3s² e o 7s¹; "₃Li" no alto e,
+       de fundo, apagado, o lítio com 3 prótons: 2 elétrons na 3ª camada e 1 na 7ª */
+    cenaLitio(){
+      if (!pronto || !grafico) return;
+      const G = grafico;
+      G.expoenteDegrau(7, 0, '1');
+      G.niveis.forEach(L => {
+        const r0 = L.rot.slice(), c0 = L.corSub.slice(), alvo = L.rot.map((_, j) => (L.n === 3 || L.n === 7) && j === 0 ? 1 : 0);
+        anima(700, k => { L.rot = r0.map((r, j) => r + (alvo[j] - r) * k); L.corSub = c0.map((c, j) => c + (alvo[j] - c) * k); G.reaplica(L); });
+      });
+      const T = linhas.topo; if (T){ if (T.timer){ T.timer.cancela(); T.timer = null; } T.el.innerHTML = ''; }
+      this.digita('topo', '3Li', { cor: '#eef1ff', sub: [0] });
+      this.atomo118(true, 1200, { els: [0, 0, 2, 0, 0, 0, 1], nP: 3, nN: 0, op: .32 });
+    },
+    atomo118(on = true, dur = 900, cfg = {}){                                    // cfg: { els: elétrons por camada, nP, nN, op: opacidade final }
       if (!pronto || !face) return;
       let A = this._a118;
       if (!A){
@@ -5155,11 +5183,13 @@ const Atomo = (() => {
         A = this._a118 = { c, vivo: false, t0: 0 };
       }
       if (!on){ A.c.style.transition = `opacity ${dur}ms ease`; A.c.style.opacity = 0; setTimeout(() => { A.vivo = false; }, dur + 50); return; }
-      const ELS = [2, 8, 18, 32, 32, 18, 8];
+      const ELS = cfg.els || [2, 8, 18, 32, 32, 18, 8], NB = (cfg.nP ?? 20) + (cfg.nN ?? 20), NP = cfg.nP ?? 20, OPF = cfg.op ?? 1;
+      A.c.style.mixBlendMode = OPF < 1 ? "screen" : "";                          // de fundo: só soma luz (o gráfico continua por cima)
+      A.cfg = { ELS, NB, NP };                                                    // (o desenho que já está rodando passa a usar este átomo)
       const cores = (grafico ? grafico.niveis : ruth.camadas).map(L => '#' + L.cor.getHexString());
       const jaRodava = A.vivo; A.vivo = true; A.t0 = jaRodava ? A.t0 : performance.now();
       const desenha = agora => {
-        if (!A.vivo) return;
+        if (!A.vivo) return; const { ELS, NB, NP } = A.cfg;
         const c = A.c, r = c.getBoundingClientRect(), dpr = Math.min(2, window.devicePixelRatio || 1);
         if (c.width !== Math.round(r.width * dpr) || c.height !== Math.round(r.height * dpr)){ c.width = Math.round(r.width * dpr); c.height = Math.round(r.height * dpr); }
         const x = c.getContext("2d"), W = c.width, H = c.height, cx = W / 2, cy = H * .38;   // (o nome fica embaixo)
@@ -5168,10 +5198,11 @@ const Atomo = (() => {
         /* núcleo: brilho e um aglomerado de prótons (azuis) e nêutrons (dourados) */
         const g = x.createRadialGradient(cx, cy, 0, cx, cy, R0 * 2.2); g.addColorStop(0, 'rgba(120,160,255,.55)'); g.addColorStop(1, 'rgba(120,160,255,0)');
         x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R0 * 2.2, 0, 7); x.fill();
-        for (let i = 0; i < 40; i++){
-          const a = i * 2.39996, d = R0 * .9 * Math.sqrt(i / 40), bx = cx + Math.cos(a) * d, by = cy + Math.sin(a) * d, rb = R0 * .26;
+        for (let i = 0; i < NB; i++){
+          const a = i * 2.39996, d = R0 * (NB < 10 ? .45 : .9) * Math.sqrt(i / NB), bx = cx + Math.cos(a) * d, by = cy + Math.sin(a) * d, rb = R0 * (NB < 10 ? .42 : .26);
+          const neutron = NP >= NB ? false : (NB - NP >= NP ? i % 2 === 1 : i >= NP);
           const gb = x.createRadialGradient(bx - rb * .3, by - rb * .3, rb * .1, bx, by, rb);
-          gb.addColorStop(0, i % 2 ? '#ffe39a' : '#9fc0ff'); gb.addColorStop(1, i % 2 ? '#b47a10' : '#2a54d8');
+          gb.addColorStop(0, neutron ? '#ffe39a' : '#9fc0ff'); gb.addColorStop(1, neutron ? '#b47a10' : '#2a54d8');
           x.fillStyle = gb; x.beginPath(); x.arc(bx, by, rb, 0, 7); x.fill();
         }
         /* camadas e elétrons */
@@ -5186,7 +5217,7 @@ const Atomo = (() => {
         requestAnimationFrame(desenha);
       };
       if (!jaRodava) requestAnimationFrame(desenha);
-      A.c.style.transition = `opacity ${dur}ms ease`; requestAnimationFrame(() => { A.c.style.opacity = 1; });
+      A.c.style.transition = `opacity ${dur}ms ease`; requestAnimationFrame(() => { A.c.style.opacity = OPF; });
     },
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
@@ -5772,6 +5803,7 @@ const Retomar = (() => {
     "audio_distribuição_8.9":  () => { INICIO["audio_distribuição_8.8"](); nivelPronto(5); },
     "audio_distribuição_8.95": () => { INICIO["audio_distribuição_8.9"](); nivelPronto(6); },
     "audio_distribuição_9":    () => { INICIO["audio_distribuição_8.95"](); nivelPronto(7); Atomo.cartoesSomem(0); },
+    "audio_distribuição_9.1":  () => { INICIO["audio_distribuição_9"](); Atomo.ordemEnergia(1); Atomo.avancaTudo(); Atomo.avancaTudo(); },
   };
   function salva(){
     try {
