@@ -1,6 +1,6 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v127';  // acompanhe APP_VERSAO do index.html (1.27 → v127)
+const CACHE = 'pauling-v128';  // acompanhe APP_VERSAO do index.html (1.28 → v128)
 const ARQUIVOS = [
   './',
   './index.html',

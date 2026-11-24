@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.27';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.28';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1019,6 +1019,8 @@ function cortaNarracao(){
   if (!atual || audio.paused || audio.ended) return;
   cortado = true; pausaNarracao(); fimDoAudio();
 }
+/* apaga na hora o título de cima (para escrever outro) */
+function linhaTopoLimpa(){ Atomo.limpaTopo(); }
 function encaixou1s2(){
   somEncaixe(); Atomo.comemoraNivel(1);                                         // pulso verde no nível + aplausos, "yes" e confetes
   tocaDepois(150, 'audio_distribuição_8.4');
@@ -1258,12 +1260,29 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(true); Atomo.letrasDoAluno(2, festaDasLetras); } },
   ],
   'audio_distribuição_8.1': [
-    { t: .05, acao: () => escondePlay(false) },                                 // o play volta (estava escondido durante as letras)
-    /* 1 s → 2,7 s: os níveis brilham em sequência (camada + etiqueta), e a energia salta de nível em nível até o último */
-    { t: 1.0, acao: () => Atomo.ondaNiveis81(1400) },
-    /* 8 s → 12 s: o átomo vira o diagrama de níveis de energia (eixos da esquerda, círculos → linhas, letras ao lado da seta) */
-    { t: 8.0, acao: () => Atomo.viraGrafico(4000, false, graficoPronto) },        // no fim: o gráfico brilha, "yes" e, 1,5 s depois, o 8.2
-    { t: "fim", acao: () => escondePlay(true) },                               // (o 8.2 começa quando o gráfico terminar de se formar)
+    { t: .05,  acao: () => escondePlay(false) },
+    { t: 1.5,  acao: () => Atomo.saltaNivel(1) },                              // o elétron vai para o nível 1 (a barra mostra a energia dele)
+    /* 4 s → 7 s: o elétron salta do K para o L, M… até o Q */
+    ...[2, 3, 4, 5, 6, 7].map((n, i) => ({ t: 4 + i * .6, acao: () => Atomo.saltaNivel(n) })),
+    /* 10 s: "Gráfico de energia" no alto (no lugar de "Modelo de Bohr - 1913") */
+    { t: 10.0, acao: () => { const L = linhaTopoLimpa(); Atomo.digita('topo', 'Gráfico de energia', { cor: '#eef1ff', ms: 45 }); } },
+    /* 11 s: o átomo vira o gráfico; aos 12 s a narração pausa 1,5 s — a transformação dura até o fim da pausa */
+    { t: 11.0, acao: () => Atomo.viraGrafico(2500, false, null, true) },
+    { t: 12.0, acao: () => pausaRoteiro(1500) },
+    { t: 13.0, acao: () => Atomo.realceNivel(1, true, false) },                // K e o nível 1 aumentam (brilho só na linha)
+    /* 19 s → 22 s: L, M… Q aumentam em sequência, com brilho (o anterior diminui); o Q fica 1 s e volta */
+    ...[2, 3, 4, 5, 6, 7].map((n, i) => ({ t: 19 + i * .6, acao: () => { Atomo.realceNivel(n - 1, false); Atomo.realceNivel(n, true, true); } })),
+    { t: 23.0, acao: () => { Atomo.realceNivel(7, false); Atomo.realceNivel(1, true, false); } },   // o Q volta; o K aumenta
+    { t: 23.9, acao: () => { Atomo.realceNivel(1, false); Atomo.textoNivel(1); } },               // o K some e "1ª camada" é digitado no lugar
+    { t: 25.0, acao: () => Atomo.realceNivel(2, true, false) },                                    // o L aumenta
+    { t: 26.0, acao: () => { Atomo.realceNivel(2, false); Atomo.textoNivel(2); } },               // o L some e "2ª camada" é digitado
+    /* 27 s: pausa de 1,5 s; nela, M … Q somem uma a uma e as camadas são digitadas no lugar */
+    { t: 27.0, acao: () => { pausaRoteiro(1500); Atomo.niveisNoLugar(290, false, 240); } },
+    /* 29 s → 36 s: a "1ª camada" aumenta e a linha do nível 1 aumenta e brilha */
+    { t: 29.0, acao: () => { Atomo.seguraTextoNivel(1); Atomo.realceNivel(1, true, true); } },
+    { t: 36.0, acao: () => { Atomo.soltaTextoNivel(1); Atomo.realceNivel(1, false); } },
+    /* fim: 1,5 s depois começa o 8.2 */
+    { t: 'fim', acao: () => { escondePlay(true); tocaDepois(1500, 'audio_distribuição_8.2'); } },
   ],
   'audio_distribuição_8.2': [
     /* 3 s → 5 s: as etiquetas "n = 1" … "n = 7" aparecem em sequência ao lado das linhas (quando a próxima aparece, a anterior some) */
@@ -4516,7 +4535,7 @@ const Atomo = (() => {
     /* áudio 8.1: em "total" ms o átomo vira o diagrama de níveis de energia (tudo em tempo real, sem sumir as linhas):
        os eixos entram deslizando da esquerda, o núcleo e o elétron somem, cada círculo se achata na sua linha
        (cores mantidas) e as letras vão para a esquerda da seta, na altura da linha */
-    viraGrafico(total = 5000, ja = false, aoTerminar = null){
+    viraGrafico(total = 5000, ja = false, aoTerminar = null, manterTopo = false){   // manterTopo: o título de cima continua (ex.: "Gráfico de energia")
       if (!pronto || !grafico) return;
       const G = grafico;
       const dg = deslocGrafico; deslocGrafico = { x: 0, y: 0 };                 // mede sem o deslocamento do modo edição…
@@ -4572,7 +4591,7 @@ const Atomo = (() => {
         }
         if (e){ e.style.transition = barraVira ? 'none' : ''; e.classList.remove('on'); if (barraVira) requestAnimationFrame(() => { e.style.transition = ''; }); }   // a original sai (a cópia é que vira o eixo)
       }
-      { const L = linhas.topo; if (L){ if (ja){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.innerHTML = ''; L.el.classList.remove('digitando'); } else if (L.el.textContent) this.apagaLinha('topo'); } }
+      if (!manterTopo){ const L = linhas.topo; if (L){ if (ja){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.innerHTML = ''; L.el.classList.remove('digitando'); } else if (L.el.textContent) this.apagaLinha('topo'); } }
       bohr.ativo = false; $('#dicaGirar').classList.add('some');                // para os raios; dica fora
       const n0 = ruth.opNucleo, e0 = bohr.op;
       const passo = (i, k) => { const C = ruth.camadas[i], it = letras.itens[i]; G.morfa(C, i + 1, k); if (it.p0g) G.letraPara(it, k, it.p0g); };
@@ -4608,6 +4627,26 @@ const Atomo = (() => {
         agenda(segura, () => anima(300, k => setH(N - 1, 1 - k), () => setH(N - 1, 0)));
       }, k => k);
     },
+    /* o elétron de Bohr salta para o nível n (a barra "Energia" vai junto para a energia desse nível) */
+    limpaTopo(){ const L = linhas.topo; if (L){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.getAnimations().forEach(a => a.cancel()); L.el.innerHTML = ''; } },
+    saltaNivel(n){
+      if (!pronto || !bohr) return;
+      if (bohr.n === n){ barraNivel(n / 7, false); return; }
+      bohrSalta(n, bohr.ang + .5);
+    },
+    /* realce de uma camada no gráfico: a linha engrossa e acende (brilha = também o brilho em volta da linha)
+       e a letra (se ainda estiver lá) aumenta; on = false volta ao normal */
+    realceNivel(n, on = true, brilha = false, dur = 250){
+      if (!pronto || !grafico) return;
+      const L = grafico.niveis[n - 1], it = letras.itens[n - 1]; if (!L) return;
+      const h0 = L.hl[0] || 0, p0 = L.p || 0, alvo = on ? .6 : 0, pAlvo = on && brilha ? .8 : 0;
+      anima(dur, k => {
+        const h = h0 + (alvo - h0) * k; L.hl = L.hl.map(() => h); L.p = p0 + (pAlvo - p0) * k; grafico.reaplica(L);   // (h vai até .6: a linha engrossa e acende sem perder a cor)
+        if (it && it.noGrafico && !(it.apaga > .5)){ const e = (1 - .195 * L.d) * ajusteLetra[n - 1].s * (1 + .35 * h); it.s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); it.s.material.color.setScalar(1 + (brilha ? .8 * h : 0)); }
+      });
+    },
+    /* o texto "Nª camada" volta ao tamanho normal */
+    soltaTextoNivel(n){ if (pronto && grafico){ const T = grafico.textosNivel[n - 1]; if (T && T.h > .001){ const h0 = T.h; anima(250, k => grafico.textoNivelH(n, h0 * (1 - k))); } } },
     /* áudio 8.1: os níveis 1 → 7 brilham em sequência (anel da camada + a etiqueta K…Q), e a barra "Energia" salta
        para a energia de cada nível quando ele acende; o último volta ao normal no fim */
     ondaNiveis81(dur = 1400){
@@ -4677,9 +4716,13 @@ const Atomo = (() => {
       agenda(total, () => this.cartaoDestaque(null));
     },
     /* as letras K…Q somem em sequência e "1º nível"… "7º nível" é digitado no lugar de cada uma */
-    niveisNoLugar(passo = 540, ja = false){
+    niveisNoLugar(passo = 540, ja = false, dur = 450){                         // (as camadas que já viraram texto ficam como estão)
       if (!pronto || !grafico) return;
-      for (let n = 1; n <= 7; n++){ if (ja) grafico.textoNivel(n, 0, true); else agenda((n - 1) * passo, () => grafico.textoNivel(n, 450)); }
+      let i = 0;
+      for (let n = 1; n <= 7; n++){
+        const T = grafico.textosNivel[n - 1]; if (T && T.s.visible) continue;
+        if (ja) grafico.textoNivel(n, 0, true); else { const k = i++; agenda(k * passo, () => grafico.textoNivel(n, dur)); }
+      }
     },
     /* o total de elétrons de cada nível é digitado embaixo do "Nº nível", de baixo para cima */
     totaisNiveis(passo = 800, ja = false, dur = 600){
