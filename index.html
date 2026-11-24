@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.29';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.30';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -3426,6 +3426,7 @@ const Atomo = (() => {
         })();
         const SUBS = [1, 2, 3, 4, 4, 3, 2], H0 = .16, GAP = .3, DEG_IN = .32, ELET = [2, 6, 10, 14];
         const VERDE_OK = new THREE.Color(0x46ff8c);                                 // verde do "nível completo"
+        const TAM_LETRA_G = .805;                                                    // letras K…Q no gráfico: o tamanho menor (o de quando os degraus já se formaram) desde o começo
         /* rótulo de um degrau, em 3 peças para poderem ser destacadas separadamente (áudio 8.4):
            o número do nível e a letra do subnível na cor da camada, e o total de elétrons como expoente
            (mesmo estilo dos cartões). U = tamanho de 1 px do desenho em unidades da cena */
@@ -3500,7 +3501,7 @@ const Atomo = (() => {
           if (it && it.noGrafico){
             const AL = ajusteLetra[L.n - 1];                                               // ajuste do modo edição (esta letra)
             it.s.position.set(XLETRA + (it.dx || 0) + AL.x, y0 + L.b + AL.y, .25);
-            const f = (1 - .195 * L.d) * AL.s; it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
+            const f = TAM_LETRA_G * AL.s; it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
             it.s.material.opacity = (1 - L.a) * (1 - (it.apaga || 0)); it.s.visible = it.s.material.opacity > .01;   // apaga: a letra deu lugar ao "1º nível"
           }
           if (grafico && grafico.posExtras) grafico.posExtras(L);                          // "2e⁻", "Nª camada", "1º nível" acompanham o nível
@@ -3567,7 +3568,7 @@ const Atomo = (() => {
           letraPara: (it, k, p0) => {
             const AL = ajusteLetra[it.i]; it.s.position.lerpVectors(p0, new THREE.Vector3(XLETRA + AL.x, yN(it.i + 1) + AL.y, .25), k);
             if (!it.s0g || k <= 0) it.s0g = it.s.scale.x / letras.BASE.x;                 // tamanho de partida → cresce até o do modo edição (sem salto)
-            const f = it.s0g + (AL.s - it.s0g) * Math.min(1, k); it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
+            const f = it.s0g + (TAM_LETRA_G * AL.s - it.s0g) * Math.min(1, k); it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
             if (k >= 1){ it.noGrafico = true; it.s0g = 0; }
           },
           /* áudio 8.2 (1 s → 5 s): a seta some e sobe de novo; cada linha salta quando a ponta passa por ela */
@@ -3629,7 +3630,7 @@ const Atomo = (() => {
           textoNivelH(n, h){ const T = this.textosNivel[n - 1]; if (!T) return; T.h = h; aplica(niveis[n - 1]); },
           /* "Nº nível" ocupa o espaço da letra: da borda esquerda dela até pouco antes do eixo, sem passar da altura dela */
           medeTextoNivel(n, T){
-            const L = niveis[n - 1], AL = ajusteLetra[n - 1], f = (1 - .195 * L.d) * AL.s;
+            const L = niveis[n - 1], AL = ajusteLetra[n - 1], f = TAM_LETRA_G * AL.s;
             const wL = letras.BASE.x * f, hL = letras.BASE.y * f, cx = XLETRA + AL.x;
             const dir = Math.min(cx + wL / 2, XEIXO + ajusteEixos.x - .12), esqL = cx - wL / 2 - (orientacaoRetrato ? 0 : wL * .9);   // tela deitada: usa também o espaço livre à esquerda
             let w = dir - esqL, h = w / T.asp; if (h > hL){ h = hL; w = h * T.asp; }
@@ -3820,7 +3821,7 @@ const Atomo = (() => {
             const L = niveis[n - 1], it = letras.itens[n - 1];
             const f = h => {
               L.hl = L.hl.map(() => h); aplica(L);
-              if (comLetra && it && it.noGrafico){ const e = (1 - .195 * L.d) * ajusteLetra[n - 1].s * (1 + .35 * h); it.s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); it.s.material.color.setScalar(1 + .8 * h); }
+              if (comLetra && it && it.noGrafico){ const e = TAM_LETRA_G * ajusteLetra[n - 1].s * (1 + .35 * h); it.s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); it.s.material.color.setScalar(1 + .8 * h); }
             };
             anima(250, k => f(k), () => agenda(Math.max(0, dur - 500), () => anima(250, k => f(1 - k), () => f(0))));
           },
@@ -4642,7 +4643,7 @@ const Atomo = (() => {
       const h0 = L.hl[0] || 0, p0 = L.p || 0, alvo = on ? .6 : 0, pAlvo = on && brilha ? .8 : 0;
       anima(dur, k => {
         const h = h0 + (alvo - h0) * k; L.hl = L.hl.map(() => h); L.p = p0 + (pAlvo - p0) * k; grafico.reaplica(L);   // (h vai até .6: a linha engrossa e acende sem perder a cor)
-        if (it && it.noGrafico && !(it.apaga > .5)){ const e = (1 - .195 * L.d) * ajusteLetra[n - 1].s * (1 + .35 * h); it.s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); it.s.material.color.setScalar(1 + (brilha ? .8 * h : 0)); }
+        if (it && it.noGrafico && !(it.apaga > .5)){ const e = .805 * ajusteLetra[n - 1].s * (1 + .35 * h); it.s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); it.s.material.color.setScalar(1 + (brilha ? .8 * h : 0)); }
       });
     },
     /* o texto "Nª camada" volta ao tamanho normal */
