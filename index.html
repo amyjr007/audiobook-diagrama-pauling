@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.38';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.39';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1288,8 +1288,8 @@ const EVENTOS = {
     ...[2, 3, 4, 5, 6, 7].map((n, i) => ({ t: 43.5 + i * .5, acao: () => Atomo.saltaNivel(n) })),
     /* 49 s → 54 s: a transformação para o gráfico se repete */
     { t: 49.0, acao: () => Atomo.viraGraficoDeNovo(5000) },
-    /* fim: 1,5 s depois começa o 8.2 */
-    { t: 'fim', acao: () => { escondePlay(true); tocaDepois(1500, 'audio_distribuição_8.2'); } },
+    /* fim: o play vira "Ok" (verde, piscando) → áudio 8.2 */
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8.2', 'Ok'); } },
   ],
   'audio_distribuição_8.2': [
     /* 3 s → 5 s: as etiquetas "n = 1" … "n = 7" aparecem em sequência ao lado das linhas (quando a próxima aparece, a anterior some) */
