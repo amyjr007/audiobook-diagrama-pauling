@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.40';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.41';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -933,7 +933,7 @@ const CAPITULOS = [
   { titulo: 'Quiz do C',                   pagina: 'pagina1', audio: 'audio_distribuição_4', inicio: 0, prepara: () => Atomo.estado('H', .464, 'Hidrogênio - D') },
   { titulo: 'O princípio da neutralidade do átomo', pagina: 'pagina1', audio: 'audio_distribuição_5', inicio: 0, prepara: () => Atomo.estado('C', .464, 'Carbono') },
   /* 6: vai direto ao 1º conceito (áudio 7.1) — câmera no Bohr, tela escura */
-  { titulo: 'Os níveis de energia',        pagina: 'pagina1', audio: 'audio_distribuição_7.1', inicio: 0,
+  { titulo: 'Os postulados de Bohr',       pagina: 'pagina1', audio: 'audio_distribuição_7.1', inicio: 0,
     prepara: () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); } },
   /* 7: vai direto ao áudio 7.3 — câmera no Bohr, tela escura (aos 2 s ela volta ao Rutherford, como no caminho normal) */
   { titulo: 'O modelo de Bohr e o salto quântico', pagina: 'pagina1', audio: 'audio_distribuição_7.3', inicio: 0,
