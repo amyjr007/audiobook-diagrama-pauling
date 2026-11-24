@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.36';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.37';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1281,6 +1281,13 @@ const EVENTOS = {
     /* 29 s → 36 s: a "1ª camada" aumenta e a linha do nível 1 aumenta e brilha */
     { t: 29.0, acao: () => { Atomo.seguraTextoNivel(1); Atomo.realceNivel(1, true, true); } },
     { t: 36.0, acao: () => { Atomo.soltaTextoNivel(1); Atomo.realceNivel(1, false); } },
+    /* 38 s → 42 s: o caminho inverso — o gráfico volta a ser o átomo de Bohr; no fim, "Átomo de Bohr - 1913" e a barra "Energia" */
+    { t: 38.0, acao: () => Atomo.graficoViraBohr(4000) },
+    /* 43 s → 46 s: o elétron aparece no nível 1 e vai saltando até o nível 7 (a barra acompanha) */
+    { t: 43.0, acao: () => Atomo.eletronNivel1() },
+    ...[2, 3, 4, 5, 6, 7].map((n, i) => ({ t: 43.5 + i * .5, acao: () => Atomo.saltaNivel(n) })),
+    /* 49 s → 54 s: a transformação para o gráfico se repete */
+    { t: 49.0, acao: () => Atomo.viraGraficoDeNovo(5000) },
     /* fim: 1,5 s depois começa o 8.2 */
     { t: 'fim', acao: () => { escondePlay(true); tocaDepois(1500, 'audio_distribuição_8.2'); } },
   ],
@@ -4628,6 +4635,38 @@ const Atomo = (() => {
         setH(N - 1, 1);
         agenda(segura, () => anima(300, k => setH(N - 1, 1 - k), () => setH(N - 1, 0)));
       }, k => k);
+    },
+    /* áudio 8.1: o gráfico volta a ser o átomo de Bohr (as linhas se curvam nas camadas, o gráfico encolhe, os eixos e os
+       textos "Nª camada" saem, o núcleo e o retrato voltam). No fim: "Átomo de Bohr - 1913" no alto e a barra "Energia" (vazia) */
+    graficoViraBohr(dur = 4000){
+      if (!pronto || !grafico) return;
+      const G = grafico;
+      this.limpaTopo();
+      G.textosNivel.forEach(T => { if (T && T.s.visible){ const o0 = T.s.material.opacity; anima(600, k => { T.s.material.opacity = o0 * (1 - k); }, () => { T.s.visible = false; T.s.material.opacity = o0; }); } });
+      const mats = []; G.eixos.traverse(o => { if (o.material && !mats.includes(o.material)) mats.push(o.material); });
+      const ops = mats.map(m => m.opacity);
+      anima(700, k => mats.forEach((m, i) => { m.opacity = ops[i] * (1 - k); }), () => { G.eixos.visible = false; mats.forEach((m, i) => { m.opacity = ops[i]; }); G.matEixo.opacity = 0; G.rotE.material.opacity = 0; });
+      ruth.camadas.forEach((C, i) => { const ini = i * 120; agenda(ini, () => anima(dur - ini, k => G.morfa(C, i + 1, 1 - ease(k)), () => G.morfa(C, i + 1, 0))); });
+      const f0 = fatorGrafico; anima(dur, k => { fatorGrafico = f0 * (1 - ease(k)); aplicaEscalaConj(); });
+      agenda(dur * .5, () => { const n0 = ruth.opNucleo, e0 = ruth.opEscuro; anima(1200, k => { ruth.opNucleo = n0 + (1 - n0) * k; ruth.opEscuro = e0 + (.93 - e0) * k; }); });
+      agenda(dur, () => {
+        this.digita('topo', 'Átomo de Bohr - 1913', { cor: '#eef1ff', ms: 45 });
+        this.energiaBarra(1);                                                      // a barra aparece (vazia)
+      });
+    },
+    /* o elétron aparece no nível 1 (a barra vai para a energia desse nível), sem liberar o toque */
+    eletronNivel1(){
+      if (!pronto || !bohr) return;
+      this.bohrEletron(null); this.bohrToque(false); $('#dicaGirar').classList.add('some');
+    },
+    /* o gráfico de novo (depois da volta ao átomo): a transformação e, no fim, "Gráfico de energia" e as camadas escritas */
+    viraGraficoDeNovo(dur = 5000){
+      if (!pronto || !grafico) return;
+      this.viraGrafico(dur, false, () => {
+        grafico.textosNivel.forEach(T => { if (T){ T.s.visible = true; T.s.material.opacity = 0; anima(600, k => { T.s.material.opacity = k; }); } });
+        grafico.niveis.forEach(L => grafico.reaplica(L));
+        this.limpaTopo(); this.digita('topo', 'Gráfico de energia', { cor: '#eef1ff', ms: 45 });
+      });
     },
     /* o elétron de Bohr salta para o nível n (a barra "Energia" vai junto para a energia desse nível) */
     limpaTopo(){ const L = linhas.topo; if (L){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.getAnimations().forEach(a => a.cancel()); L.el.innerHTML = ''; } },
