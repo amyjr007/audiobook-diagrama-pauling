@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.26';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.27';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -2402,7 +2402,7 @@ const Atomo = (() => {
     const caixa = $('#energia'), fill = $('#energiaFill'); if (!caixa || !fill) return;
     caixa.classList.add('on');
     fill.style.setProperty('--cheio', fill.parentElement.clientWidth + 'px');
-    fill.style.transition = suave ? 'width .5s cubic-bezier(.3,.8,.3,1)' : 'none';
+    fill.style.transition = 'none';                                       // a energia muda de uma vez (salto), sem encher ou secar aos poucos
     fill.style.width = (Math.max(0, Math.min(1, frac)) * 100) + '%';
   }
   function ruthPadrao(){
@@ -5134,7 +5134,7 @@ const Atomo = (() => {
       const C = ruth.camadas[i]; if (!C || C.g.visible) return;
       C.g.visible = true;
       if ($('#energia') && $('#energia').classList.contains('on')){                  // energia sobe uma quantidade definida (1/7) por camada — salto, não contínua
-        const fill = $('#energiaFill'); fill.style.transition = 'width .15s ease-out'; fill.style.width = ((i + 1) / 7 * 100) + '%';
+        const fill = $('#energiaFill'); fill.style.transition = 'none'; fill.style.width = ((i + 1) / 7 * 100) + '%';
       }
       anima(dur, k => tvLigaCamada(C, k), () => tvLigaCamada(C, 1), k => k);
     },
