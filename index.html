@@ -277,6 +277,10 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 
 /* cabeçalho da página do Aprender */
 .cabeca{position:relative;z-index:4;text-align:center;padding:2px 16px 0;pointer-events:none}
+/* na página do Aprender o título fica centralizado (em cima/embaixo) na barra de cima, entre "Página 1" e o Home */
+#pagina1 .cabeca{position:absolute;left:0;right:0;top:0;height:calc(var(--topoH,76px));padding:var(--safe-t) 150px 0;display:flex;align-items:center;justify-content:center}
+#pagina1 .topo{min-height:76px}
+#pagina1 .cabeca h1{font-size:clamp(18px,3.6vw,42px);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}   /* uma linha só (diminui em telas menores) */
 .cabeca h1{font-family:"Space Grotesk",sans-serif;font-weight:700;font-size:clamp(24px,6.2vw,42px);line-height:1.05;letter-spacing:-.01em}
 .cabeca .elemento{margin-top:6px;font:500 13px "IBM Plex Mono",monospace;color:var(--ink-2);letter-spacing:.06em}
 .cabeca .elemento b{color:var(--s);font-weight:500}
@@ -918,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.25';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.26';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
