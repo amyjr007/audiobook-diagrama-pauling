@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.44';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.45';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1331,6 +1331,7 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8.3A', 'Ok'); } },
   ],
   'audio_distribuição_8.3A': [
+    { t: 16.2, acao: () => pausaRoteiro(1500) },                                // pausa de 1,5 s na narração
     { t: .05,  acao: () => escondePlay(false) },
     /* 8,5 s → 11 s: o total de elétrons de cada nível é digitado embaixo do "Nº nível", de baixo para cima */
     { t: 8.5,  acao: () => Atomo.totaisNiveis(317, false, 600) },
@@ -4814,12 +4815,19 @@ const Atomo = (() => {
     },
     realcaParte(k, n = 1, j = 0, segura = null){
       if (!pronto || !grafico) return;
+      /* o que acompanha cada peça: o "1" → o texto "1ª camada"; o "s" → o cartão s colorido; o "2" → só o "2" do cartão s */
+      const tipo = 'spdf'[j], card = document.querySelector(`#cartoes [data-t="${tipo}"]`), sup = card && card.querySelector('sup');
+      const espelho = (q, on) => {
+        if (q === 1 && card) card.classList.toggle('destaque', on);
+        if (q === 2 && sup) sup.classList.toggle('pulsa', on);
+      };
       [0, 1, 2].forEach(q => {
         const h0 = grafico.parteH(n, j, q), alvo = q === k ? 1 : 0;
         if (Math.abs(h0 - alvo) < .001) return;
-        anima(250, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t));
+        espelho(q, !!alvo);
+        anima(250, t => { const h = h0 + (alvo - h0) * t; grafico.parteRotulo(n, j, q, h); if (q === 0) grafico.textoNivelH(n, h); });
       });
-      if (segura !== null) agenda(250 + segura, () => anima(250, t => grafico.parteRotulo(n, j, k, 1 - t)));
+      if (segura !== null) agenda(250 + segura, () => { espelho(k, false); anima(250, t => { grafico.parteRotulo(n, j, k, 1 - t); if (k === 0) grafico.textoNivelH(n, 1 - t); }); });
     },
     /* "Nº nível" aumenta e brilha por "dur" ms */
     destacaTextoNivel(n = 1, dur = 1000){
