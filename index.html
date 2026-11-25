@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.55';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.56';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1506,20 +1506,23 @@ const EVENTOS = {
     /* "E por que isso importa?": o 4s e o 3d voltam ao normal */
     { t: 25.02, acao: () => { Atomo.subnivelAumenta(4, 0, false); Atomo.subnivelAumenta(3, 2, false); } },
     /* fim: "Toque na tela" → áudio 9.2 (o exemplo: o sódio) */
-    { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, 'audio_distribuição_9.2'); } },
+    { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, 'audio_distribuição_9.2', 'toque na tela pra ver um exemplo'); } },
   ],
   'audio_distribuição_9.2': [
     /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.2.json) */
     { t: .05,   acao: () => escondePlay(false) },
-    /* "olha o sódio aqui": "₁₁Na" no alto e, de fundo, o núcleo do sódio com as 3 camadas (ainda sem elétrons) */
-    { t: 1.04,  acao: () => { Atomo.limpaTopo(); Atomo.digita('topo', '11Na', { cor: '#eef1ff', sub: [0, 1] }); Atomo.atomoNa('nucleo'); } },
+    /* "olha o sódio aqui": "₁₁Na" no alto (o átomo só aparece em "assim") */
+    { t: 1.04,  acao: () => { Atomo.limpaTopo(); Atomo.digita('topo', '11Na', { cor: '#eef1ff', sub: [0, 1] }); } },
+    /* "11" (as duas vezes): o número atômico do Na aumenta e brilha por 2 s */
+    { t: 4.08,  acao: () => Atomo.realcaSub('topo', 2000) },
+    { t: 6.16,  acao: () => Atomo.realcaSub('topo', 2000) },
     /* "assim": a tela escurece, "Eletrosfera errada" no alto e, no centro, o sódio com os 11 elétrons amontoados de forma absurda */
     { t: 15.24, acao: () => { Atomo.escurece(true); Atomo.limpaTopo(); Atomo.digita('topo', 'Eletrosfera errada', { cor: '#ff7a7a', ms: 45 }); Atomo.atomoNa('errada'); } },
     /* fim: "Toque pra ver a eletrosfera correta" → os elétrons viajam, um a um, para 2, 8, 1; no fim, "Eletrosfera correta" */
     { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, () => {
         mostraToque(false);
         escondePlay(true);                                                     // (o toque mostrou o play; ele sai enquanto os elétrons andam)
-        Atomo.atomoNa('corrige', () => { sfx('right'); Atomo.limpaTopo(); Atomo.digita('topo', 'Eletrosfera correta', { cor: '#8cff6a', ms: 45 }); });
+        Atomo.atomoNa('corrige', () => { sfx('yes'); Atomo.limpaTopo(); Atomo.digita('topo', 'Eletrosfera correta', { cor: '#8cff6a', ms: 45 }); });
     }, 'toque pra ver a eletrosfera correta'); } },
   ],
 };
@@ -5522,6 +5525,14 @@ const Atomo = (() => {
     },
     /* digita um trecho numa linha parada na tela (os trechos se somam na mesma linha) */
     /* sub = posições (índices) do texto que ficam subescritas, ex.: 'Hélio (2He)' com sub [7] → ₂He */
+    /* o número de baixo (os <sub>) de uma linha aumenta e brilha por "ms" (ex.: o 11 de "₁₁Na") */
+    realcaSub(id, ms = 2000){
+      const L = linhas[id]; if (!L) return;
+      const subs = [...L.el.querySelectorAll('sub')]; if (!subs.length) return;
+      subs.forEach(s => { s.style.transition = 'font-size .3s ease, color .3s ease, text-shadow .3s ease'; });   // (cresce pela fonte: os dígitos não se sobrepõem)
+      requestAnimationFrame(() => subs.forEach(s => { s.style.fontSize = '1.1em'; s.style.color = '#7ce7ff'; s.style.textShadow = '0 0 10px #7ce7ff, 0 0 22px #3ee0ff'; }));
+      agenda(ms, () => subs.forEach(s => { s.style.fontSize = ''; s.style.color = ''; s.style.textShadow = ''; }));
+    },
     digita(id, texto, { cor = '', ms = 85, dur = 0, sub = null } = {}){
       const L = linhas[id]; if (!L) return;
       const pinta = (span, s) => { if (!sub) span.textContent = s; else span.innerHTML = [...s].map((c, i) => sub.includes(i) ? `<sub>${c}</sub>` : c).join(''); };
