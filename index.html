@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.48';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.49';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1241,6 +1241,10 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(true); if (pendente7_4){ pendente7_4 = false; tocaDepois(600, 'audio_distribuição_7.4'); } } },
   ],
   'audio_distribuição_7.4': [
+    /* 1,28 s ("saltos"): modo automático — o aluno não toca; o elétron sobe um nível por segundo até o 7 */
+    { t: 1.28, acao: () => { Atomo.bohrToque(false); Atomo.bohrAuto(1); } },
+    /* 6,84 s ("volta"): o elétron desce um nível por segundo até o 1; aí o aluno volta a poder tocar */
+    { t: 6.84, acao: () => Atomo.bohrAuto(-1, () => { if (atual === 'audio_distribuição_7.4' && !audio.ended && audio.currentTime < 14.4) Atomo.bohrToque(true); }) },
     /* 14,4 s ("salto quântico"): a tela escurece e "Salto quântico" é escrito; o elétron não salta enquanto isso */
     { t: 14.4, acao: () => { Atomo.bohrToque(false); Atomo.escurece(true); Atomo.digita('conceito', 'Salto quântico', { cor: '#eef1ff', ms: 70 }); } },
     /* fim: "Toque na tela" → a tela clareia, o aluno volta a saltar o elétron (cada salto: "salto quântico" em relâmpago)
@@ -4678,6 +4682,19 @@ const Atomo = (() => {
       if (!pronto || !bohr) return;
       if (bohr.n === n){ barraNivel(n / 7, false); return; }
       bohrSalta(n, bohr.ang + .5);
+    },
+    /* saltos automáticos (áudio 7.4): o elétron salta um nível por segundo, para cima (dir = 1) até o nível 7
+       ou para baixo (dir = -1) até o nível 1; o primeiro salto é na hora; no fim, aoTerminar */
+    bohrAuto(dir, aoTerminar){
+      if (!pronto || !bohr) return;
+      const alvo = dir > 0 ? 7 : 1, vez = this._autoVez = (this._autoVez || 0) + 1;   // um ciclo novo encerra o anterior
+      const passo = () => {
+        if (vez !== this._autoVez) return;
+        if (!bohr || bohr.n === alvo){ if (aoTerminar) aoTerminar(); return; }
+        this.saltaNivel(bohr.n + dir);
+        agenda(1000, passo);
+      };
+      passo();
     },
     /* realce de uma camada no gráfico: a linha engrossa e acende (brilha = também o brilho em volta da linha)
        e a letra (se ainda estiver lá) aumenta; on = false volta ao normal */
