@@ -354,7 +354,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .linha.linha-topo{font-size:clamp(18px,4.6vw,28px)}
 /* áudio 8.2: cartões dos subníveis, enfileirados (tela deitada: à direita do gráfico · celular: embaixo dele).
    Altos, com o nome dentro e o total de elétrons em cima, na diagonal direita */
-.cartoes{position:absolute;z-index:3;left:84%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:flex-end;gap:clamp(8px,1.5vw,14px);pointer-events:none}
+.cartoes{position:absolute;z-index:3;left:81.5%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:flex-end;gap:clamp(16px,2.6vw,26px);pointer-events:none}   /* (folga para o número de cima não ficar atrás do cartão vizinho) */
 .cartoes.retrato{left:50%;top:89%;translate:-7.8vw 2.4vh;scale:.92}   /* celular: posição e tamanho do modo edição v0.72 (384×783); v1.05: ~20 px mais alto */
 .cartoes.retrato .cartao{height:clamp(46px,6.2vh,62px);font-size:clamp(14px,3.9vw,19px);padding:0 clamp(7px,2vw,12px);min-width:clamp(50px,14vw,66px)}   /* celular: mais baixos, letra maior */
 .cartoes:not(.retrato) .cartao{height:clamp(54px,7.5vh,74px);font-size:clamp(13px,1.15vw,17px);min-width:clamp(58px,4.6vw,74px)}   /* tela deitada: mais baixos; a fileira cabe entre o gráfico e a borda */
@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.45';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.46';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -4726,7 +4726,7 @@ const Atomo = (() => {
     /* rótulo do degrau j do nível n (as 3 peças) aumenta (on) ou volta ao normal */
     rotuloDestaque(n, j, on = true, dur = 250){
       if (!pronto || !grafico) return;
-      [0, 1, 2].forEach(q => { const h0 = grafico.parteH(n, j, q), alvo = on ? 1 : 0; anima(dur, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t)); });
+      [0, 1, 2].forEach(q => { const h0 = grafico.parteH(n, j, q), alvo = on ? 1 : 0; if (Math.abs(h0 - alvo) > .001) this._espelho(n, j, q, on); anima(dur, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t)); });
       const d0 = grafico.niveis[n - 1].hl[j], dA = on ? 1 : 0; anima(dur, t => grafico.hlDegrau(n, j, d0 + (dA - d0) * t));   // o degrau aumenta junto
     },
     /* rótulo do degrau j do nível n pulsa (aumenta e volta) */
@@ -4804,30 +4804,39 @@ const Atomo = (() => {
     /* a peça k do rótulo do degrau (0 o número · 1 a letra · 2 o expoente) aumenta e as outras diminuem.
        segura = null: fica aumentada · número: volta ao normal depois de "segura" ms */
     /* destaca as peças [j, k] listadas dos rótulos do nível n (as outras do nível diminuem); segura: ms até as listadas diminuírem */
+    /* o que acompanha cada peça do rótulo de um degrau (nível n, subnível j; peça q):
+       o número da frente (q 0) → o texto "Nª camada"; a letra (q 1) → o cartão colorido do subnível;
+       o expoente (q 2) → só o número de cima desse cartão */
+    _espelho(n, j, q, on){
+      if (!grafico) return;
+      const card = document.querySelector(`#cartoes [data-t="${'spdf'[j]}"]`), sup = card && card.querySelector('sup');
+      if (q === 1 && card) card.classList.toggle('destaque', on);
+      if (q === 2 && sup) sup.classList.toggle('pulsa', on);
+      if (q === 0){
+        const S = this._num0 || (this._num0 = new Set()); on ? S.add(n + '-' + j) : S.delete(n + '-' + j);
+        const alvo = [...S].some(k => k.startsWith(n + '-')) ? 1 : 0, T = grafico.textosNivel[n - 1];
+        if (T){ const h0 = T.h || 0; if (Math.abs(h0 - alvo) > .001) anima(250, t => grafico.textoNivelH(n, h0 + (alvo - h0) * t)); }
+      }
+    },
+    /* destaca as peças [j, k] listadas dos rótulos do nível n (as outras do nível diminuem); segura: ms até as listadas diminuírem */
     realcaPartes(n, lista, segura = null){
       if (!pronto || !grafico) return;
       const L = grafico.niveis[n - 1]; if (!L) return;
       for (let j = 0; j < L.m; j++) for (let q = 0; q < 3; q++){
         const h0 = grafico.parteH(n, j, q), alvo = lista.some(([a, b]) => a === j && b === q) ? 1 : 0;
-        if (Math.abs(h0 - alvo) > .001) anima(250, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t));
+        if (Math.abs(h0 - alvo) > .001){ this._espelho(n, j, q, !!alvo); anima(250, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t)); }
       }
-      if (segura !== null) agenda(250 + segura, () => lista.forEach(([j, q]) => anima(250, t => grafico.parteRotulo(n, j, q, 1 - t))));
+      if (segura !== null) agenda(250 + segura, () => lista.forEach(([j, q]) => { this._espelho(n, j, q, false); anima(250, t => grafico.parteRotulo(n, j, q, 1 - t)); }));
     },
     realcaParte(k, n = 1, j = 0, segura = null){
       if (!pronto || !grafico) return;
-      /* o que acompanha cada peça: o "1" → o texto "1ª camada"; o "s" → o cartão s colorido; o "2" → só o "2" do cartão s */
-      const tipo = 'spdf'[j], card = document.querySelector(`#cartoes [data-t="${tipo}"]`), sup = card && card.querySelector('sup');
-      const espelho = (q, on) => {
-        if (q === 1 && card) card.classList.toggle('destaque', on);
-        if (q === 2 && sup) sup.classList.toggle('pulsa', on);
-      };
       [0, 1, 2].forEach(q => {
         const h0 = grafico.parteH(n, j, q), alvo = q === k ? 1 : 0;
         if (Math.abs(h0 - alvo) < .001) return;
-        espelho(q, !!alvo);
-        anima(250, t => { const h = h0 + (alvo - h0) * t; grafico.parteRotulo(n, j, q, h); if (q === 0) grafico.textoNivelH(n, h); });
+        this._espelho(n, j, q, !!alvo);
+        anima(250, t => grafico.parteRotulo(n, j, q, h0 + (alvo - h0) * t));
       });
-      if (segura !== null) agenda(250 + segura, () => { espelho(k, false); anima(250, t => { grafico.parteRotulo(n, j, k, 1 - t); if (k === 0) grafico.textoNivelH(n, 1 - t); }); });
+      if (segura !== null) agenda(250 + segura, () => { this._espelho(n, j, k, false); anima(250, t => grafico.parteRotulo(n, j, k, 1 - t)); });
     },
     /* "Nº nível" aumenta e brilha por "dur" ms */
     destacaTextoNivel(n = 1, dur = 1000){
