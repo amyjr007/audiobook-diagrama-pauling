@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.51';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.52';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1494,9 +1494,15 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, () => { botaoOk(false); escondePlay(true); Atomo.ordemEnergia(); tocaDepois(2700, 'audio_distribuição_9.1'); }, 'Ok'); } },
   ],
   'audio_distribuição_9.1': [
-    { t: .05,  acao: () => escondePlay(false) },
-    /* 27,7 s: só o 3s² e o 7s¹ ocupados (o resto fica só o degrau), "₃Li" e, de fundo, o lítio */
-    { t: 27.7, acao: () => Atomo.cenaLitio() },
+    /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.1.json) */
+    { t: .05,   acao: () => escondePlay(false) },
+    { t: 11.68, acao: () => Atomo.subnivelAumenta(4, 0) },                    // "o quatro éssi aqui": o 4s (degrau e rótulo) aumenta
+    { t: 13.76, acao: () => Atomo.subnivelAumenta(3, 2) },                    // "três dê!": o 3d aumenta
+    { t: 14.3,  acao: () => pausaRoteiro(1500) },                             // pausa de 1,5 s depois de "três dê!"
+    /* "E por que isso importa?": o 4s e o 3d voltam ao normal */
+    { t: 25.02, acao: () => { Atomo.subnivelAumenta(4, 0, false); Atomo.subnivelAumenta(3, 2, false); } },
+    /* fim: "Toque na tela" → o exemplo: só o 3s² e o 7s¹ ocupados, "₃Li" e, de fundo, o lítio */
+    { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, () => { mostraToque(false); Atomo.cenaLitio(); }); } },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -5154,6 +5160,7 @@ const Atomo = (() => {
       if (!pronto || !grafico) return;
       grafico.textosNivel.forEach(T => { if (T && T.s.visible){ const o0 = T.s.material.opacity; anima(600, k => { T.s.material.opacity = o0 * (1 - k); }, () => { T.s.visible = false; }); } });
       grafico.totais.forEach((T, i) => { if (T && T.s.visible) grafico.totalSome(i + 1); });
+      if (dur > 50) sfx('transition_cube');                                            // som da reorganização (não ao retomar)
       grafico.sobeSeta(2.2, dur); this.reorganizaNiveis(dur);                         // a seta sobe e os degraus usam o espaço a mais
     },
     reorganizaNiveis(dur = 1600){ if (pronto && grafico) grafico.niveis.forEach(L => { if (L.fechado && L.a < 1) grafico.flutua(L.n, dur); }); },
@@ -5214,6 +5221,11 @@ const Atomo = (() => {
     /* o total embaixo do "Nº nível" aparece de novo (digitado, com o total do nível) */
     /* os degraus (subníveis) do nível n e os rótulos deles (1s², 2p⁶…) aumentam e brilham (on) ou voltam ao normal
        (só o rótulo: não puxa junto a "Nª camada" nem os cartões) */
+    subnivelAumenta(n, j, on = true, dur = 250){
+      if (!pronto || !grafico) return;
+      const d0 = grafico.niveis[n - 1].hl[j], r0 = [0, 1, 2].map(q => grafico.parteH(n, j, q)), alvo = on ? 1 : 0;
+      anima(dur, k => { grafico.hlDegrau(n, j, d0 + (alvo - d0) * k); [0, 1, 2].forEach(q => grafico.parteRotulo(n, j, q, r0[q] + (alvo - r0[q]) * k)); });
+    },
     degrausNivel(n, on = true, dur = 250){
       if (!pronto || !grafico) return;
       const L = grafico.niveis[n - 1]; if (!L) return;
