@@ -1,6 +1,6 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v158';  // acompanhe APP_VERSAO do index.html (1.47 → v147)
+const CACHE = 'pauling-v159';  // acompanhe APP_VERSAO do index.html (1.47 → v147)
 const ARQUIVOS = [
   './',
   './index.html',
@@ -34,7 +34,7 @@ const ARQUIVOS = [
   './audio/' + encodeURIComponent('audio_distribuição_5.1') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_5.2') + '.mp3',
   './audio/' + encodeURIComponent('audio_distribuição_6') + '.mp3',
-  ...['7', '7.1', '7.2', '7.3', '7.4', '8', '8.1', '8.2', '8.3', '8.3A', '8.4', '8.5', '8.5A', '8.6', '8.6A', '8.7', '8.8', '8.9', '8.95', '9', '9.0', '9.1', '9.2', '9.3'].map(n => './audio/' + encodeURIComponent('audio_distribuição_' + n) + '.mp3'),
+  ...['7', '7.1', '7.2', '7.3', '7.4', '8', '8.1', '8.2', '8.3', '8.3A', '8.4', '8.5', '8.5A', '8.6', '8.6A', '8.7', '8.8', '8.9', '8.95', '9', '9.0', '9.1', '9.2', '9.3', '9.4'].map(n => './audio/' + encodeURIComponent('audio_distribuição_' + n) + '.mp3'),
   /* sons do quiz */
   ...['funfare','applause','error','Calmanaproximaacerta','exato!','muitobem','issomesmo!','excelente']
       .map(n => './audio/vfx/' + encodeURIComponent(n) + '.mp3'),

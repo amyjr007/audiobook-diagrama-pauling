@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.58';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.59';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -959,7 +959,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1539,6 +1539,33 @@ const EVENTOS = {
     /* "zoom": zoom grande na camada 2, que se abre nas sublinhas 2s (por dentro) e 2p (por fora) */
     { t: 21.04, acao: () => Atomo.naZoom(2400) },
     { t: 23.68, acao: () => Atomo.naSubRotulos() },                           // "subníveis da camada dois": 2s² e 2p⁶
+    /* fim ("Olha..."): o 9.4 continua a fala */
+    { t: 'fim', acao: () => tocaDepois(600, 'audio_distribuição_9.4') },
+  ],
+  'audio_distribuição_9.4': [
+    /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.4.json) */
+    { t: .05,   acao: () => escondePlay(false) },
+    { t: 4.6,   acao: () => pausaRoteiro(1000) },                             // pausa de 1 s depois de "…em um átomo."
+    /* "sódio": zoom out (as 3 camadas de novo) e, em seguida, as camadas viram os degraus do gráfico com os 11 elétrons */
+    { t: 24.24, acao: () => Atomo.naZoomVolta(1600) },
+    { t: 25.9,  acao: () => Atomo.naViraGrafico(2600) },
+    { t: 26.9,  acao: () => pausaRoteiro(1500) },                             // pausa de 1,5 s depois de "…de visualizar." (a transformação continua)
+    { t: 30.24, acao: () => Atomo.camadasSodioAumentam(1000) },               // "3 camadas": as 3 camadas aumentam por 1 s
+    /* cada coisa falada aumenta; a anterior volta ao normal */
+    { t: 32.48, acao: () => Atomo.textoCamada(1) },                           // "camada 1"
+    { t: 33.44, acao: () => Atomo.parteRealce(1, 0, 2) },                     // "dois elétrons": o 2 do 1s²
+    { t: 35.84, acao: () => { Atomo.parteRealce(1, 0, 2, false); Atomo.parteRealce(1, 0, 1); } },   // "éssi": o s
+    { t: 36.96, acao: () => { Atomo.parteRealce(1, 0, 1, false); Atomo.textoCamada(1, false); Atomo.textoCamada(2); } },   // "camada 2"
+    { t: 38.08, acao: () => { Atomo.subnivelAumenta(2, 0); Atomo.subnivelAumenta(2, 1); } },     // "oito elétrons": 2s² e 2p⁶ por 1 s
+    { t: 39.08, acao: () => { Atomo.subnivelAumenta(2, 0, false); Atomo.subnivelAumenta(2, 1, false); } },
+    { t: 39.36, acao: () => { Atomo.textoCamada(2, false); Atomo.parteRealce(2, 0, 2); } },      // "2 no subnível": o 2 do 2s²
+    { t: 40.32, acao: () => { Atomo.parteRealce(2, 0, 2, false); Atomo.parteRealce(2, 0, 1); } },   // "éssi": o s
+    { t: 41.04, acao: () => { Atomo.parteRealce(2, 0, 1, false); Atomo.parteRealce(2, 1, 2); } },   // "6": o 6 do 2p⁶
+    { t: 41.56, acao: () => { Atomo.parteRealce(2, 1, 2, false); Atomo.parteRealce(2, 1, 1); } },   // "pê": o p
+    { t: 42.52, acao: () => { Atomo.parteRealce(2, 1, 1, false); Atomo.textoCamada(3); } },      // "última camada"
+    { t: 44.08, acao: () => { Atomo.textoCamada(3, false); Atomo.parteRealce(3, 0, 2); } },      // "um elétron": o 1 do 3s¹
+    { t: 46.72, acao: () => { Atomo.parteRealce(3, 0, 2, false); Atomo.parteRealce(3, 0, 1); } },   // "éssi": o s
+    { t: 47.6,  acao: () => Atomo.parteRealce(3, 0, 1, false) },              // "É ou não é…"
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -3600,6 +3627,14 @@ const Atomo = (() => {
             const y0 = yTopo, e0 = aufExtra, alvoY = y0 - e0 + extra;                  // (a altura normal da seta + o espaço a mais)
             anima(dur, k => { const q = ease(k); aufExtra = e0 + (extra - e0) * q; yTopo = y0 + (alvoY - y0) * q; posEixos(); niveis.forEach(L => aplica(L)); });
           },
+          /* posição na tela (px do palco) do degrau j do nível n: centro e largura (áudio 9.4: as camadas do sódio viram os degraus) */
+          telaDegrau(n, j){
+            conj.updateMatrixWorld(true); ruth.cam.updateMatrixWorld();
+            const rc = renderer.domElement.getBoundingClientRect(), pr = palco.getBoundingClientRect(), t = niveis[n - 1].tiras[j];
+            const p = (x, y) => { const v = new THREE.Vector3(x, y, 0); conj.localToWorld(v); v.project(ruth.cam); return { x: rc.left - pr.left + (v.x + 1) / 2 * rc.width, y: rc.top - pr.top + (1 - v.y) / 2 * rc.height }; };
+            const a = p(t.position.x - t.scale.x / 2, t.position.y), b = p(t.position.x + t.scale.x / 2, t.position.y);
+            return { x0: a.x, x1: b.x, y: (a.y + b.y) / 2 };
+          },
           /* posição na tela (px do palco) do eixo vertical: base, topo e a altura do nível K (para a barra de energia virar o eixo) */
           telaEixo(){
             conj.updateMatrixWorld(true); ruth.cam.updateMatrixWorld();
@@ -3692,8 +3727,9 @@ const Atomo = (() => {
             const dir = Math.min(cx + wL / 2, XEIXO + ajusteEixos.x - .12), esqL = cx - wL / 2 - (orientacaoRetrato ? 0 : wL * .9);   // tela deitada: usa também o espaço livre à esquerda
             let w = dir - esqL, h = w / T.asp; if (h > hL){ h = hL; w = h * T.asp; }
             const g = .85 * tamNivel() * (1 + .25 * (T.h || 0));                                       // 85% do espaço (sobra para o destaque crescer em volta do centro) · destaque +25% e brilho
-            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w * .85 * tamNivel() / 2, yN(n) + AL.y, .3);   /* borda direita (sem destaque) antes do eixo */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[n - 1].dim || 0))); if (niveis[n - 1].verde) T.s.material.color.lerp(VERDE_OK, niveis[n - 1].verde);
-            T.n = n; T.bx = dir - w * .85 * tamNivel() / 2; T.by = yN(n) + AL.y; T.bh = h * .85 * tamNivel();                        // posição/altura sem destaque (o total fica embaixo)
+            const yT = yN(n) + AL.y * (1 - L.a) + (yAufbau(n, 0) - yN(n)) * L.a;                      // (na ordem de energia, na altura do degrau s da camada)
+            T.s.scale.set(w * g, h * g, 1); T.s.position.set(dir - w * .85 * tamNivel() / 2, yT, .3);   /* borda direita (sem destaque) antes do eixo */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[n - 1].dim || 0))); if (niveis[n - 1].verde) T.s.material.color.lerp(VERDE_OK, niveis[n - 1].verde);
+            T.n = n; T.bx = dir - w * .85 * tamNivel() / 2; T.by = yT; T.bh = h * .85 * tamNivel();                        // posição/altura sem destaque (o total fica embaixo)
           },
           /* total de elétrons que cabem no nível n ("2e⁻", "8e⁻", "18e⁻"…), digitado embaixo do "Nº nível" */
           totais: [],
@@ -5422,7 +5458,7 @@ const Atomo = (() => {
       }
       const ERRADO = [...Array(7)].map((_, i) => ({ r: 0, f: i * .26 })).concat([...Array(4)].map((_, i) => ({ r: 2, f: Math.PI + i * .2 })));
       const CERTO = [...Array(11)].map((_, i) => i < 2 ? { r: 0, f: i * Math.PI } : i < 10 ? { r: 1, f: (i - 2) / 8 * Math.PI * 2, sub: i < 4 ? -1 : 1 } : { r: 2, f: 0 });
-      const zera = () => { A.realce = 0; A.rot = [0, 0, 0]; A.zoom = 0; A.split = 0; A.subRot = 0; A.ang = [0, 0, 0]; };
+      const zera = () => { A.realce = 0; A.rot = [0, 0, 0]; A.zoom = 0; A.split = 0; A.subRot = 0; A.ang = [0, 0, 0]; A.vira = 0; A.alvo = null; };
       const aparece = ms => { A.c.style.transition = `opacity ${ms}ms ease`; requestAnimationFrame(() => { A.c.style.opacity = 1; }); };
       if (modo === 'errada'){ zera(); A.els = ERRADO.map((de, i) => ({ de, para: CERTO[i], k: 0 })); aparece(900); }
       else if (modo === 'certa'){ zera(); A.els = CERTO.map(p => ({ de: p, para: p, k: 1 })); aparece(1); }
@@ -5463,7 +5499,9 @@ const Atomo = (() => {
         if (!roteiroCongelado()) A.ang = A.ang.map((a, i) => a + dt * VEL[i] * (i === 1 ? 1 : 1 - .8 * ez));
         x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H);
         x.setTransform(Z, 0, 0, Z, sx - px * Z, cy - cy * Z);
-        x.globalAlpha = viz;
+        /* áudio 9.4: as camadas viram os degraus do gráfico (kv: 0 → 1); no fim tudo some (sai) e o gráfico fica */
+        const kv = ease(A.vira || 0), sai = 1 - Math.max(0, ((A.vira || 0) - .75) / .25);
+        x.globalAlpha = viz * (1 - Math.min(1, (A.vira || 0) * 2));               // (o núcleo some logo no começo da transformação)
         /* núcleo: brilho e o aglomerado de 11 prótons (azuis) e 12 nêutrons (dourados) */
         const g = x.createRadialGradient(cx, cy, 0, cx, cy, R0 * 2.2); g.addColorStop(0, 'rgba(120,160,255,.55)'); g.addColorStop(1, 'rgba(120,160,255,0)');
         x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R0 * 2.2, 0, 7); x.fill();
@@ -5479,6 +5517,16 @@ const Atomo = (() => {
           if (i !== 1 && viz <= 0) continue;
           const larg = Math.max(1, dpr * 1.2) * (1 + 1.6 * A.realce) / zl;
           x.globalAlpha = (.55 + .45 * A.realce) * (i === 1 ? 1 : viz); x.shadowColor = cores[i]; x.shadowBlur = 14 * dpr * A.realce;
+          if (A.vira > 0 && A.alvo){                                              // a camada se desenrola na linha do degrau s dela (como no gráfico do 8.1)
+            const Lh = A.alvo.lin[i], N = 120; x.globalAlpha = (.55 + .45 * kv) * sai; x.strokeStyle = cores[i]; x.lineWidth = larg * (1 + 1.5 * kv);
+            x.beginPath();
+            for (let s = 0; s <= N; s++){
+              const u = s / N, qx = cx + Math.cos(u * Math.PI * 2) * RA(i), qy = cy - Math.sin(u * Math.PI * 2) * RA(i);
+              const lx = u <= .5 ? Lh.x1 + (Lh.x0 - Lh.x1) * (u / .5) : Lh.x0 + (Lh.x1 - Lh.x0) * ((u - .5) / .5);
+              const X = qx + (lx - qx) * kv, Y = qy + (Lh.y - qy) * kv; if (s) x.lineTo(X, Y); else x.moveTo(X, Y);
+            }
+            x.stroke(); continue;
+          }
           if (i === 1 && A.split > 0){
             x.globalAlpha = .55 + .4 * A.split;
             linha(RA(1) - GAP, A.split > .5 ? COR_S : cores[1], larg * (1 + .6 * A.split));
@@ -5489,14 +5537,15 @@ const Atomo = (() => {
         /* elétrons: cada um vai do lugar errado (de) ao certo (para) conforme k; errado = vermelho e tremendo.
            Na 2ª camada aberta, os 2 primeiros vão para o 2s e os outros 6 para o 2p */
         const re = Math.max(2.5, dpr * 3.2) / zl, t = agora / 1000;
-        A.els.forEach(e => {
+        A.els.forEach((e, n) => {
           const k = ease(e.k), a0 = A.ang[e.de.r] + e.de.f, a1 = A.ang[e.para.r] + e.para.f;
           let da = (a1 - a0) % (Math.PI * 2); if (da > Math.PI) da -= Math.PI * 2; if (da < -Math.PI) da += Math.PI * 2;
           const treme = (1 - k) * re * .5, a = a0 + da * k;
           const R = RA(e.de.r) + (RA(e.para.r) + (e.para.sub || 0) * GAP - RA(e.de.r)) * k;
-          const ex = cx + Math.cos(a) * R + Math.sin(t * 31 + e.de.f * 7) * treme, ey = cy + Math.sin(a) * R + Math.cos(t * 27 + e.de.f * 5) * treme;
+          let ex = cx + Math.cos(a) * R + Math.sin(t * 31 + e.de.f * 7) * treme, ey = cy + Math.sin(a) * R + Math.cos(t * 27 + e.de.f * 5) * treme;
+          if (A.vira > 0 && A.alvo){ const q = A.alvo.el[n]; ex += (q.x - ex) * kv; ey += (q.y - ey) * kv; }   // 9.4: o elétron vai para o seu degrau
           const errado = k < .5, cor = errado ? '#ff5a5a' : (cores[e.para.r] || '#3ee0ff');
-          x.globalAlpha = e.para.r === 1 ? 1 : viz; if (x.globalAlpha <= 0) return;
+          x.globalAlpha = (e.para.r === 1 ? 1 : viz) * sai; if (x.globalAlpha <= 0) return;
           x.shadowColor = e.para.sub && A.split > .5 ? (e.para.sub < 0 ? COR_S : COR_P) : cor; x.shadowBlur = 10 * dpr / zl; x.fillStyle = errado ? '#ffd0d0' : '#eafcff';
           x.beginPath(); x.arc(ex, ey, re, 0, 7); x.fill();
         });
@@ -5532,6 +5581,63 @@ const Atomo = (() => {
       agenda(dur * .55, () => anima(1200, k => { A.split = k; }, () => { A.split = 1; }));
     },
     naSubRotulos(){ const A = this._aNa; if (A) anima(500, k => { A.subRot = k; }, () => { A.subRot = 1; }, k => k); },
+    /* ----- áudio 9.4 ----- */
+    /* zoom out: volta a mostrar as 3 camadas (a 2ª se fecha de novo; somem 2s², 2p⁶ e os rótulos K, L, M) */
+    naZoomVolta(dur = 1600){
+      const A = this._aNa; if (!A) return;
+      const z0 = A.zoom, s0 = A.split, r0 = A.subRot, k0 = A.rot.slice();
+      anima(dur, k => { A.zoom = z0 * (1 - k); A.split = s0 * (1 - k); A.subRot = r0 * (1 - Math.min(1, k * 3)); A.rot = k0.map(v => v * (1 - Math.min(1, k * 3))); },
+        () => { A.zoom = 0; A.split = 0; A.subRot = 0; A.rot = [0, 0, 0]; });
+    },
+    /* o gráfico de energia passa a mostrar só o sódio: 1s², 2s², 2p⁶ e 3s¹ ocupados (cor e rótulo); os outros degraus ficam vazios.
+       fase 'limpa': todos os rótulos saem · fase 'ocupa': os do sódio entram (e os textos "1ª/2ª/3ª camada") */
+    cenaSodioGrafico(fase, dur = 600){
+      if (!pronto || !grafico) return;
+      const G = grafico, OC = { 1: [0], 2: [0, 1], 3: [0] };
+      G.expoenteDegrau(3, 0, '1');
+      G.niveis.forEach(L => {
+        const r0 = L.rot.slice(), c0 = L.corSub.slice();
+        const alvo = L.rot.map((_, j) => fase === 'ocupa' && (OC[L.n] || []).includes(j) ? 1 : 0);
+        anima(dur, k => { L.rot = r0.map((r, j) => r + (alvo[j] - r) * k); L.corSub = c0.map((c, j) => c + (alvo[j] - c) * k); G.reaplica(L); });
+      });
+      if (fase === 'ocupa') [1, 2, 3].forEach(n => { G.textoNivel(n, 0, true); const T = G.textosNivel[n - 1]; T.s.material.opacity = 0; G.textoNivelH(n, 0); anima(dur, k => { T.s.material.opacity = k; }); });
+    },
+    /* as 3 camadas do sódio viram os degraus do gráfico: cada anel se desenrola na linha do degrau s da sua camada
+       e cada elétron vai para o seu degrau (1s, 2s, 2p, 3s); no fim o desenho some e os rótulos do sódio aparecem */
+    naViraGrafico(dur = 2600){
+      const A = this._aNa; if (!A || !grafico) return;
+      this.escurece(false);
+      this.cenaSodioGrafico('limpa', 500);
+      const dpr = A.c.width / Math.max(1, A.c.getBoundingClientRect().width), D = (n, j) => { const d = grafico.telaDegrau(n, j); return { x0: d.x0 * dpr, x1: d.x1 * dpr, y: d.y * dpr }; };
+      const lin = [D(1, 0), D(2, 0), D(3, 0)], alvoDe = e => e.para.r === 1 && e.para.sub === 1 ? [2, 1] : [e.para.r + 1, 0];
+      const grupos = {}; A.els.forEach(e => { const g = alvoDe(e).join(); grupos[g] = (grupos[g] || 0) + 1; });
+      const usados = {};
+      const el = A.els.map(e => {
+        const [n, j] = alvoDe(e), g = n + ',' + j, d = D(n, j), i = usados[g] = (usados[g] || 0) + 1;
+        return { x: d.x0 + (d.x1 - d.x0) * (i - .5) / grupos[g], y: d.y - 7 * dpr };
+      });
+      A.alvo = { lin, el };
+      anima(dur, k => { A.vira = k; }, () => {
+        A.vira = 1; A.c.style.transition = 'opacity 400ms ease'; A.c.style.opacity = 0;
+        this.cenaSodioGrafico('ocupa', 600);
+        this.limpaTopo(); this.digita('topo', '11Na', { cor: '#eef1ff', sub: [0, 1] });   // no alto, no lugar de "Eletrosfera correta"
+      });
+    },
+    /* peça q (0 número, 1 letra, 2 expoente) do rótulo do degrau j do nível n aumenta (on) ou volta */
+    parteRealce(n, j, q, on = true, dur = 250){
+      if (!pronto || !grafico) return;
+      const h0 = grafico.parteH(n, j, q), a = on ? 1 : 0;
+      anima(dur, k => grafico.parteRotulo(n, j, q, h0 + (a - h0) * k));
+    },
+    /* texto "Nª camada" aumenta (on) ou volta */
+    textoCamada(n, on = true, dur = 250){
+      if (!pronto || !grafico) return;
+      const T = grafico.textosNivel[n - 1]; if (!T) return;
+      const h0 = T.h || 0, a = on ? 1 : 0;
+      anima(dur, k => grafico.textoNivelH(n, h0 + (a - h0) * k));
+    },
+    /* as camadas 1, 2 e 3 (degraus e rótulos) aumentam por "ms" */
+    camadasSodioAumentam(ms = 1000){ [1, 2, 3].forEach(n => this.degrausNivel(n, true)); agenda(ms, () => [1, 2, 3].forEach(n => this.degrausNivel(n, false))); },
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
     zoomDiscreto(){ taxaCam = 1.3; fatorCamAlvo = .82; },
@@ -6130,6 +6236,8 @@ const Retomar = (() => {
     "audio_distribuição_9.2":  () => INICIO["audio_distribuição_9.1"](),
     /* como o 9.2 terminou: tela escura, o sódio com a eletrosfera correta (2, 8, 1) e "Eletrosfera correta" no alto */
     "audio_distribuição_9.3":  () => { INICIO["audio_distribuição_9.2"](); Atomo.escurece(true); Atomo.atomoNa("certa"); Atomo.limpaTopo(); Atomo.digita("topo", "Eletrosfera correta", { cor: "#8cff6a", ms: 1 }); },
+    /* como o 9.3 terminou: o zoom na camada 2, com 2s² e 2p⁶ (os rótulos K, L, M já tinham aparecido) */
+    "audio_distribuição_9.4":  () => { INICIO["audio_distribuição_9.3"](); [0, 1, 2].forEach(i => Atomo.naRotulo(i)); Atomo.naZoom(1); Atomo.naSubRotulos(); Atomo.avancaTudo(); Atomo.avancaTudo(); },
   };
   function salva(){
     try {
