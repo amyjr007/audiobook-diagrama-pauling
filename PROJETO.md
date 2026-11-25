@@ -1,7 +1,7 @@
 # Projeto: audiobook "Distribuição Eletrônica — O diagrama de Pauling"
 
 > Documento de contexto para um assistente (Claude) entender o projeto antes de ajudar.
-> Estado descrito: **versão 1.52** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
+> Estado descrito: **versão 1.53** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
 
 ## 1. O que é
 
@@ -26,7 +26,7 @@ Um **audiobook interativo** de Química, em português, para alunos do ensino m�
 
 ## 3. Como o roteiro funciona
 
-- `SEQUENCIA`: ordem dos áudios do Aprender. Atual: `1, 2, 3, 4, 5, 5.1, 5.2, 6, 7, 7.1, 7.2, 7.3, 7.4, 8, 8.1, 8.2, 8.3, 8.3A, 8.4, 8.5, 8.5A, 8.6, 8.6A, 8.7, 8.8, 8.9, 8.95, 9, 9.0, 9.1`.
+- `SEQUENCIA`: ordem dos áudios do Aprender. Atual: `1, 2, 3, 4, 5, 5.1, 5.2, 6, 7, 7.1, 7.2, 7.3, 7.4, 8, 8.1, 8.2, 8.3, 8.3A, 8.4, 8.5, 8.5A, 8.6, 8.6A, 8.7, 8.8, 8.9, 8.95, 9, 9.0, 9.1, 9.2`.
 - `EVENTOS['audio_distribuição_X'] = [{ t: segundos, acao }]`; `t: 'fim'` roda no fim do áudio. **É aqui que entram os tempos que o professor passa.**
 - Avanço entre áudios: `botaoOk(true, 'próximo', 'Ok'|'Próximo')` (play verde piscando), `mostraToque(true, 'próximo' ou função)` ("Toque na tela"), `tocaDepois(ms, nome)`, ou a atividade (ex.: completar uma camada).
 - `pausaRoteiro(ms)`: pausa a narração e volta sozinha. `CORTES`: áudio que termina antes do fim do arquivo (hoje vazio).
@@ -41,7 +41,7 @@ Um **audiobook interativo** de Química, em português, para alunos do ensino m�
 - Montar uma camada: `Atomo.montaNivel(n, total, aoCompletar)` (1ª camada: `arrasteBloco`). Arrastar **corta a narração** e esconde o play. Camada completa: pulso verde, aplausos, "yes", confetes (`comemoraNivel`) e o próximo áudio.
 - Destaques dos rótulos (1s², 2p⁶…): `realcaParte`, `realcaPartes`, `rotuloDestaque`, `pulsaRotulo`. **Cada peça puxa junto:** o número da frente → o texto "Nª camada"; a letra → o cartão colorido; o expoente → só o número de cima do cartão.
 - Foco: `focoNivel([1,2])` escurece as outras camadas. Realce de uma camada: `realceNivel(n, on, brilha)`.
-- Áudio 9: totais, "118 e⁻ no total", o gráfico vira o **átomo 118** (núcleo grande e 118 elétrons nas 7 camadas, `voltaAtomo`); 9.0: volta ao gráfico (`voltaGrafico`); "Ok" → **ordem de energia** (`ordemEnergia`: degraus vão para a ordem 1s, 2s, 2p, 3s… com a seta mais alta) (com o som `transition_cube`) → 9.1 (regravado pela ElevenLabs: 4s e 3d aumentam, pausa de 1,5 s; no fim "Toque na tela" → exemplo do lítio: só 3s² e 7s¹ ocupados, "₃Li" e o lítio apagado ao fundo).
+- Áudio 9: totais, "118 e⁻ no total", o gráfico vira o **átomo 118** (núcleo grande e 118 elétrons nas 7 camadas, `voltaAtomo`); 9.0: volta ao gráfico (`voltaGrafico`); "Ok" → **ordem de energia** (`ordemEnergia`: degraus vão para a ordem 1s, 2s, 2p, 3s… com a seta mais alta) (com o som `transition_cube`) → 9.1 (regravado pela ElevenLabs: 4s e 3d aumentam, pausa de 1,5 s; no fim "Toque na tela") → 9.2 (sódio: "₁₁Na" e o núcleo de fundo; em "assim" a tela escurece, "Eletrosfera errada" e o Na com os 11 e⁻ amontoados (`atomoNa('errada')`); "toque pra ver a eletrosfera correta" → cada elétron viaja até 2, 8, 1 e "Eletrosfera correta"). `mostraToque(on, próximo, texto)` aceita texto próprio. `cenaLitio` (lítio) ficou sem uso.
 
 ## 5. Sumário: velocidade e legendas
 
@@ -53,7 +53,7 @@ Toque longo na versão (canto inferior esquerdo) ou tecla **G**. Arrastar/pinça
 
 ## 7. Regras de trabalho combinadas
 
-1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.52 → `pauling-v152`), commit e push na `main`.
+1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.53 → `pauling-v153`), commit e push na `main`.
 2. Git nesta pasta (OneDrive): `-c windows.appendAtomically=false` no commit e no fetch; identidade com `-c user.name=… -c user.email=…`; usar o Bash (Git Bash).
 3. Áudio novo/regravado: MP3 em `audio/`, nome na lista do `sw.js`, em `SEQUENCIA`, `EVENTOS` e `INICIO`; commit do MP3.
 4. Termos do professor: "aumenta" = cresce e brilha; "pulsa" = cresce e volta; "onda" = um depois do outro; "card" = cartão; "degrau" = barra de um subnível.
@@ -68,7 +68,7 @@ Toque longo na versão (canto inferior esquerdo) ou tecla **G**. Arrastar/pinça
 
 ## 9. Testes sem o professor
 
-Edge sem janela (`--headless=new --use-angle=swiftshader`), cópia temporária do index com um script injetado. **O navegador sem janela não fica mais estreito que ~518 px e o PC também distorce**: abrir o app dentro de um `<iframe>` (384×783 celular, 1100×620 deitada). O teste não toca áudio.
+Edge sem janela (`--headless=new --use-angle=swiftshader`), cópia temporária do index com um script injetado. **O navegador sem janela não fica mais estreito que ~518 px e o PC também distorce**: abrir o app dentro de um `<iframe>` (384×783 celular, 1100×620 deitada). O teste não toca áudio. **No modo sem janela o `requestAnimationFrame` não roda**: na cópia de teste, trocar por `setTimeout(…, 33)`. Para montar uma cena, gravar no `sessionStorage` (`pauling-onde-parou`) o áudio e o segundo e deixar o Retomar montar.
 
 ## 10. Pendências
 
