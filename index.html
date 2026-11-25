@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.43';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.44';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1292,36 +1292,31 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8.2', 'Ok'); } },
   ],
   'audio_distribuição_8.2': [
-    /* 3 s → 5 s: as etiquetas "n = 1" … "n = 7" aparecem em sequência ao lado das linhas (quando a próxima aparece, a anterior some) */
-    { t: 3.0,  acao: () => Atomo.etiquetasN(2000) },
-    { t: 6.2,  acao: () => Atomo.destacaNivel(1, 2000) },                       // o nível 1 e a letra K aumentam e brilham por 2 s
-    /* 8,2 s → 11 s: a seta vertical some e sobe de novo; cada linha dá um saltinho quando a ponta passa por ela */
-    { t: 8.2,  acao: () => Atomo.setaSobe(2800) },
-    { t: 11.0, acao: () => pausaRoteiro(1000) },                                // pausa de 1 s na narração
-    { t: 17.8, acao: () => Atomo.linhasPulsam(1000) },                          // as linhas engrossam por 1 s
-    /* 21,5 s → 24 s: cada nível se divide em degraus (um por subnível), em sequência K → Q */
-    { t: 21.5, acao: () => Atomo.degraus(2500) },
-    { t: 25.0, acao: () => Atomo.digita('sub', 'Subníveis atômicos', { cor: '#eef1ff', dur: 1000 }) },
-    /* 34,9 s: no celular o texto sai (os cartões vêm para o mesmo lugar); na tela deitada ele fica (há espaço) */
-    { t: 34.9, acao: () => { const p = $("#palco"); if (p.clientWidth < p.clientHeight) Atomo.apagaLinha("sub"); } },
-    /* cartões dos subníveis (fade in) e o total de elétrons em cima, na diagonal direita */
-    { t: 35.9, acao: () => Atomo.cartao('s') },                                 // sharp
-    { t: 37.0, acao: () => Atomo.cartaoEletrons('s') },                         // 2
-    { t: 39.0, acao: () => Atomo.cartao('p') },                                 // principal
-    { t: 40.2, acao: () => Atomo.cartaoEletrons('p') },                         // 6
-    { t: 41.5, acao: () => Atomo.cartao('d') },                                 // diffuse
-    { t: 42.2, acao: () => Atomo.cartaoEletrons('d') },                         // 10
-    { t: 43.0, acao: () => Atomo.cartao('f') },                                 // fundamental
-    { t: 44.8, acao: () => Atomo.cartaoEletrons('f') },                         // 14
-    { t: 46.8, acao: () => Atomo.cartoesBrilham() },                            // brilho (mesmo intervalo de antes: 2 s depois do último número)
-    { t: 47.8, acao: () => Atomo.cartoesAumentam(1000) },                       // aumentam por 1 s
-    { t: 55.0, acao: () => Atomo.cartoesNaLetra(900) },                         // nomes apagados até a 1ª letra (s, p, d, f)
-    /* um de cada vez fica maior: s → p → d → f (o anterior volta) — mesmos intervalos de antes */
-    { t: 56.9, acao: () => Atomo.cartaoDestaque('s') },
-    { t: 57.5, acao: () => Atomo.cartaoDestaque('p') },
-    { t: 58.1, acao: () => Atomo.cartaoDestaque('d') },
-    { t: 58.9, acao: () => Atomo.cartaoDestaque('f') },
-    { t: 59.9, acao: () => Atomo.cartaoDestaque(null) },
+    /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/8.2.json) */
+    { t: 6.0,  acao: () => Atomo.linhasPulsam(1000) },                          // "cada nível desses não tem uma energia só": as linhas engrossam por 1 s
+    /* 9,6 s ("se divide em degraus"): cada nível se divide em degraus (um por subnível), em sequência K → Q */
+    { t: 9.6,  acao: () => Atomo.degraus(2500) },
+    { t: 14.4, acao: () => Atomo.digita('sub', 'Subníveis atômicos', { cor: '#eef1ff', dur: 1000 }) },   // "subníveis atômicos"
+    /* no celular o texto sai antes dos cartões (eles vêm para o mesmo lugar); na tela deitada ele fica */
+    { t: 24.7, acao: () => { const p = $("#palco"); if (p.clientWidth < p.clientHeight) Atomo.apagaLinha("sub"); } },
+    /* cartões dos subníveis (fade in) e o total de elétrons em cima, na hora em que cada um é falado */
+    { t: 25.68, acao: () => Atomo.cartao('s') },                                // "sharp"
+    { t: 27.28, acao: () => Atomo.cartaoEletrons('s') },                        // "2 elétrons"
+    { t: 28.96, acao: () => Atomo.cartao('p') },                                // "principal"
+    { t: 30.4,  acao: () => Atomo.cartaoEletrons('p') },                        // "6"
+    { t: 31.44, acao: () => Atomo.cartao('d') },                                // "diffuse"
+    { t: 32.4,  acao: () => Atomo.cartaoEletrons('d') },                        // "10"
+    { t: 33.44, acao: () => Atomo.cartao('f') },                                // "fundamental"
+    { t: 34.88, acao: () => Atomo.cartaoEletrons('f') },                        // "14"
+    { t: 36.9, acao: () => Atomo.cartoesBrilham() },                            // brilho (2 s depois do "14", como antes)
+    { t: 37.9, acao: () => Atomo.cartoesAumentam(1000) },                       // aumentam por 1 s
+    { t: 45.28, acao: () => Atomo.cartoesNaLetra(900) },                        // "primeira letra": nomes apagados até a 1ª letra
+    /* "s, p, d e f": um de cada vez fica maior (o anterior volta) */
+    { t: 47.28, acao: () => Atomo.cartaoDestaque('s') },
+    { t: 47.92, acao: () => Atomo.cartaoDestaque('p') },
+    { t: 48.52, acao: () => Atomo.cartaoDestaque('d') },
+    { t: 49.12, acao: () => Atomo.cartaoDestaque('f') },
+    { t: 50.1,  acao: () => Atomo.cartaoDestaque(null) },
     /* fim: o play vira "Ok" (verde, piscando) → áudio 8.3 */
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_8.3', 'Ok'); } },
   ],
