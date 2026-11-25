@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.53';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.54';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1473,17 +1473,17 @@ const EVENTOS = {
     { t: .05,  acao: () => { escondePlay(false); Atomo.focoNivel(0); Atomo.cartoesSomem(); } },   // os cartões coloridos somem em fade out
     /* o total de elétrons de cada camada volta embaixo dela, quando é falado, e os degraus (subníveis) dessa camada
        aumentam junto (os da camada anterior voltam ao normal) */
-    ...[5.2, 7.28, 8.56, 10.2, 11.52, 12.64, 14.12].map((t, i) => ({ t, acao: () => {   // "2 elétrons no primeiro nível", "8 no segundo", "18 no terceiro",
+    ...[5.44, 7.52, 8.88, 10.44, 11.96, 12.92, 14.44].map((t, i) => ({ t, acao: () => {   // "2 elétrons no primeiro nível", "8 no segundo", "18 no terceiro",
         Atomo.totalDeNovo(i + 1);                                                       //  "32 no quarto", "e no quinto", "18 no sexto", "8 no sétimo"
         if (i) Atomo.degrausNivel(i, false);
         Atomo.degrausNivel(i + 1);
     } })),
-    { t: 15.04, acao: () => Atomo.degrausNivel(7, false) },                    // fim de "sétimo": os degraus do 7º nível voltam ao normal
+    { t: 15.35, acao: () => Atomo.degrausNivel(7, false) },                    // fim de "sétimo": os degraus do 7º nível voltam ao normal
     /* "118!": a tela escurece e "118 e⁻ no total" é escrito no meio */
-    { t: 18.16, acao: () => { Atomo.escurece(true); Atomo.digita('conceito', '118 e⁻ no total', { cor: '#eef1ff', ms: 70 }); } },
+    { t: 18.48, acao: () => { Atomo.escurece(true); Atomo.digita('conceito', '118 e⁻ no total', { cor: '#eef1ff', ms: 70 }); } },
     /* "Exatamente o número de elétrons…": o escuro e o texto saem e o gráfico vira o átomo 118 */
-    { t: 19.68, acao: () => { Atomo.apagaLinha('conceito'); Atomo.escurece(false); Atomo.voltaAtomo(6000); } },
-    { t: 24.32, acao: () => Atomo.digita('elem', 'Oganessônio (118Og)', { cor: '#eef1ff', sub: [13, 14, 15] }) },   // "oganessônio"
+    { t: 19.92, acao: () => { Atomo.apagaLinha('conceito'); Atomo.escurece(false); Atomo.voltaAtomo(6000); } },
+    { t: 24.72, acao: () => Atomo.digita('elem', 'Oganessônio (118Og)', { cor: '#eef1ff', sub: [13, 14, 15] }) },   // "oganessônio"
     /* fim: 1,5 s de pausa e "Toque na tela" (o átomo continua) → áudio 9.0 */
     { t: 'fim', acao: () => { escondePlay(true); setTimeout(() => mostraToque(true, 'audio_distribuição_9.0'), 1500); } },
   ],
