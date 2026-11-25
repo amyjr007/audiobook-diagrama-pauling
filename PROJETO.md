@@ -1,7 +1,7 @@
 # Projeto: audiobook "Distribuição Eletrônica — O diagrama de Pauling"
 
 > Documento de contexto para um assistente (Claude) entender o projeto antes de ajudar.
-> Estado descrito: **versão 1.57** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
+> Estado descrito: **versão 1.58** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
 
 ## 1. O que é
 
@@ -32,7 +32,7 @@ Um **audiobook interativo** de Química, em português, para alunos do ensino m�
 - `pausaRoteiro(ms)`: pausa a narração e volta sozinha. `CORTES`: áudio que termina antes do fim do arquivo (hoje vazio).
 - Relógio do roteiro: `anima(ms, fn, fim, curva)` e `agenda(ms, fn)` — congelam com a narração pausada e aceleram com a velocidade da fala.
 - `INICIO['audio_X']`: monta a cena como o áudio anterior terminou (para **Retomar** ao recarregar). Todo áudio novo precisa de entrada aqui. Ajudante: `nivelPronto(n)`.
-- `CAPITULOS`: itens do Sumário (12 itens; o 6 é "Os postulados de Bohr" → 7.1; o 11 "O diagrama de energia" → 9; o 12 "O diagrama e a ordem crescente de energia" → 9.0, com o gráfico pronto e sem cartões).
+- `CAPITULOS`: itens do Sumário (13 itens; o 6 é "Os postulados de Bohr" → 7.1; o 11 "O diagrama de energia" → 9; o 12 "O diagrama e a ordem crescente de energia" → 9.0, com o gráfico pronto e sem cartões; o 13 "A eletrosfera do ₁₁Na" → 9.2, com o gráfico em ordem de energia).
 
 ## 4. O gráfico de energia (áudios 8.x e 9)
 
@@ -41,7 +41,7 @@ Um **audiobook interativo** de Química, em português, para alunos do ensino m�
 - Montar uma camada: `Atomo.montaNivel(n, total, aoCompletar)` (1ª camada: `arrasteBloco`). Arrastar **corta a narração** e esconde o play. Camada completa: pulso verde, aplausos, "yes", confetes (`comemoraNivel`) e o próximo áudio.
 - Destaques dos rótulos (1s², 2p⁶…): `realcaParte`, `realcaPartes`, `rotuloDestaque`, `pulsaRotulo`. **Cada peça puxa junto:** o número da frente → o texto "Nª camada"; a letra → o cartão colorido; o expoente → só o número de cima do cartão.
 - Foco: `focoNivel([1,2])` escurece as outras camadas. Realce de uma camada: `realceNivel(n, on, brilha)`.
-- Áudio 9: totais, "118 e⁻ no total", o gráfico vira o **átomo 118** (núcleo grande e 118 elétrons nas 7 camadas, `voltaAtomo`); 9.0: volta ao gráfico (`voltaGrafico`); "Ok" → **ordem de energia** (`ordemEnergia`: degraus vão para a ordem 1s, 2s, 2p, 3s… com a seta mais alta) (com o som `transition_cube`) → 9.1 (regravado pela ElevenLabs: 4s e 3d aumentam, pausa de 1,5 s; no fim "toque na tela pra ver um exemplo") → 9.2 (sódio: "₁₁Na"; nas duas vezes que fala "11", o 11 aumenta por 2 s (`realcaSub`); só em "assim" a tela escurece, "Eletrosfera errada" e o Na com os 11 e⁻ amontoados (`atomoNa('errada')`); "toque pra ver a eletrosfera correta" → cada elétron viaja até 2, 8, 1, som "yes" e "Eletrosfera correta") → 9.3 (as 3 camadas aumentam (`naCamadasAumentam`); K 2e⁻, L 8e⁻, M 1e⁻ em sequência (`naRotulo`); em "zoom", zoom grande na camada 2, que se abre nas sublinhas 2s e 2p (`naZoom`), e "2s²"/"2p⁶" (`naSubRotulos`)). `mostraToque(on, próximo, texto)` aceita texto próprio. `cenaLitio` (lítio) ficou sem uso.
+- Áudio 9: totais, "118 e⁻ no total", o gráfico vira o **átomo 118** (núcleo grande e 118 elétrons nas 7 camadas, `voltaAtomo`); 9.0: volta ao gráfico (`voltaGrafico`); "Ok" → **ordem de energia** (`ordemEnergia`: degraus vão para a ordem 1s, 2s, 2p, 3s… com a seta mais alta) (com o som `transition_cube`) → 9.1 (regravado pela ElevenLabs: 4s e 3d aumentam, pausa de 1,5 s; no fim "toque na tela pra ver um exemplo") → 9.2 (sódio: "₁₁Na"; nas duas vezes que fala "11", o 11 aumenta por 2 s (`realcaSub`); só em "assim" a tela escurece, "Eletrosfera errada" e o Na com os 11 e⁻ amontoados (`atomoNa('errada')`); "toque pra ver a eletrosfera correta" → cada elétron viaja até 2, 8, 1, som "yes" e "Eletrosfera correta") → 9.3 (as 3 camadas aumentam (`naCamadasAumentam`); K 2e⁻, L 8e⁻, M 1e⁻ em sequência (`naRotulo`); em "zoom", zoom fundo na camada 2 (calculado pela tela para K e M ficarem fora; núcleo, K e M somem), que se abre nas sublinhas 2s e 2p (`naZoom`), e "2s²"/"2p⁶" (`naSubRotulos`)). `mostraToque(on, próximo, texto)` aceita texto próprio. `cenaLitio` (lítio) ficou sem uso.
 
 ## 5. Sumário: velocidade e legendas
 
@@ -53,7 +53,7 @@ Toque longo na versão (canto inferior esquerdo) ou tecla **G**. Arrastar/pinça
 
 ## 7. Regras de trabalho combinadas
 
-1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.57 → `pauling-v157`), commit e push na `main`.
+1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.58 → `pauling-v158`), commit e push na `main`.
 2. Git nesta pasta (OneDrive): `-c windows.appendAtomically=false` no commit e no fetch; identidade com `-c user.name=… -c user.email=…`; usar o Bash (Git Bash).
 3. Áudio novo/regravado: MP3 em `audio/`, nome na lista do `sw.js`, em `SEQUENCIA`, `EVENTOS` e `INICIO`; commit do MP3.
 4. Termos do professor: "aumenta" = cresce e brilha; "pulsa" = cresce e volta; "onda" = um depois do outro; "card" = cartão; "degrau" = barra de um subnível.

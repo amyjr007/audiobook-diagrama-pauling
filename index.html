@@ -922,7 +922,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.57';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.58';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -953,6 +953,9 @@ const CAPITULOS = [
   /* 12: vai direto ao áudio 9.0 — o gráfico com as 7 camadas prontas, sem os cartões (como no Retomar do 9.0) */
   { titulo: 'O diagrama e a ordem crescente de energia', pagina: 'pagina1', audio: 'audio_distribuição_9.0', inicio: 0,
     prepara: () => { cenaGraficoCartoes(); for (let n = 1; n <= 7; n++) nivelPronto(n); Atomo.cartoesSomem(0); } },
+  /* 13: vai direto ao áudio 9.2 — o gráfico já em ordem crescente de energia (como o 9.1 terminou) */
+  { titulo: 'A eletrosfera do <sub>11</sub>Na', pagina: 'pagina1', audio: 'audio_distribuição_9.2', inicio: 0,
+    prepara: () => { cenaGraficoCartoes(); for (let n = 1; n <= 7; n++) nivelPronto(n); Atomo.cartoesSomem(0); Atomo.ordemEnergia(1); Atomo.avancaTudo(); Atomo.avancaTudo(); } },
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
@@ -5432,7 +5435,7 @@ const Atomo = (() => {
       A.vivo = true; A.ultimo = performance.now();
       const cores = (grafico ? grafico.niveis : ruth.camadas).slice(0, 3).map(L => '#' + L.cor.getHexString());
       const css = getComputedStyle(document.documentElement), COR_S = css.getPropertyValue('--s').trim() || '#3ee0ff', COR_P = css.getPropertyValue('--p').trim() || '#ff5fa8';
-      const NB = 23, VEL = [.5, -.37, .29], ROTULOS = ['K  2e⁻', 'L  8e⁻', 'M  1e⁻'], ZMAX = 3.4;
+      const NB = 23, VEL = [.5, -.37, .29], ROTULOS = ['K  2e⁻', 'L  8e⁻', 'M  1e⁻'];
       const ease = k => k < .5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
       const pilula = (x, txt, px, py, cor, fs, al, esc = 1) => {               // texto com fundo escuro arredondado
         x.save(); x.globalAlpha = al; x.translate(px, py); x.scale(esc, esc);
@@ -5450,12 +5453,17 @@ const Atomo = (() => {
         const x = c.getContext('2d'), W = c.width, H = c.height, cx = W / 2, cy = H * .52;
         const Rmax = Math.min(W * .4, H * .34), R0 = Rmax * .17, S = 1 + .07 * A.realce;   // S: as camadas crescem quando aumentam
         const RA = i => (R0 * 1.9 + (Rmax - R0 * 1.9) * i / 2) * S;              // raio da camada i (0, 1, 2)
-        const GAP = (Rmax - R0 * 1.9) / 2 * .16 * A.split;                       // meia distância entre as sublinhas 2s e 2p
-        const ez = ease(A.zoom), Z = 1 + (ZMAX - 1) * ez, fx = cx + RA(1) * ez, zl = Math.pow(Z, .65);   // zoom no lado direito da camada 2
+        const D = (Rmax - R0 * 1.9) / 2, GAP = D * .16 * A.split;                 // D: distância entre camadas; GAP: meia distância entre as sublinhas 2s e 2p
+        /* zoom no lado direito da camada 2: tão fundo que as camadas vizinhas (K e M) ficam fora da tela (calculado pelo tamanho da tela);
+           a escala cresce exponencialmente e o ponto mirado desliza até o centro (parece um mergulho contínuo) */
+        const ez = ease(A.zoom), ZMAX = Math.max(7, (W / 2) / (D * .55)), Z = Math.exp(Math.log(ZMAX) * ez), zl = Math.pow(Z, .65);
+        const px = cx + RA(1), sx = px + (cx - px) * ez;                           // o ponto mirado (px) vai para o centro da tela (sx → cx)
+        const viz = Math.max(0, 1 - ez * 2);                                       // núcleo, camadas K e M e os elétrons delas somem no zoom
         const fs = Math.max(13 * dpr, H * .024);
-        if (!roteiroCongelado()) A.ang = A.ang.map((a, i) => a + dt * VEL[i] * (1 - .8 * ez));   // (no zoom os elétrons andam devagar)
+        if (!roteiroCongelado()) A.ang = A.ang.map((a, i) => a + dt * VEL[i] * (i === 1 ? 1 : 1 - .8 * ez));
         x.setTransform(1, 0, 0, 1, 0, 0); x.clearRect(0, 0, W, H);
-        x.setTransform(Z, 0, 0, Z, cx - fx * Z, cy - cy * Z);
+        x.setTransform(Z, 0, 0, Z, sx - px * Z, cy - cy * Z);
+        x.globalAlpha = viz;
         /* núcleo: brilho e o aglomerado de 11 prótons (azuis) e 12 nêutrons (dourados) */
         const g = x.createRadialGradient(cx, cy, 0, cx, cy, R0 * 2.2); g.addColorStop(0, 'rgba(120,160,255,.55)'); g.addColorStop(1, 'rgba(120,160,255,0)');
         x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R0 * 2.2, 0, 7); x.fill();
@@ -5468,8 +5476,9 @@ const Atomo = (() => {
         /* as 3 camadas (aumentam: engrossam, acendem e crescem); a 2ª, no zoom, se abre em duas sublinhas (2s por dentro, 2p por fora) */
         const linha = (R, cor, larg) => { x.strokeStyle = cor; x.lineWidth = larg; x.beginPath(); x.arc(cx, cy, R, 0, 7); x.stroke(); };
         for (let i = 0; i < 3; i++){
+          if (i !== 1 && viz <= 0) continue;
           const larg = Math.max(1, dpr * 1.2) * (1 + 1.6 * A.realce) / zl;
-          x.globalAlpha = .55 + .45 * A.realce; x.shadowColor = cores[i]; x.shadowBlur = 14 * dpr * A.realce;
+          x.globalAlpha = (.55 + .45 * A.realce) * (i === 1 ? 1 : viz); x.shadowColor = cores[i]; x.shadowBlur = 14 * dpr * A.realce;
           if (i === 1 && A.split > 0){
             x.globalAlpha = .55 + .4 * A.split;
             linha(RA(1) - GAP, A.split > .5 ? COR_S : cores[1], larg * (1 + .6 * A.split));
@@ -5487,23 +5496,27 @@ const Atomo = (() => {
           const R = RA(e.de.r) + (RA(e.para.r) + (e.para.sub || 0) * GAP - RA(e.de.r)) * k;
           const ex = cx + Math.cos(a) * R + Math.sin(t * 31 + e.de.f * 7) * treme, ey = cy + Math.sin(a) * R + Math.cos(t * 27 + e.de.f * 5) * treme;
           const errado = k < .5, cor = errado ? '#ff5a5a' : (cores[e.para.r] || '#3ee0ff');
-          x.shadowColor = cor; x.shadowBlur = 10 * dpr / zl; x.fillStyle = errado ? '#ffd0d0' : '#eafcff';
+          x.globalAlpha = e.para.r === 1 ? 1 : viz; if (x.globalAlpha <= 0) return;
+          x.shadowColor = e.para.sub && A.split > .5 ? (e.para.sub < 0 ? COR_S : COR_P) : cor; x.shadowBlur = 10 * dpr / zl; x.fillStyle = errado ? '#ffd0d0' : '#eafcff';
           x.beginPath(); x.arc(ex, ey, re, 0, 7); x.fill();
         });
-        x.shadowBlur = 0;
+        x.globalAlpha = 1; x.shadowBlur = 0;
+        /* os rótulos são desenhados na escala da tela (no zoom fundo, uma fonte minúscula ampliada fica ilegível) */
+        x.setTransform(1, 0, 0, 1, 0, 0);
+        const tela = (R, ang) => [sx - px * Z + (cx + Math.cos(ang) * R) * Z, cy - cy * Z + (cy + Math.sin(ang) * R) * Z];
         /* rótulos K, L, M com o total de elétrons, em cima de cada camada (lado de cima, à direita); somem no zoom */
         A.rot.forEach((v, i) => {
-          if (v <= 0) return;
-          const ang = -Math.PI * .3, px = cx + Math.cos(ang) * RA(i), py = cy + Math.sin(ang) * RA(i);
-          pilula(x, ROTULOS[i], px, py, cores[i], fs / Z, Math.min(1, v * 1.5) * (1 - ez), .6 + .4 * ease(v));
+          if (v <= 0 || viz <= 0) return;
+          const [qx, qy] = tela(RA(i), -Math.PI * .3);
+          pilula(x, ROTULOS[i], qx, qy, cores[i], fs, Math.min(1, v * 1.5) * viz, .6 + .4 * ease(v));
         });
-        /* no zoom: 2s² por dentro e 2p⁶ por fora da camada 2 */
+        /* no zoom: 2s² por dentro e 2p⁶ por fora da camada 2 (um pouco acima do centro da tela) */
         if (A.subRot > 0){
-          const ang = -.32, fsz = fs * 1.05 / Z, al = A.subRot;
-          pilula(x, '2s²', cx + Math.cos(ang) * (RA(1) - GAP) - fsz * 2.2, cy + Math.sin(ang) * (RA(1) - GAP), COR_S, fsz, al, .6 + .4 * ease(al));
-          pilula(x, '2p⁶', cx + Math.cos(ang) * (RA(1) + GAP) + fsz * 2.2, cy + Math.sin(ang) * (RA(1) + GAP), COR_P, fsz, al, .6 + .4 * ease(al));
+          const ang = -Math.min(.32, .5 * (cy / Z) / RA(1)), fsz = fs * 1.15, al = A.subRot;
+          const [ax, ay] = tela(RA(1) - GAP, ang), [bx, by] = tela(RA(1) + GAP, ang);
+          pilula(x, '2s²', ax - fsz * 2.4, ay, COR_S, fsz, al, .6 + .4 * ease(al));
+          pilula(x, '2p⁶', bx + fsz * 2.4, by, COR_P, fsz, al, .6 + .4 * ease(al));
         }
-        x.setTransform(1, 0, 0, 1, 0, 0);
         requestAnimationFrame(desenha);
       };
       requestAnimationFrame(desenha);
