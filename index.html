@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.80';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.81';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -2645,6 +2645,7 @@ const Atomo = (() => {
     ruth.atomo.scale.setScalar(1); ruth.atomo.position.y = 0;
     /* núcleo completo de novo (4 p⁺ + 3 n⁰) e sem o elétron de Bohr */
     ruth.bolas.forEach(b => { ruth.nucleo.add(b.m); b.m.position.copy(b.pos0); b.m.rotation.set(0, 0, 0); b.m.scale.setScalar(1); b.m.visible = true; });
+    if (ruth.maisBohr){ ruth.maisBohr.visible = false; ruth.maisOp = 0; }   // (o + do próton é só do átomo de Bohr)
     if (ruth._n118) ruth._n118.visible = false; if (ruth._e118) ruth._e118.forEach(E => { E.g.visible = false; });   // (átomo 118 do fim do áudio 9)
     if (bohrLimpa) bohrLimpa();
     ruth.camadas.forEach(C => { C.g.visible = false; C.fio.material.opacity = C.brilhoC.material.opacity = C.rotulo.material.opacity = 0; C.rotulo.visible = true; C.rotulo.scale.set(1.95, .73, 1); C.rotulo.material.color.setScalar(1); C.glowR.material.opacity = 0; C.destaque = 0; });
@@ -3330,6 +3331,29 @@ const Atomo = (() => {
           g.add(grupo);
           bohr.raios.push({ grupo, geos, mats: [mCor, mBranco], t: 0, vida: (.14 + Math.random() * .14) * (forca > 1.4 ? 1.8 : 1) });
         };
+        /* raio-rastro (elétron girando): nasce no elétron e vai PARA TRÁS, seguindo a própria órbita (um arco em zigue-zague
+           que acompanha o caminho já percorrido); como fica parado onde nasceu, o elétron segue em frente e os raios formam um rastro */
+        const criaRaioRastro = (r, ang, cor, nivel, forca = 1) => {
+          const comp = (.7 + .16 * nivel + Math.random() * .5) * forca, dA = comp / Math.max(.5, r), seg = 9, torto = .22 * forca;
+          const arco = (a0, da, n, tt) => { const pts = []; for (let s = 0; s <= n; s++){ const a = a0 - da * s / n, rr = r + (s && s < n ? (Math.random() - .5) * tt : 0); pts.push(new THREE.Vector3(rr * Math.cos(a), rr * Math.sin(a), .3)); } return pts; };
+          const pts = arco(ang, dA, seg, torto);
+          const geos = [new THREE.BufferGeometry().setFromPoints(pts)];
+          if (forca > 1.4 && Math.random() < .6){                                   // galho: sai do meio do raio, um pouco para fora ou para dentro
+            const k = 3 + Math.floor(Math.random() * 4), b = pts[k], ab = Math.atan2(b.y, b.x), rb = Math.hypot(b.x, b.y), sg = Math.random() < .5 ? -1 : 1, gp = [b.clone()];
+            for (let s = 1; s <= 4; s++){ const a = ab - dA * .35 * s / 4; gp.push(new THREE.Vector3((rb + sg * .12 * s) * Math.cos(a), (rb + sg * .12 * s) * Math.sin(a), .3)); }
+            geos.push(new THREE.BufferGeometry().setFromPoints(gp));
+          }
+          const mCor = new THREE.LineBasicMaterial({ color: cor, opacity: 1, ...aditivo });
+          const mBranco = new THREE.LineBasicMaterial({ color: 0xffffff, opacity: .8, ...aditivo });
+          const grupo = new THREE.Group();
+          geos.forEach((geo, i) => {
+            const l2 = new THREE.Line(geo, mCor); l2.position.set(.03, .03, 0);
+            grupo.add(new THREE.Line(geo, mCor), l2);
+            if (i === 0) grupo.add(new THREE.Line(geo, mBranco));
+          });
+          g.add(grupo);
+          bohr.raios.push({ grupo, geos, mats: [mCor, mBranco], t: 0, vida: .3 + Math.random() * .25 });   // (vive mais: o rastro aparece)
+        };
         const tira = o => { g.remove(o); if (o.material) o.material.dispose(); if (o.geometry && !o.isSprite) o.geometry.dispose(); };
         const circulo = () => { const p = []; for (let s = 0; s <= 64; s++){ const a = s / 64 * Math.PI * 2; p.push(new THREE.Vector3(Math.cos(a), Math.sin(a), 0)); } return p; };
 
@@ -3388,9 +3412,9 @@ const Atomo = (() => {
           });
 
           if (vis && B.ativo){
-            /* raios contínuos: quanto mais alto o nível, mais raios e maiores (com galhos nos níveis altos) */
+            /* raios contínuos (rastro para trás): quanto mais alto o nível, mais raios e maiores (com galhos nos níveis altos) */
             B.acum += dt * (nf - 1) * 2.6;
-            while (B.acum >= 1){ B.acum -= 1; criaRaio(p, B.cor, nf, 1.2 + .1 * (nf - 1)); }
+            while (B.acum >= 1){ B.acum -= 1; criaRaioRastro(B.r, B.ang, B.cor, nf, 1.2 + .1 * (nf - 1)); }   // raios formam um rastro para trás
           }
           B.raios = B.raios.filter(R => {
             R.t += dt; const k = R.t / R.vida;
@@ -4401,6 +4425,7 @@ const Atomo = (() => {
     if (ruth.on){
       ruth.nucleo.rotation.y += dtR * .35; ruth.nucleo.rotation.x += dtR * .12;
       ruth.mats.forEach(m => m.opacity = ruth.opNucleo);
+      if (ruth.maisBohr) ruth.maisBohr.material.opacity = (ruth.maisOp || 0) * ruth.opNucleo;   // o + do próton de Bohr some junto com o núcleo
       ruth.nucleo.visible = ruth.opNucleo > .01;
       ruth.aura.material.opacity = .45 * ruth.opNucleo;
       ruth.escuro.material.opacity = ruth.opEscuro;
@@ -4717,7 +4742,13 @@ const Atomo = (() => {
       let atraso = 0;
       ruth.bolas.forEach(b => {
         ruth.atomo.attach(b.m); b.m.rotation.set(0, 0, 0);           // sai do núcleo que gira: o efeito fica "de frente" para a tela
-        if (b.fica){ const p0 = b.m.position.clone(); anima(700, k => b.m.position.lerpVectors(p0, V(0, 0, 0), k)); return; }
+        if (b.fica){
+          const p0 = b.m.position.clone(); anima(700, k => b.m.position.lerpVectors(p0, V(0, 0, 0), k));
+          /* o sinal de + no próton (de frente para a tela), aparece em fade */
+          if (!ruth.maisBohr){ ruth.maisBohr = new THREE.Sprite(new THREE.SpriteMaterial({ map: texMais(), transparent: true, opacity: 0, depthWrite: false, depthTest: false })); ruth.maisBohr.scale.setScalar(.55); ruth.maisBohr.position.set(0, 0, .6); ruth.maisBohr.renderOrder = 8; }
+          b.m.add(ruth.maisBohr); ruth.maisBohr.visible = true; anima(700, k => { ruth.maisOp = k; });   // (a opacidade final acompanha a do núcleo, a cada quadro)
+          return;
+        }
         agenda(atraso, () => anima(480, k => tvDesligaBola(b.m, k), () => { b.m.visible = false; }, k => k));
         atraso += 90;
       });
