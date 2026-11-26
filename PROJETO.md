@@ -1,7 +1,7 @@
 # Projeto: audiobook "Distribuição Eletrônica — O diagrama de Pauling"
 
 > Documento de contexto para um assistente (Claude) entender o projeto antes de ajudar.
-> Estado descrito: **versão 1.89** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
+> Estado descrito: **versão 1.90** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
 
 ## 1. O que é
 
@@ -53,7 +53,7 @@ Toque longo na versão (canto inferior esquerdo) ou tecla **G**. Arrastar/pinça
 
 ## 7. Regras de trabalho combinadas
 
-1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.89 → `pauling-v189`), commit e push na `main`.
+1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.90 → `pauling-v190`), commit e push na `main`.
 2. Git nesta pasta (OneDrive): `-c windows.appendAtomically=false` no commit e no fetch; identidade com `-c user.name=… -c user.email=…`; usar o Bash (Git Bash).
 3. Áudio novo/regravado: MP3 em `audio/`, nome na lista do `sw.js`, em `SEQUENCIA`, `EVENTOS` e `INICIO`; commit do MP3.
 4. Termos do professor: "aumenta" = cresce e brilha; "pulsa" = cresce e volta; "onda" = um depois do outro; "card" = cartão; "degrau" = barra de um subnível.

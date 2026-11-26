@@ -924,7 +924,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.89';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.90';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1378,6 +1378,7 @@ const EVENTOS = {
     { t: 12.5, acao: () => { Atomo.cartoesBrilham(); Atomo.cartoesAumentam(2500); } },
     { t: 18.0, acao: () => Atomo.focoNivel(1) },                               // do 2º nível para cima escurece
     { t: 22.0, acao: () => Atomo.seguraTotal(1) },                             // o "2e⁻" aumenta (fica assim até o s² encaixar)
+    { t: 27.8, acao: () => { Atomo.cartoesBrilham(); Atomo.cartoesAumentam(1000); } },   // os 4 cartões coloridos dos subníveis aumentam por 1 s
     /* 28 s: a mãozinha leva o s² até o 1º nível e o aluno já pode arrastar; sem ação, a mãozinha repete a cada 3 s.
        Ao encaixar: som de encaixe, aplausos com confetes e o áudio 8.4 começa na hora */
     { t: 28.0, acao: () => Atomo.arrasteBloco('s', 1, 0, encaixou1s2, { som: false, semGuia: true, intervalo: 5000, paraNoToque: true }) },
