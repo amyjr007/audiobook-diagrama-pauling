@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.66';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.67';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1616,8 +1616,8 @@ const EVENTOS = {
   'audio_distribuição_9.5C': [
     /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.5C.json) */
     { t: .05,   acao: () => { escondePlay(false); Atomo.novoJogo(); } },   // os rótulos apagam de novo, o K sai e o Joãozinho volta ao chão
-    { t: 2.0,   acao: () => Atomo.digita('dist', '26Fe:', { cor: '#eef1ff', sub: [0, 1] }) },   // "ferro": embaixo, com o número atômico
-    { t: 4.0,   acao: () => Atomo.realcaSub('dist', 1000) },                  // "26": o 26 aumenta por 1 s
+    { t: 1.92,  acao: () => Atomo.digita('dist', '26Fe:', { cor: '#eef1ff', sub: [0, 1] }) },   // "ferro": embaixo, com o número atômico
+    { t: 3.76,  acao: () => Atomo.realcaSub('dist', 1000) },                  // "26": o 26 aumenta por 1 s
     /* fim ("Vá lá!"): o toque e o joguinho do ferro (1s, 2s, 2p, 3s, 3p, 4s, 3d⁶) */
     { t: 'fim', acao: () => { escondePlay(true); Atomo.jogoFerro(); } },
   ],
