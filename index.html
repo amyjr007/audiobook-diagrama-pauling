@@ -924,7 +924,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.84';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.85';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1315,7 +1315,8 @@ const EVENTOS = {
     { t: 25.04, acao: () => Atomo.realceNivel(2, true, false) },                                    // "élli": o L aumenta
     { t: 25.68, acao: () => { Atomo.realceNivel(2, false); Atomo.textoNivel(2); } },               // "segunda": o L some e "2ª camada" é digitado
     /* "assim por diante": pausa de 1,5 s; nela, M … Q somem uma a uma e as camadas são digitadas no lugar */
-    { t: 26.56, acao: () => { pausaRoteiro(1500); Atomo.niveisNoLugar(290, false, 240); } },
+    { t: 26.56, acao: () => Atomo.niveisNoLugar(290, false, 240) },          // "assim por diante": M … Q somem uma a uma e as camadas são digitadas no lugar
+    { t: 27.4,  acao: () => pausaRoteiro(1500) },                             // pausa de 1,5 s no silêncio depois de "…e assim por diante."
     /* "repare: o K é a camada de menor energia…": a "1ª camada" aumenta e a linha do nível 1 aumenta e brilha */
     { t: 28.16, acao: () => { Atomo.seguraTextoNivel(1); Atomo.realceNivel(1, true, true); } },
     { t: 36.44, acao: () => { Atomo.soltaTextoNivel(1); Atomo.realceNivel(1, false); } },          // "Só não se perca…"
