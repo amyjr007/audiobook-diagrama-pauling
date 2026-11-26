@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.77';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.78';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1208,7 +1208,7 @@ const EVENTOS = {
     /* 35,5 s: o átomo some em fade e o quadro do Rutherford clareia de novo */
     { t: 35.5, acao: () => Atomo.rutherford(false) },
     /* 45 s: a tela escurece de novo e a frase é digitada */
-    { t: 45.0, acao: () => { Atomo.escurece(true); Atomo.digita('conceito', 'A forma como os elétrons estão organizados é justamente a chave para entender o comportamento químico de um átomo.', { cor: '#eef1ff', ms: 55 }); } },
+    { t: 45.0, acao: () => { Atomo.escurece(true); Atomo.digita('conceito', 'A forma como os elétrons estão organizados na eletrosfera de um átomo é a chave pra entender o comportamento químico dele.', { cor: '#eef1ff', ms: 55 }); } },
     /* fim: "Toque na tela" → áudio 7 */
     { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, 'audio_distribuição_7'); } },
   ],
@@ -6648,7 +6648,7 @@ const Retomar = (() => {
     'audio_distribuição_7':   () => {
       Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_RUTHERFORD[0], CAM_RUTHERFORD[1], 1);
       Atomo.construcao(true, true); Atomo.escurece(true);               // como o áudio 6 terminou: átomo montado, tela escura e a frase final
-      Atomo.digita('conceito', 'A forma como os elétrons estão organizados é justamente a chave para entender o comportamento químico de um átomo.', { cor: '#eef1ff', ms: 1 });
+      Atomo.digita('conceito', 'A forma como os elétrons estão organizados na eletrosfera de um átomo é a chave pra entender o comportamento químico dele.', { cor: '#eef1ff', ms: 1 });
     },
     'audio_distribuição_7.1': () => { Atomo.estado('C', 1); Atomo.mostraCavaletes(true); Atomo.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1); Atomo.escurece(true); },
     'audio_distribuição_7.2': () => {
