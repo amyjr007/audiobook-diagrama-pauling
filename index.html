@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.72';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.73';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -963,6 +963,9 @@ const CAPITULOS = [
   /* 15 e 16: vão direto aos áudios 9.5C (ferro) e 9.5D (bromo) — o gráfico do joguinho (rótulos apagados) e o Joãozinho no chão */
   { titulo: 'A eletrosfera do <sub>26</sub>Fe', pagina: 'pagina1', audio: 'audio_distribuição_9.5C', inicio: 0, prepara: () => cenaJoguinho() },
   { titulo: 'A eletrosfera do <sub>35</sub>Br', pagina: 'pagina1', audio: 'audio_distribuição_9.5D', inicio: 0, prepara: () => cenaJoguinho() },
+  /* 17: vai direto ao áudio 9.6 — o gráfico em ordem de energia, com todos os subníveis acesos */
+  { titulo: 'O Diagrama de Pauling', pagina: 'pagina1', audio: 'audio_distribuição_9.6', inicio: 0,
+    prepara: () => { cenaGraficoCartoes(); for (let n = 1; n <= 7; n++) nivelPronto(n); Atomo.cartoesSomem(0); Atomo.ordemEnergia(1); Atomo.avancaTudo(); Atomo.avancaTudo(); } },
 ];
 
 /* cena do joguinho (Sumário 15 e 16): gráfico em ordem de energia, todos os subníveis com os rótulos 80% apagados e o Joãozinho no chão */
@@ -977,6 +980,8 @@ const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_di
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
 const CAM_RUTHERFORD = [[13.64, -2.36, 24.93], [13.62, -2.02, 34.92]];
 const CAM_BOHR       = [[-9.36, -2.36, 24.93], [-9.38, -2.02, 34.92]];
+const CAM_MADELUNG   = [[-32.36, -2.36, 24.93], [-32.38, -2.02, 34.92]];   // áudio 9.6: cavaletes do Madelung e do Pauling (mesma altura e distância)
+const CAM_PAULING    = [[-55.36, -2.36, 24.93], [-55.38, -2.02, 34.92]];
 /* conceitos (áudios 7.1 e 7.2) */
 const CONCEITO_1 = '1. Os elétrons se organizam em níveis de energia bem definidos, chamados de camadas eletrônicas.';
 const CONCEITO_2 = '2. Cada nível é representado por um número inteiro, n, e sua energia aumenta quanto mais afastado do núcleo esse nível está.';
@@ -1639,8 +1644,16 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(true); Atomo.jogoBromo(() => tocaDepois(300, 'audio_distribuição_9.6')); } },   // (o 9.6 toca junto com a comemoração)
   ],
   'audio_distribuição_9.6': [
-    /* "Bom demais!" — Madelung, Pauling e o diagrama de Pauling (eventos a definir) */
+    /* "Bom demais!" — Madelung, Pauling e o diagrama de Pauling (tempos tirados da própria narração, ferramentas/tempos/9.6.json) */
     { t: .05,   acao: () => escondePlay(false) },
+    { t: 12.64, acao: () => Atomo.historiaVaiPara(CAM_MADELUNG, 'Erwin Madelung - 1936') },   // "Erwin Madelung": o gráfico sai e a câmera vai até o cavalete dele
+    { t: 28.64, acao: () => Atomo.historiaVaiPara(CAM_PAULING, 'Linus Pauling') },             // "Linus Pauling": a câmera vai até o cavalete dele
+    { t: 32.24, acao: () => Atomo.livroPauling('capa') },                     // "livros": a foto escurece e entra a capa do livro
+    { t: 37.6,  acao: () => Atomo.livroPauling('pagina') },                   // "gráfico": a capa desliza para a esquerda e entra a página
+    { t: 40.54, acao: () => Atomo.historiaVoltaGrafico() },                   // "Com esse gráfico…": de volta ao gráfico (limpo, tudo aceso)
+    { t: 65.36, acao: () => Atomo.graficoViraTabela() },                      // "do jeito que você montou lá no começo": volta às camadas e vira tabela (1ª em cima)
+    { t: 70.76, acao: () => Atomo.setasPauling() },                           // "setas diagonais": desenhadas uma a uma
+    { t: 82.4,  acao: () => { Atomo.limpaTopo(); Atomo.digita('topo', 'Diagrama de Pauling', { cor: '#ffe066', ms: 45 }); } },   // "diagrama de Pauling"
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -2795,7 +2808,7 @@ const Atomo = (() => {
   /* x de cada cavalete: o 1º (Rutherford) fica no centro da câmera do áudio 6 (x 13.64).
      A câmera está a ~22 dos cavaletes → a tela mostra ~28,6 de largura → meia tela ≈ 14,3 de vão;
      com o cavalete (~9 de largura) → um a cada 23 unidades (à direita na tela = −x) */
-  const CAVALETES = [13.6, -9.4, -32.4];
+  const CAVALETES = [13.6, -9.4, -32.4, -55.4];   // Rutherford, Bohr, Madelung, Pauling
   const TABLADO = -9.4;                           // altura do tampo do tablado (o piso fica em −11)
   let galeria = null;                             // grupo com tablado, cavaletes e luzes (invisível até o áudio 6)
   function texPlaca(nome, anos){
@@ -2841,6 +2854,7 @@ const Atomo = (() => {
       /* anos = ano do modelo atômico (não as datas de vida e morte) */
       { img: 'imagens/rutherford_free.jpg',    nome: 'Ernest Rutherford', anos: '1911', prop: 960 / 1300 },
       { img: 'imagens/Niels_Bohr_free.jpg',    nome: 'Niels Bohr',        anos: '1913', prop: 960 / 1350 },
+      { img: 'imagens/Erwin_Madelung.jpeg',    nome: 'Erwin Madelung',    anos: '1936', prop: 320 / 450 },
       { img: 'imagens/Linus_Pauling_Free.png', nome: 'Linus Pauling',     anos: '',     prop: 711 / 806 },
     ];
     /* barra de madeira entre dois pontos (para as pernas inclinadas) */
@@ -2914,7 +2928,7 @@ const Atomo = (() => {
       `• direção: yaw ${i.yaw.toFixed(1)}° · pitch ${i.pitch.toFixed(1)}°\n` +
       `• campo de visão: ${camera.fov}°\n` +
       `• átomos: H (${POS_ATOMO.H.join(', ')}) · He (${POS_ATOMO.He.join(', ')}) · C (${POS_ATOMO.C.join(', ')})\n` +
-      `• cavaletes (centro do quadro): Rutherford (${CAVALETES[0]}, −1.8, ${GALERIA.z}) · Bohr (${CAVALETES[1]}, −1.8, ${GALERIA.z}) · Pauling (${CAVALETES[2]}, −1.8, ${GALERIA.z})`;
+      `• cavaletes (centro do quadro): Rutherford (${CAVALETES[0]}, −1.8, ${GALERIA.z}) · Bohr (${CAVALETES[1]}, −1.8, ${GALERIA.z}) · Madelung (${CAVALETES[2]}, −1.8, ${GALERIA.z}) · Pauling (${CAVALETES[3]}, −1.8, ${GALERIA.z})`;
   }
 
   function monta(){
@@ -3634,7 +3648,8 @@ const Atomo = (() => {
             const xa = (GX0 + GX1) / 2, wa = W, ya = y0 + (j - (L.m - 1) / 2) * H0;          // empilhada (linha grossa)
             const xb = GX0 + (j + .5) * Wc, wb = Wc - GAP;                                   // degrau: coluna do subnível…
             const yb = y0 + j * DEG_IN + (yAufbau(L.n, j) - y0 - j * DEG_IN) * L.a;           // …dentro do nível → altura de energia
-            const y = ya + (yb - ya) * L.d + L.b;
+            const yG = ya + (yb - ya) * L.d + L.b, tb = L.tab || 0;                       // tab (áudio 9.6): as camadas viram linhas de uma tabela, a 1ª em cima
+            const y = yG + (yN(8 - L.n) - yG) * tb;
             t.position.set(xa + (xb - xa) * L.d + A.x, y + A.y * (1 - L.a), .02);   // (na ordem de energia o ajuste de altura do modo edição não vale)
             const hl = L.hl[j];
             t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl) * A.s, h * (1 + 1.4 * hl + 1.2 * (L.verde || 0)) * A.s, 1);
@@ -4050,7 +4065,7 @@ const Atomo = (() => {
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
             [grafico.contadores, grafico.textosCamada].forEach(M => Object.values(M).forEach(o => { o.s.visible = false; o.s.material.opacity = 0; }));
             Object.values(grafico.circulos).forEach(O => { O.l.visible = false; });
-            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.dim = 0; L.apag = null; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
+            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.dim = 0; L.apag = null; L.tab = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; T.h = 0; } });   // "1º nível"…
             grafico.totais.forEach(T => { if (T){ T.s.visible = false; T.h = 0; } });      // totais "2e⁻"… embaixo dos níveis
             niveis.forEach(L => L.rotulos.forEach((r, j) => { if (r.partes[2].mudou) grafico.expoenteDegrau(L.n, j, ELET[j]); }));   // expoentes trocados voltam
@@ -4470,6 +4485,9 @@ const Atomo = (() => {
       { const e = face.querySelector('.escurecedor'); if (e) e.classList.remove('on'); }
       [this._a118, this._aNa].forEach(A => { if (A){ A.vivo = false; A.c.style.transition = 'none'; A.c.style.opacity = 0; } });   // desenhos 2D (átomo 118, sódio) somem
       if (this._joao){ this._joao.svg.style.transition = 'none'; this._joao.svg.style.opacity = 0; this._joao.ativo = false; if (this._joao.tira) this._joao.tira(); }   // Joãozinho (áudio 9.5) some e o joguinho para
+      ruth.conj.visible = true;                                                      // (o 9.6 esconde o gráfico na galeria)
+      if (this._livro) [this._livro.capa, this._livro.pagina].forEach(i => { i.style.transition = 'none'; i.style.opacity = 0; });   // livro do Pauling (9.6)
+      if (this._setas) this._setas.svg.innerHTML = '';                               // setas do diagrama de Pauling (9.6)
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
@@ -5742,6 +5760,99 @@ const Atomo = (() => {
       const [n, j] = PASSOS[i]; this.subnivelAumenta(n, j);
       agenda(ms, () => { sp.style.transform = ''; sp.style.margin = ''; sp.style.color = '#eef1ff'; sp.style.textShadow = ''; this.subnivelAumenta(n, j, false); });
     },
+    /* ----- áudio 9.6: Madelung, Pauling e o diagrama de Pauling ----- */
+    /* sai do gráfico para a galeria: a tela escurece, o gráfico (e o Joãozinho, a linha de baixo, o título) sai,
+       o escuro da sala some e a câmera desliza do cavalete do Bohr até o cavalete "cam" */
+    historiaVaiPara(cam, titulo, dur = 2600){
+      if (!pronto) return;
+      if (ruth.conj.visible){
+        this.escurece(true);
+        agenda(900, () => {
+          ruth.conj.visible = false; ruth.opEscuro = 0;
+          if (this._joao){ this._joao.ativo = false; if (this._joao.tira) this._joao.tira(); this._joao.svg.style.opacity = 0; }
+          this.limpaDist(); this.limpaTopo();
+          this.escurece(false); this.voaCamera(cam[0], cam[1], dur);
+          if (titulo) agenda(dur, () => this.digita('topo', titulo, { cor: '#eef1ff', ms: 45 }));
+        });
+      } else {
+        this.limpaTopo(); this.voaCamera(cam[0], cam[1], dur);
+        if (titulo) agenda(dur, () => this.digita('topo', titulo, { cor: '#eef1ff', ms: 45 }));
+      }
+    },
+    /* livro do Pauling por cima da foto: a tela escurece e entra a capa; depois (pagina) a capa desliza para a esquerda e entra a página */
+    livroPauling(passo){
+      if (!pronto || !face) return;
+      let B = this._livro;
+      if (!B){
+        const el = document.createElement('div'); el.className = 'livro-pauling';
+        el.style.cssText = 'position:absolute;inset:0;z-index:3;pointer-events:none;overflow:hidden';
+        const img = src => { const i = document.createElement('img'); i.src = src; i.alt = '';
+          i.style.cssText = 'position:absolute;left:50%;top:52%;height:min(74%,560px);max-width:86%;object-fit:contain;border-radius:6px;box-shadow:0 18px 50px rgba(0,0,0,.7),0 0 0 1px rgba(255,255,255,.08);opacity:0;transform:translate(-50%,-50%) scale(.9);transition:transform .7s cubic-bezier(.2,.8,.2,1),opacity .6s ease';
+          el.appendChild(i); return i; };
+        B = this._livro = { el, capa: img('imagens/pauling_book.png'), pagina: img('imagens/pauling_book_page.png') };
+        face.appendChild(el);
+      }
+      const poe = (i, op, tx, esc) => { i.style.opacity = op; i.style.transform = `translate(calc(-50% + ${tx}), -50%) scale(${esc})`; };
+      if (passo === 'capa'){ this.escurece(true); B.el.style.display = ''; poe(B.pagina, 0, '120%', 1); requestAnimationFrame(() => poe(B.capa, 1, '0px', 1)); }
+      else if (passo === 'pagina'){ poe(B.capa, 0, '-140%', 1); poe(B.pagina, 0, '140%', 1); requestAnimationFrame(() => requestAnimationFrame(() => poe(B.pagina, 1, '0px', 1))); }
+      else { poe(B.capa, 0, '0px', .9); poe(B.pagina, 0, '0px', .9); }
+    },
+    /* volta ao gráfico: o livro sai, a tela escurece e a câmera volta para o Bohr; o gráfico volta limpo,
+       com todos os subníveis acesos (rótulos inteiros, expoentes completos) */
+    historiaVoltaGrafico(){
+      if (!pronto || !grafico) return;
+      this.livroPauling('sai'); this.escurece(true); this.apagaLinha('topo');
+      agenda(900, () => {
+        this.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1);
+        ruth.opEscuro = .93; ruth.conj.visible = true;
+        const ELET = [2, 6, 10, 14];
+        grafico.niveis.forEach(L => { L.rot = L.rot.map(() => 1); L.corSub = L.corSub.map(() => 1); L.apag = L.apag ? L.apag.map(() => 0) : null; L.rotulos.forEach((r, j) => grafico.expoenteDegrau(L.n, j, ELET[j])); grafico.reaplica(L); });
+        this.escurece(false);
+      });
+    },
+    /* "do jeito que você montou lá no começo": os degraus saem da ordem de energia e voltam para as camadas (como no fim da etapa 8);
+       depois as camadas se empilham como linhas de uma tabela, com a 1ª em cima; o eixo some */
+    graficoViraTabela(dur = 1700){
+      if (!pronto || !grafico) return;
+      const G = grafico, N = G.niveis;
+      N.forEach(L => { const a0 = L.a; anima(dur, k => { L.a = a0 * (1 - k); G.reaplica(L); }); });
+      G.sobeSeta(0, dur);
+      const mats = []; G.eixos.traverse(o => { if (o.material && !mats.includes(o.material)) mats.push(o.material); });
+      const ops = mats.map(m => m.opacity);
+      anima(dur, k => mats.forEach((m, i) => { m.opacity = ops[i] * (1 - k); }), () => { G.eixos.visible = false; mats.forEach((m, i) => { m.opacity = ops[i]; }); });
+      agenda(dur + 300, () => N.forEach((L, i) => agenda(i * 90, () => { const t0 = L.tab || 0; anima(dur, k => { L.tab = t0 + (1 - t0) * k; G.reaplica(L); }); })));
+    },
+    /* setas diagonais do diagrama de Pauling, desenhadas uma a uma (de cima para baixo), passando pelos subníveis na ordem de energia */
+    setasPauling(ja = false){
+      if (!pronto || !grafico || !face) return;
+      let S = this._setas;
+      const ns = 'http://www.w3.org/2000/svg';
+      if (!S){
+        const svg = document.createElementNS(ns, 'svg'); svg.setAttribute('class', 'setas-pauling');
+        svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:visible;filter:drop-shadow(0 0 4px rgba(255,224,102,.7))';
+        face.appendChild(svg); S = this._setas = { svg };
+      }
+      S.svg.innerHTML = ''; S.svg.style.opacity = 1;
+      if (grafico.niveis.some(L => (L.tab || 0) < .999)){ agenda(120, () => this.setasPauling(ja)); return; }   // espera a tabela terminar de se formar
+      const GRUPOS = [['1s'], ['2s'], ['2p', '3s'], ['3p', '4s'], ['3d', '4p', '5s'], ['4d', '5p', '6s'], ['4f', '5d', '6p', '7s'], ['5f', '6d', '7p']];
+      const centro = t => { const d = grafico.telaDegrau(+t[0], 'spdf'.indexOf(t[1])); return { x: (d.x0 + d.x1) / 2, y: d.y - 9 }; };
+      const a = centro('2p'), b = centro('3s'), passo = Math.hypot(b.x - a.x, b.y - a.y), ux = (b.x - a.x) / passo, uy = (b.y - a.y) / passo;
+      const ext = passo * .42, cab = Math.max(7, passo * .16);
+      GRUPOS.forEach((g, i) => {
+        const p0 = centro(g[0]), p1 = centro(g[g.length - 1]);
+        const x0 = p0.x - ux * ext, y0 = p0.y - uy * ext, x1 = p1.x + ux * ext, y1 = p1.y + uy * ext;
+        const lin = document.createElementNS(ns, 'line');
+        [['x1', x0], ['y1', y0], ['x2', x1], ['y2', y1], ['stroke', '#ffe066'], ['stroke-width', 2.6], ['stroke-linecap', 'round']].forEach(([k, v]) => lin.setAttribute(k, v));
+        const ponta = document.createElementNS(ns, 'polygon'), px = -uy, py = ux;   // cabeça da seta (na ponta de baixo, à esquerda)
+        ponta.setAttribute('points', `${x1 + ux * cab * .4},${y1 + uy * cab * .4} ${x1 - ux * cab + px * cab * .55},${y1 - uy * cab + py * cab * .55} ${x1 - ux * cab - px * cab * .55},${y1 - uy * cab - py * cab * .55}`);
+        ponta.setAttribute('fill', '#ffe066');
+        S.svg.appendChild(lin); S.svg.appendChild(ponta);
+        const L = Math.hypot(x1 - x0, y1 - y0);
+        if (ja) return;
+        lin.style.strokeDasharray = L; lin.style.strokeDashoffset = L; ponta.style.opacity = 0;
+        agenda(i * 650, () => { sfx('flip'); anima(500, k => { lin.style.strokeDashoffset = L * (1 - k); }, () => { lin.style.strokeDashoffset = 0; ponta.style.transition = 'opacity .2s'; ponta.style.opacity = 1; }); });
+      });
+    },
     /* ----- áudio 9.5 ----- */
     /* "segundo exemplo": a distribuição do sódio (embaixo) e o "₁₁Na" (no alto) somem; o gráfico volta a ter todos os subníveis
        preenchidos, com os degraus bem visíveis e os rótulos (1s², 2p⁶…) 80% apagados; os textos "1ª/2ª/3ª camada" saem */
@@ -5914,6 +6025,7 @@ const Atomo = (() => {
             this.digita('dist', ' ' + n + 'spdf'[j] + expo(n, j), { cor: '#eef1ff', sup: [3, 4], ms: 90 });   // embaixo, a distribuição vai se formando
             if (J.passo >= META){
               J.ativo = false; Quiz.confetes(); sfx('funfare'); this._joaoComemora(5); aoComemorar && aoComemorar();
+              agenda(500, () => { this.brilhaLinha('dist'); sfx('yes'); });            // a distribuição formada brilha
               agenda(2400, () => { J.ocupado = false; });
             } else { agenda(450, () => sfx('próximo')); agenda(300, () => { J.ocupado = false; }); }
           });

@@ -1,6 +1,6 @@
 /* Service worker do audiobook.
    Troque o número de CACHE a cada publicação para os aparelhos pegarem a versão nova. */
-const CACHE = 'pauling-v172';  // acompanhe APP_VERSAO do index.html (1.47 → v147)
+const CACHE = 'pauling-v173';  // acompanhe APP_VERSAO do index.html (1.47 → v147)
 const ARQUIVOS = [
   './',
   './index.html',
@@ -17,6 +17,9 @@ const ARQUIVOS = [
   './imagens/Niels_Bohr_free.jpg',
   './imagens/Linus_Pauling_Free.png',
   './imagens/bohr_postulados.webp',
+  './imagens/Erwin_Madelung.jpeg',
+  './imagens/pauling_book.png',
+  './imagens/pauling_book_page.png',
   './fontes/ibm-plex-mono-500.woff2',
   './fontes/ibm-plex-sans-300.woff2',
   './fontes/ibm-plex-sans-400.woff2',
