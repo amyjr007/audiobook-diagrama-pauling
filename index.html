@@ -924,7 +924,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.88';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.89';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -3928,8 +3928,8 @@ const Atomo = (() => {
             const o0 = T.s.material.opacity; anima(dur, k => { T.s.material.opacity = o0 * (1 - k); }, () => { T.s.visible = false; T.h = 0; });
           },
           posTotal(T, TN){
-            const hT = TN.bh * 1.25, g = 1 + .35 * (T.h || 0);
-            T.s.scale.set(hT * 2.6 * g, hT * g, 1); T.s.position.set(TN.bx, TN.by - TN.bh * 1.05 - (g - 1) * hT * .5, .3);   /* cresce para baixo (não cobre o "Nº nível") */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[TN.n - 1].dim || 0)));
+            const hT = TN.bh * 1.7, g = 1 + .35 * (T.h || 0);   // (era 1,25: os totais ficaram ~35% maiores)
+            T.s.scale.set(hT * 2.6 * g, hT * g, 1); T.s.position.set(TN.bx, TN.by - TN.bh * .425 - hT * .5 - (g - 1) * hT * .5, .3);   /* cresce para baixo (não cobre o "Nº nível") */ T.s.material.color.setScalar((1 + .8 * (T.h || 0)) * (1 - .8 * (niveis[TN.n - 1].dim || 0)));
           },
           /* degraus de baixo para cima (pela altura na tela) */
           degrausDeBaixo: () => niveis.flatMap(L => L.tiras.map((t, j) => ({ n: L.n, j, y: t.position.y }))).sort((a, b) => a.y - b.y),
