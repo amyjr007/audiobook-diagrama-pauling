@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.69';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.70';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1543,41 +1543,40 @@ const EVENTOS = {
   'audio_distribuição_9.3': [
     /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.3.json) */
     { t: .05,   acao: () => escondePlay(false) },
-    { t: 6.08,  acao: () => Atomo.naCamadasAumentam(1500) },                 // "São 3 camadas": as 3 camadas aumentam por 1,5 s (os elétrons vão junto, em cima delas)
+    { t: 6.0,   acao: () => Atomo.naCamadasAumentam(1500) },                 // "São 3 camadas": as 3 camadas aumentam por 1,5 s (os elétrons vão junto, em cima delas)
     /* "soma … camada!": K 2e⁻, L 8e⁻ e M 1e⁻ aparecem um depois do outro, em cima de cada camada */
-    { t: 10.0,  acao: () => Atomo.naRotulo(0) },
-    { t: 11.0,  acao: () => Atomo.naRotulo(1) },
-    { t: 12.0,  acao: () => Atomo.naRotulo(2) },
+    { t: 9.68,  acao: () => Atomo.naRotulo(0) },
+    { t: 10.68, acao: () => Atomo.naRotulo(1) },
+    { t: 11.68, acao: () => Atomo.naRotulo(2) },
     /* "zoom": zoom grande na camada 2, que se abre nas sublinhas 2s (por dentro) e 2p (por fora) */
-    { t: 21.04, acao: () => Atomo.naZoom(2400) },
-    { t: 23.68, acao: () => Atomo.naSubRotulos() },                           // "subníveis da camada dois": 2s² e 2p⁶
+    { t: 21.6,  acao: () => Atomo.naZoom(2400) },
+    { t: 23.39, acao: () => Atomo.naSubRotulos() },                           // "Aqui, olha...": 2s² e 2p⁶
     /* fim ("Olha..."): o 9.4 continua a fala */
     { t: 'fim', acao: () => tocaDepois(600, 'audio_distribuição_9.4') },
   ],
   'audio_distribuição_9.4': [
     /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.4.json) */
     { t: .05,   acao: () => escondePlay(false) },
-    { t: 4.6,   acao: () => pausaRoteiro(1000) },                             // pausa de 1 s depois de "…em um átomo."
     /* "sódio": zoom out (as 3 camadas de novo) e, em seguida, as camadas viram os degraus do gráfico com os 11 elétrons */
-    { t: 24.24, acao: () => Atomo.naZoomVolta(1600) },
-    { t: 25.9,  acao: () => Atomo.naViraGrafico(2600) },
-    { t: 26.9,  acao: () => pausaRoteiro(1500) },                             // pausa de 1,5 s depois de "…de visualizar." (a transformação continua)
-    { t: 30.24, acao: () => Atomo.camadasSodioAumentam(1000) },               // "3 camadas": as 3 camadas aumentam por 1 s
+    { t: 20.16, acao: () => Atomo.naZoomVolta(1600) },
+    { t: 21.82, acao: () => Atomo.naViraGrafico(2600) },
+    { t: 22.56, acao: () => pausaRoteiro(1500) },                             // pausa de 1,5 s depois de "…de visualizar." (a transformação continua)
+    { t: 26.16, acao: () => Atomo.camadasSodioAumentam(1000) },               // "3 camadas": as 3 camadas aumentam por 1 s
     /* cada coisa falada aumenta; a anterior volta ao normal */
-    { t: 32.48, acao: () => Atomo.textoCamada(1) },                           // "camada 1"
-    { t: 33.44, acao: () => Atomo.parteRealce(1, 0, 2) },                     // "dois elétrons": o 2 do 1s²
-    { t: 35.84, acao: () => { Atomo.parteRealce(1, 0, 2, false); Atomo.parteRealce(1, 0, 1); } },   // "éssi": o s
-    { t: 36.96, acao: () => { Atomo.parteRealce(1, 0, 1, false); Atomo.textoCamada(1, false); Atomo.textoCamada(2); } },   // "camada 2"
-    { t: 38.08, acao: () => { Atomo.subnivelAumenta(2, 0); Atomo.subnivelAumenta(2, 1); } },     // "oito elétrons": 2s² e 2p⁶ por 1 s
-    { t: 39.08, acao: () => { Atomo.subnivelAumenta(2, 0, false); Atomo.subnivelAumenta(2, 1, false); } },
-    { t: 39.36, acao: () => { Atomo.textoCamada(2, false); Atomo.parteRealce(2, 0, 2); } },      // "2 no subnível": o 2 do 2s²
-    { t: 40.32, acao: () => { Atomo.parteRealce(2, 0, 2, false); Atomo.parteRealce(2, 0, 1); } },   // "éssi": o s
-    { t: 41.04, acao: () => { Atomo.parteRealce(2, 0, 1, false); Atomo.parteRealce(2, 1, 2); } },   // "6": o 6 do 2p⁶
-    { t: 41.56, acao: () => { Atomo.parteRealce(2, 1, 2, false); Atomo.parteRealce(2, 1, 1); } },   // "pê": o p
-    { t: 42.52, acao: () => { Atomo.parteRealce(2, 1, 1, false); Atomo.textoCamada(3); } },      // "última camada"
-    { t: 44.08, acao: () => { Atomo.textoCamada(3, false); Atomo.parteRealce(3, 0, 2); } },      // "um elétron": o 1 do 3s¹
-    { t: 46.72, acao: () => { Atomo.parteRealce(3, 0, 2, false); Atomo.parteRealce(3, 0, 1); } },   // "éssi": o s
-    { t: 47.6,  acao: () => Atomo.parteRealce(3, 0, 1, false) },              // "É ou não é…"
+    { t: 27.84, acao: () => Atomo.textoCamada(1) },                           // "camada 1"
+    { t: 28.8,  acao: () => Atomo.parteRealce(1, 0, 2) },                     // "dois elétrons": o 2 do 1s²
+    { t: 31.2,  acao: () => { Atomo.parteRealce(1, 0, 2, false); Atomo.parteRealce(1, 0, 1); } },   // "éssi": o s
+    { t: 32.16, acao: () => { Atomo.parteRealce(1, 0, 1, false); Atomo.textoCamada(1, false); Atomo.textoCamada(2); } },   // "camada 2"
+    { t: 33.36, acao: () => { Atomo.subnivelAumenta(2, 0); Atomo.subnivelAumenta(2, 1); } },     // "oito elétrons": 2s² e 2p⁶ por 1 s
+    { t: 34.36, acao: () => { Atomo.subnivelAumenta(2, 0, false); Atomo.subnivelAumenta(2, 1, false); } },
+    { t: 34.56, acao: () => { Atomo.textoCamada(2, false); Atomo.parteRealce(2, 0, 2); } },      // "2 no subnível": o 2 do 2s²
+    { t: 35.6,  acao: () => { Atomo.parteRealce(2, 0, 2, false); Atomo.parteRealce(2, 0, 1); } },   // "éssi": o s
+    { t: 36.32, acao: () => { Atomo.parteRealce(2, 0, 1, false); Atomo.parteRealce(2, 1, 2); } },   // "6": o 6 do 2p⁶
+    { t: 36.8,  acao: () => { Atomo.parteRealce(2, 1, 2, false); Atomo.parteRealce(2, 1, 1); } },   // "pê": o p
+    { t: 37.72, acao: () => { Atomo.parteRealce(2, 1, 1, false); Atomo.textoCamada(3); } },      // "última camada"
+    { t: 39.36, acao: () => { Atomo.textoCamada(3, false); Atomo.parteRealce(3, 0, 2); } },      // "um elétron": o 1 do 3s¹
+    { t: 41.96, acao: () => { Atomo.parteRealce(3, 0, 2, false); Atomo.parteRealce(3, 0, 1); } },   // "éssi": o s
+    { t: 42.8,  acao: () => Atomo.parteRealce(3, 0, 1, false) },              // "É ou não é…"
     /* fim: o 9.4A */
     { t: 'fim', acao: () => tocaDepois(800, 'audio_distribuição_9.4A') },
   ],
@@ -1590,10 +1589,10 @@ const EVENTOS = {
     /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.4B.json) */
     { t: .05,   acao: () => escondePlay(false) },
     /* "um éssi dois", "dois éssi dois", "dois pê seis", "três éssi um": cada parte da linha pulsa e o degrau dela acende junto */
-    { t: 10.0,  acao: () => Atomo.pulsaDist(0) },
-    { t: 11.52, acao: () => Atomo.pulsaDist(1) },
-    { t: 13.12, acao: () => Atomo.pulsaDist(2) },
-    { t: 14.85, acao: () => Atomo.pulsaDist(3) },
+    { t: 11.68, acao: () => Atomo.pulsaDist(0) },
+    { t: 13.12, acao: () => Atomo.pulsaDist(1) },
+    { t: 14.69, acao: () => Atomo.pulsaDist(2) },
+    { t: 16.24, acao: () => Atomo.pulsaDist(3) },
     /* fim ("Facilitou, né?"): o 9.5 */
     { t: 'fim', acao: () => tocaDepois(1200, 'audio_distribuição_9.5') },
   ],
