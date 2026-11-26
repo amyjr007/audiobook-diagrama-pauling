@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.65';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.66';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -963,7 +963,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4', 'audio_distribuição_9.4A', 'audio_distribuição_9.4B', 'audio_distribuição_9.5', 'audio_distribuição_9.5A'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4', 'audio_distribuição_9.4A', 'audio_distribuição_9.4B', 'audio_distribuição_9.5', 'audio_distribuição_9.5A', 'audio_distribuição_9.5B', 'audio_distribuição_9.5C'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1604,7 +1604,22 @@ const EVENTOS = {
   'audio_distribuição_9.5A': [
     { t: .05,   acao: () => escondePlay(false) },
     /* fim ("Vai!"): o aluno toca nos degraus e o Joãozinho sobe na ordem crescente de energia (1s, 2s, 2p, 3s, 3p, 4s¹) */
-    { t: 'fim', acao: () => { escondePlay(true); Atomo.jogoPotassio(); } },
+    { t: 'fim', acao: () => { escondePlay(true); Atomo.jogoPotassio(() => tocaDepois(300, 'audio_distribuição_9.5B')); } },   // (o 9.5B toca junto com a comemoração)
+  ],
+  'audio_distribuição_9.5B': [
+    /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.5B.json) */
+    { t: .05,   acao: () => escondePlay(false) },
+    { t: .96,   acao: () => pausaRoteiro(1000) },                             // pausa de 1 s depois de "Parabéns!"
+    /* fim ("Vamo pro próximo exemplo?"): o play vira "Ok" → 9.5C */
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_9.5C', 'Ok'); } },
+  ],
+  'audio_distribuição_9.5C': [
+    /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.5C.json) */
+    { t: .05,   acao: () => { escondePlay(false); Atomo.novoJogo(); } },   // os rótulos apagam de novo, o K sai e o Joãozinho volta ao chão
+    { t: 2.0,   acao: () => Atomo.digita('dist', '26Fe:', { cor: '#eef1ff', sub: [0, 1] }) },   // "ferro": embaixo, com o número atômico
+    { t: 4.0,   acao: () => Atomo.realcaSub('dist', 1000) },                  // "26": o 26 aumenta por 1 s
+    /* fim ("Vá lá!"): o toque e o joguinho do ferro (1s, 2s, 2p, 3s, 3p, 4s, 3d⁶) */
+    { t: 'fim', acao: () => { escondePlay(true); Atomo.jogoFerro(); } },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -5803,14 +5818,39 @@ const Atomo = (() => {
           () => anima(120, k => { const a = Math.sin(Math.PI * k); this._joaoPoe(J.x, y0, 1 + .15 * a, 1 - .2 * a); }, () => um(i + 1), k => k), k => k); };
       um(0);
     },
-    /* áudio 9.5A (no fim): o joguinho do potássio — o aluno toca nos degraus na ordem crescente de energia
-       (1s, 2s, 2p, 3s, 3p, 4s¹). Certo: o Joãozinho anda até a beira e pula; o subnível acende, "right" e "próximo".
-       Mais alto que o próximo: ele tenta, não alcança e cai de volta. Último: confetes, funfare e pulos de alegria */
-    jogoPotassio(aoTerminar = null){
+    /* joguinho da distribuição (9.5A potássio, 9.5C ferro) — o aluno toca nos degraus na ordem crescente de energia
+       até o "meta"-ésimo subnível (o último com "ultimoExp" elétrons). Certo: o Joãozinho anda até a beira e pula; acende, "right" e "próximo".
+       Mais alto que o próximo: ele tenta, não alcança e cai de volta. Último: confetes, funfare, pulos de alegria e aoComemorar (na hora) */
+    jogoPotassio(aoComemorar = null){ this.jogoDistribuicao(6, 1, aoComemorar); },          // K: 1s² 2s² 2p⁶ 3s² 3p⁶ 4s¹
+    /* áudio 9.5C (começo): novo exemplo — os rótulos voltam a ficar 80% apagados, o alto e a linha de baixo são limpos
+       e o Joãozinho some e reaparece no chão, à direita (pronto para começar de novo) */
+    novoJogo(dur = 600){
+      if (!pronto || !grafico) return;
+      grafico.niveis.forEach(L => { const a0 = L.apag ? L.apag.slice() : Array(L.m).fill(0); anima(dur, k => { L.apag = a0.map(a => a + (1 - a) * k); grafico.reaplica(L); }); });
+      this.limpaTopo(); this.limpaDist();                                           // (na hora: o "₂₆Fe:" é escrito logo depois)
+      const J = this._joao; if (!J) return;
+      if (J.tira) J.tira(); J.ativo = false;
+      J.svg.style.transition = `opacity ${dur / 2}ms ease`; J.svg.style.opacity = 0;
+      agenda(dur / 2 + 30, () => { this.joaozinho(true, true); J.svg.style.opacity = 0; requestAnimationFrame(() => { J.svg.style.transition = `opacity ${dur / 2}ms ease`; J.svg.style.opacity = 1; }); });
+    },
+    jogoFerro(aoComemorar = null){ this.jogoDistribuicao(7, 6, aoComemorar); },             // Fe: 1s² 2s² 2p⁶ 3s² 3p⁶ 4s² 3d⁶
+    /* (ao retomar) o joguinho já feito, na hora: os "meta" primeiros subníveis acesos, a distribuição embaixo e o Joãozinho no último degrau */
+    jogoPronto(META, ultimoExp){
+      const J = this._joao; if (!pronto || !grafico || !J) return;
+      const AUF = ['1s', '2s', '2p', '3s', '3p', '4s', '3d', '4p', '5s'].map(t => [+t[0], 'spdf'.indexOf(t[1])]), ELET = [2, 6, 10, 14];
+      AUF.slice(0, META).forEach(([n, j], i) => {
+        const e = i === META - 1 ? ultimoExp : ELET[j], L = grafico.niveis[n - 1];
+        grafico.expoenteDegrau(n, j, e); if (L.apag){ L.apag[j] = 0; grafico.reaplica(L); }
+        this.digita('dist', ' ' + n + 'spdf'[j] + e, { cor: '#eef1ff', sup: [3, 4], ms: 1 });
+      });
+      const [n, j] = AUF[META - 1], d = grafico.telaDegrau(n, j);
+      J.sup = { n, j, x0: d.x0, x1: d.x1, y: d.y - 2 }; J.passo = META; J.ativo = false; this._joaoPoe(d.x0 + 6, d.y - 2); this._joaoPose(0, 0, 1);
+    },
+    jogoDistribuicao(META, ultimoExp, aoComemorar = null){
       const J = this._joao; if (!pronto || !grafico || !J) return;
       const AUF = ['1s', '2s', '2p', '3s', '3p', '4s', '3d', '4p', '5s', '4d', '5p', '6s', '4f', '5d', '6p', '7s', '5f', '6d', '7p'].map(t => [+t[0], 'spdf'.indexOf(t[1])]);
-      const META = 6;                                                              // K: 1s² 2s² 2p⁶ 3s² 3p⁶ 4s¹ (os 6 primeiros)
-      grafico.expoenteDegrau(4, 0, '1');                                           // o 4s do potássio tem 1 elétron
+      const ELET = [2, 6, 10, 14], [nU, jU] = AUF[META - 1], expo = (n, j) => n === nU && j === jU ? ultimoExp : ELET[j];
+      AUF.slice(0, META).forEach(([n, j]) => grafico.expoenteDegrau(n, j, expo(n, j)));   // (o último pode ter menos elétrons: 4s¹ no K, 3d⁶ no Fe)
       J.ativo = true; J.passo = 0; J.ocupado = false;
       const sup = (n, j) => { const d = grafico.telaDegrau(n, j); return { n, j, x0: d.x0, x1: d.x1, y: d.y - 2 }; };
       const toque = e => {
@@ -5833,10 +5873,10 @@ const Atomo = (() => {
             J.sup = T; J.passo++;
             this.acendeSubnivel(n, j); this.subnivelAumenta(n, j); agenda(700, () => this.subnivelAumenta(n, j, false));
             sfx('right');
-            this.digita('dist', ' ' + n + 'spdf'[j] + (n === 4 && j === 0 ? 1 : [2, 6, 10, 14][j]), { cor: '#eef1ff', sup: [3, 4], ms: 90 });   // embaixo, a distribuição vai se formando
+            this.digita('dist', ' ' + n + 'spdf'[j] + expo(n, j), { cor: '#eef1ff', sup: [3, 4], ms: 90 });   // embaixo, a distribuição vai se formando
             if (J.passo >= META){
-              J.ativo = false; Quiz.confetes(); sfx('funfare'); this._joaoComemora(5);
-              agenda(2400, () => { J.ocupado = false; aoTerminar && aoTerminar(); });
+              J.ativo = false; Quiz.confetes(); sfx('funfare'); this._joaoComemora(5); aoComemorar && aoComemorar();
+              agenda(2400, () => { J.ocupado = false; });
             } else { agenda(450, () => sfx('próximo')); agenda(300, () => { J.ocupado = false; }); }
           });
         });
@@ -6470,6 +6510,9 @@ const Retomar = (() => {
     "audio_distribuição_9.5":  () => INICIO["audio_distribuição_9.4B"](),
     /* como o 9.5 terminou: gráfico completo com os rótulos apagados, "₁₉K" no alto e o Joãozinho no chão, à direita */
     "audio_distribuição_9.5A": () => { INICIO["audio_distribuição_9.5"](); Atomo.cenaPotassioInicio(1); Atomo.avancaTudo(); Atomo.limpaTopo(); Atomo.digita("topo", "19K", { cor: "#eef1ff", sub: [0, 1], ms: 1 }); Atomo.limpaDist(); Atomo.digita("dist", "19K:", { cor: "#eef1ff", sub: [0, 1], ms: 1 }); Atomo.joaozinho(true, true); },
+    /* como o 9.5A terminou: o joguinho do potássio feito (K: 1s² 2s² 2p⁶ 3s² 3p⁶ 4s¹) */
+    "audio_distribuição_9.5B": () => { INICIO["audio_distribuição_9.5A"](); Atomo.jogoPronto(6, 1); },
+    "audio_distribuição_9.5C": () => INICIO["audio_distribuição_9.5B"](),
   };
   function salva(){
     try {
