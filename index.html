@@ -352,6 +352,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   background:linear-gradient(90deg,#3ee0ff,#6f9bff,#9b5cff,#ff3bd0,#ff5a5a);background-size:var(--cheio,520px) 100%;
   box-shadow:0 0 14px rgba(155,92,255,.8)}
 .linha.linha-topo{font-size:clamp(18px,4.6vw,28px)}
+.linha.linha-dist{font-size:clamp(20px,5.5vw,31px)}   /* distribuição (₁₁Na: 1s² 2s²…): 20% maior que as outras linhas */
 /* áudio 8.2: cartões dos subníveis, enfileirados (tela deitada: à direita do gráfico · celular: embaixo dele).
    Altos, com o nome dentro e o total de elétrons em cima, na diagonal direita */
 .cartoes{position:absolute;z-index:3;left:81.5%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:flex-end;gap:clamp(16px,2.6vw,26px);pointer-events:none}   /* (folga para o número de cima não ficar atrás do cartão vizinho) */
@@ -926,7 +927,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.91';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.92';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -3729,7 +3730,7 @@ const Atomo = (() => {
             t.position.set(xa + (xb - xa) * L.d + A.x, y + A.y * (1 - L.a), .02);   // (na ordem de energia o ajuste de altura do modo edição não vale)
             const hl = L.hl[j];
             t.scale.set((wa + (wb - wa) * L.d) * (1 + .1 * hl) * A.s, h * (1 + 1.4 * hl + 1.2 * (L.verde || 0)) * A.s, 1);
-            t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar((1 + .9 * L.p + 1.1 * hl) * esc);   // cor do nível; a do bloco quando encaixado; acende no destaque
+            t.material.color.copy(L.cor).lerp(COR_SUB[j], L.corSub[j]).multiplyScalar((1 + .9 * L.p + 1.1 * hl) * esc * (1 - .78 * ((L.escD && L.escD[j]) || 0)));   // escD[j]: degrau não usado, escurecido (9.4)   // cor do nível; a do bloco quando encaixado; acende no destaque
             if (L.verde){ t.material.color.lerp(VERDE_OK, L.verde); }                         // nível completo: pulso verde
             t.material.opacity = L.op; t.visible = L.op > .01;
             const op = L.rot[j] * L.op * (1 - .8 * ((L.apag && L.apag[j]) || 0));                // rótulo "3d¹⁰" logo acima do degrau (apag[j]: 1 = 80% apagado, áudio 9.5)
@@ -4141,7 +4142,7 @@ const Atomo = (() => {
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
             [grafico.contadores, grafico.textosCamada].forEach(M => Object.values(M).forEach(o => { o.s.visible = false; o.s.material.opacity = 0; }));
             Object.values(grafico.circulos).forEach(O => { O.l.visible = false; });
-            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.dim = 0; L.apag = null; L.tab = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
+            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.dim = 0; L.apag = null; L.escD = null; L.tab = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; T.h = 0; } });   // "1º nível"…
             grafico.totais.forEach(T => { if (T){ T.s.visible = false; T.h = 0; } });      // totais "2e⁻"… embaixo dos níveis
             niveis.forEach(L => L.rotulos.forEach((r, j) => { if (r.partes[2].mudou) grafico.expoenteDegrau(L.n, j, ELET[j]); }));   // expoentes trocados voltam
@@ -5793,7 +5794,8 @@ const Atomo = (() => {
       G.niveis.forEach(L => {
         const r0 = L.rot.slice(), c0 = L.corSub.slice();
         const alvo = L.rot.map((_, j) => fase === 'ocupa' && (OC[L.n] || []).includes(j) ? 1 : 0);
-        anima(dur, k => { L.rot = r0.map((r, j) => r + (alvo[j] - r) * k); L.corSub = c0.map((c, j) => c + (alvo[j] - c) * k); G.reaplica(L); });
+        const e0 = L.escD ? L.escD.slice() : Array(L.m).fill(0), eA = L.rot.map((_, j) => fase === 'ocupa' && !(OC[L.n] || []).includes(j) ? 1 : 0);   // não usados: escuros
+        anima(dur, k => { L.rot = r0.map((r, j) => r + (alvo[j] - r) * k); L.corSub = c0.map((c, j) => c + (alvo[j] - c) * k); L.escD = e0.map((e, j) => e + (eA[j] - e) * k); G.reaplica(L); });
       });
       if (fase === 'ocupa') [1, 2, 3].forEach(n => { G.textoNivel(n, 0, true); const T = G.textosNivel[n - 1]; T.s.material.opacity = 0; G.textoNivelH(n, 0); anima(dur, k => { T.s.material.opacity = k; }); });
     },
@@ -5890,7 +5892,7 @@ const Atomo = (() => {
         this.voaCamera(CAM_BOHR[0], CAM_BOHR[1], 1);
         ruth.opEscuro = .93; ruth.conj.visible = true;
         const ELET = [2, 6, 10, 14];
-        grafico.niveis.forEach(L => { L.rot = L.rot.map(() => 1); L.corSub = L.corSub.map(() => 1); L.apag = L.apag ? L.apag.map(() => 0) : null; L.rotulos.forEach((r, j) => grafico.expoenteDegrau(L.n, j, ELET[j])); grafico.reaplica(L); });
+        grafico.niveis.forEach(L => { L.rot = L.rot.map(() => 1); L.corSub = L.corSub.map(() => 1); L.apag = L.apag ? L.apag.map(() => 0) : null; L.escD = null; L.rotulos.forEach((r, j) => grafico.expoenteDegrau(L.n, j, ELET[j])); grafico.reaplica(L); });
         this.escurece(false);
       });
     },
@@ -5956,8 +5958,8 @@ const Atomo = (() => {
       this.apagaLinha('dist'); this.apagaLinha('topo');
       G.expoenteDegrau(3, 0, '2');                                                  // (o 3s¹ do sódio volta a 3s²)
       G.niveis.forEach(L => {
-        const r0 = L.rot.slice(), c0 = L.corSub.slice(), d0 = L.dim || 0, a0 = L.apag ? L.apag.slice() : Array(L.m).fill(0);
-        anima(dur, k => { L.rot = r0.map(r => r + (1 - r) * k); L.corSub = c0.map(c => c + (1 - c) * k); L.dim = d0 * (1 - k); L.apag = a0.map(a => a + (1 - a) * k); G.reaplica(L); });
+        const r0 = L.rot.slice(), c0 = L.corSub.slice(), d0 = L.dim || 0, a0 = L.apag ? L.apag.slice() : Array(L.m).fill(0), s0 = L.escD ? L.escD.slice() : Array(L.m).fill(0);   // (s0: degraus escuros do sódio voltam)
+        anima(dur, k => { L.rot = r0.map(r => r + (1 - r) * k); L.corSub = c0.map(c => c + (1 - c) * k); L.dim = d0 * (1 - k); L.apag = a0.map(a => a + (1 - a) * k); L.escD = s0.map(s => s * (1 - k)); G.reaplica(L); });
       });
       G.textosNivel.forEach(T => { if (T && T.s.visible){ const o0 = T.s.material.opacity; anima(dur, k => { T.s.material.opacity = o0 * (1 - k); }, () => { T.s.visible = false; T.h = 0; }); } });
     },
