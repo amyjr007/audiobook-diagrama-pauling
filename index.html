@@ -352,7 +352,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   background:linear-gradient(90deg,#3ee0ff,#6f9bff,#9b5cff,#ff3bd0,#ff5a5a);background-size:var(--cheio,520px) 100%;
   box-shadow:0 0 14px rgba(155,92,255,.8)}
 .linha.linha-topo{font-size:clamp(18px,4.6vw,28px)}
-.linha.linha-dist{font-size:clamp(20px,5.5vw,31px)}   /* distribuição (₁₁Na: 1s² 2s²…): 20% maior que as outras linhas */
+.linha.linha-dist{font-size:clamp(22px,calc(5.5vw + 2px),33px)}   /* distribuição (₁₁Na: 1s² 2s²…): 20% maior que as outras linhas */
 /* áudio 8.2: cartões dos subníveis, enfileirados (tela deitada: à direita do gráfico · celular: embaixo dele).
    Altos, com o nome dentro e o total de elétrons em cima, na diagonal direita */
 .cartoes{position:absolute;z-index:3;left:81.5%;top:50%;transform:translate(-50%,-50%);display:flex;align-items:flex-end;gap:clamp(16px,2.6vw,26px);pointer-events:none}   /* (folga para o número de cima não ficar atrás do cartão vizinho) */
@@ -927,7 +927,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.92';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.93';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -2490,6 +2490,7 @@ const Atomo = (() => {
   /* posição do gráfico (deslocamento, em unidades da cena), ajustável no modo edição arrastando fora dos textos */
   const POS_GRAFICO = { deitada: { x: 0, y: 0 }, retrato: { x: -1.58, y: -.30 } };   // celular: modo edição v0.70 (384×783)
   let deslocGrafico = { ...POS_GRAFICO.deitada };
+  let descePos = 0; const DESCE_RETRATO = -1.5;     // celular: da ordem de energia em diante (9.x) o gráfico desce um pouco (mais espaço em cima)
   /* ajustes finos do gráfico no modo edição: cada letra K…Q (sozinha) e os degraus de cada nível (juntos).
      x, y = deslocamento (unidades da cena) · s = tamanho. Índice 0 = K … 6 = Q */
   const AJUSTE_LETRAS  = { deitada: [], retrato: [                                  // celular: modo edição v0.74 — todas com o tamanho e a coluna da K
@@ -2506,7 +2507,7 @@ const Atomo = (() => {
   function aplicaEscalaConj(){
     if (!ruth) return;
     ruth.conj.scale.setScalar(escalaCamadas * (1 + (escalaGrafico - 1) * fatorGrafico));
-    ruth.conj.position.set(deslocGrafico.x * fatorGrafico, deslocGrafico.y * fatorGrafico, 0);   // (o átomo fica no lugar; o gráfico vai para a posição ajustada)
+    ruth.conj.position.set(deslocGrafico.x * fatorGrafico, (deslocGrafico.y + (orientacaoRetrato ? DESCE_RETRATO * descePos : 0)) * fatorGrafico, 0);   // (o átomo fica no lugar; o gráfico vai para a posição ajustada)
     ruth.conj.updateMatrixWorld(true);
   }
   /* áudio 5.2: elétrons do carbono ganham energia (0 → 1) e o contorno das camadas some (1 → 0) */
@@ -3652,7 +3653,7 @@ const Atomo = (() => {
             const qE = local({ clientX: rc.left + 8, clientY: meio }), qD = local({ clientX: rc.right - 10, clientY: meio });
             if (qE && qD){
               XLETRA = qE.x + letras.BASE.x / 2 + .55;                                   // (folga para a letra se afastar no 8.3)
-              XEIXO = XLETRA + letras.BASE.x / 2 + 1.5;                                 // (cabe o "2e⁻" entre a letra e o eixo)
+              XEIXO = XLETRA + letras.BASE.x / 2 + 1.0;                                 // (cabe o "2e⁻" entre a letra e o eixo; era 1,5: o eixo foi um pouco para a esquerda)
               GX0 = XEIXO + .45; GX1 = qD.x - .7;
               TOPO_DEG = GY1 + 6.5;                                                  // no celular há mais espaço acima: degraus mais afastados
             }
@@ -4184,7 +4185,7 @@ const Atomo = (() => {
     /* neutro: no celular embaixo do átomo (centralizado, pode quebrar linha); na tela deitada, ao lado do átomo */
     /* escurecedor da cena (fica atrás dos textos) — usado nos "conceitos" */
     const escuro = document.createElement('div'); escuro.className = 'escurecedor'; face.appendChild(escuro);
-    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: { y: .835, yR: .755 }, neutro: { y: .578, yR: .86, xLado: .65, fonteLado: .065 }, conceito: .45, topo: .075, sub: { y: .36, yR: .89, xLado: .84 }, dist: { y: .5, yR: .86, xLado: .84 } }).forEach(([id, p]) => {
+    Object.entries({ eq: .665, z: .308, elem: { y: .76, yR: .702 }, hnome: .8, hz: { y: .835, yR: .755 }, neutro: { y: .578, yR: .86, xLado: .65, fonteLado: .065 }, conceito: .45, topo: .075, sub: { y: .36, yR: .89, xLado: .84 }, dist: { y: .5, yR: .895, xLado: .84 } }).forEach(([id, p]) => {
       const el = document.createElement('div'); el.className = 'linha linha-' + id;
       camLinhas.appendChild(el);
       linhas[id] = { el, timer: null, y: typeof p === 'number' ? p : p.y, yR: typeof p === 'number' ? null : p.yR, xLado: p.xLado, fonteLado: p.fonteLado };
@@ -4564,6 +4565,7 @@ const Atomo = (() => {
       [this._a118, this._aNa].forEach(A => { if (A){ A.vivo = false; A.c.style.transition = 'none'; A.c.style.opacity = 0; } });   // desenhos 2D (átomo 118, sódio) somem
       if (this._joao){ this._joao.svg.style.transition = 'none'; this._joao.svg.style.opacity = 0; this._joao.ativo = false; if (this._joao.tira) this._joao.tira(); }   // Joãozinho (áudio 9.5) some e o joguinho para
       ruth.conj.visible = true;                                                      // (o 9.6 esconde o gráfico na galeria)
+      descePos = 0; aplicaEscalaConj();
       if (this._livro) [this._livro.capa, this._livro.pagina].forEach(i => { i.style.transition = 'none'; i.style.opacity = 0; });   // livro do Pauling (9.6)
       if (this._diag){ const D = this._diag; D.vez++; D.mostrado = false; D.el.style.transition = 'none'; D.el.style.opacity = 0; requestAnimationFrame(() => { D.el.style.transition = 'opacity .9s ease'; }); }   // diagrama de Pauling (9.6)
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
@@ -5418,6 +5420,7 @@ const Atomo = (() => {
       grafico.totais.forEach((T, i) => { if (T && T.s.visible) grafico.totalSome(i + 1); });
       if (dur > 50) sfx('transition_cube');                                            // som da reorganização (não ao retomar)
       grafico.sobeSeta(2.2, dur); this.reorganizaNiveis(dur);                         // a seta sobe e os degraus usam o espaço a mais
+      const dp0 = descePos; anima(dur, k => { descePos = dp0 + (1 - dp0) * k; aplicaEscalaConj(); });   // (celular: o gráfico desce um pouco)
     },
     reorganizaNiveis(dur = 1600){ if (pronto && grafico) grafico.niveis.forEach(L => { if (L.fechado && L.a < 1) grafico.flutua(L.n, dur); }); },
     /* ----- áudio 8.2 ----- */
@@ -6096,7 +6099,7 @@ const Atomo = (() => {
       const AUF = ['1s', '2s', '2p', '3s', '3p', '4s', '3d', '4p', '5s', '4d', '5p', '6s', '4f', '5d', '6p', '7s', '5f', '6d', '7p'].map(t => [+t[0], 'spdf'.indexOf(t[1])]);
       const ELET = [2, 6, 10, 14], [nU, jU] = AUF[META - 1], expo = (n, j) => n === nU && j === jU ? ultimoExp : ELET[j];
       AUF.slice(0, META).forEach(([n, j]) => grafico.expoenteDegrau(n, j, expo(n, j)));   // (o último pode ter menos elétrons: 4s¹ no K, 3d⁶ no Fe)
-      J.ativo = true; J.passo = 0; J.ocupado = false;
+      J.ativo = true; J.passo = 0; J.ocupado = false; J.aguarda = false;
       const sup = (n, j) => { const d = grafico.telaDegrau(n, j); return { n, j, x0: d.x0, x1: d.x1, y: d.y - 2 }; };
       const toque = e => {
         if (!J.ativo || J.ocupado || roteiroCongelado()) return;
@@ -6106,6 +6109,20 @@ const Atomo = (() => {
           const d = grafico.telaDegrau(n, j), dx = px < d.x0 ? d.x0 - px : px > d.x1 ? px - d.x1 : 0, dy = Math.abs(py - (d.y - 8)), dist = Math.hypot(dx, dy);
           if (dx <= 12 && dy <= 26 && dist < melhor){ melhor = dist; alvo = i; }
         });
+        /* 2º toque: ele já está no degrau certo — tocar nele de novo acende o subnível ("right", a distribuição embaixo e "próximo") */
+        if (J.aguarda){
+          if (alvo !== J.passo) return;                                            // (antes de acender este, os outros não respondem)
+          const [n, j] = AUF[alvo]; J.aguarda = false; J.passo++;
+          this.acendeSubnivel(n, j); this.subnivelAumenta(n, j); agenda(700, () => this.subnivelAumenta(n, j, false));
+          sfx('right');
+          this.digita('dist', ' ' + n + 'spdf'[j] + expo(n, j), { cor: '#eef1ff', sup: [3, 4], ms: 90 });   // embaixo, a distribuição vai se formando
+          if (J.passo >= META){
+            J.ativo = false; J.ocupado = true; Quiz.confetes(); sfx('funfare'); this._joaoComemora(5); aoComemorar && aoComemorar();
+            agenda(500, () => { this.brilhaLinha('dist'); sfx('yes'); });            // a distribuição formada brilha
+            agenda(2400, () => { J.ocupado = false; });
+          } else { J.ocupado = true; agenda(450, () => sfx('próximo')); agenda(300, () => { J.ocupado = false; }); }
+          return;
+        }
         if (alvo < J.passo || alvo < 0) return;                                    // fora dos degraus, ou um que ele já passou
         const [n, j] = AUF[alvo], T = sup(n, j), S = J.sup;
         /* pousa na ponta do degrau do lado de onde vem (longe do rótulo, que fica no meio); anda antes até ficar embaixo/ao lado desse ponto */
@@ -6114,17 +6131,8 @@ const Atomo = (() => {
         J.ocupado = true;
         this._joaoAnda(xBeira, () => {
           if (alvo > J.passo){ this._joaoPula(xPouso, T.y, false, () => { J.ocupado = false; }); return; }   // alto demais: não alcança
-          this._joaoPula(xPouso, T.y, true, () => {
-            J.sup = T; J.passo++;
-            this.acendeSubnivel(n, j); this.subnivelAumenta(n, j); agenda(700, () => this.subnivelAumenta(n, j, false));
-            sfx('right');
-            this.digita('dist', ' ' + n + 'spdf'[j] + expo(n, j), { cor: '#eef1ff', sup: [3, 4], ms: 90 });   // embaixo, a distribuição vai se formando
-            if (J.passo >= META){
-              J.ativo = false; Quiz.confetes(); sfx('funfare'); this._joaoComemora(5); aoComemorar && aoComemorar();
-              agenda(500, () => { this.brilhaLinha('dist'); sfx('yes'); });            // a distribuição formada brilha
-              agenda(2400, () => { J.ocupado = false; });
-            } else { agenda(450, () => sfx('próximo')); agenda(300, () => { J.ocupado = false; }); }
-          });
+          /* 1º toque: ele pula para o degrau; o subnível só acende quando o aluno tocar nele de novo */
+          this._joaoPula(xPouso, T.y, true, () => { J.sup = T; J.aguarda = true; J.ocupado = false; });
         });
       };
       if (J.tira) J.tira();
