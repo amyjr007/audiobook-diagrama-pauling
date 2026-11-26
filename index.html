@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.71';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.72';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -4833,6 +4833,8 @@ const Atomo = (() => {
       });
     },
     /* o elétron de Bohr salta para o nível n (a barra "Energia" vai junto para a energia desse nível) */
+    /* a linha de texto brilha (acende com um halo azul e volta), sem mexer na posição */
+    brilhaLinha(id, dur = 1400){ const L = linhas[id]; if (!L) return; L.el.animate([{ filter: 'none' }, { filter: 'brightness(1.7) drop-shadow(0 0 8px #7ce7ff) drop-shadow(0 0 18px #3ee0ff)', offset: .3 }, { filter: 'brightness(1.4) drop-shadow(0 0 6px #7ce7ff)', offset: .7 }, { filter: 'none' }], { duration: dur, easing: 'ease-out' }); },
     limpaDist(){ const L = linhas.dist; if (L){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.getAnimations().forEach(a => a.cancel()); L.el.innerHTML = ''; } },   // linha de baixo (distribuição), limpa na hora
     limpaTopo(){ const L = linhas.topo; if (L){ if (L.timer){ L.timer.cancela(); L.timer = null; } L.el.getAnimations().forEach(a => a.cancel()); L.el.innerHTML = ''; } },
     saltaNivel(n){
@@ -5580,13 +5582,27 @@ const Atomo = (() => {
         const kv = ease(A.vira || 0), sai = 1 - Math.max(0, ((A.vira || 0) - .75) / .25);
         x.globalAlpha = viz * (1 - Math.min(1, (A.vira || 0) * 2));               // (o núcleo some logo no começo da transformação)
         /* núcleo: brilho e o aglomerado de 11 prótons (azuis) e 12 nêutrons (dourados) */
-        const g = x.createRadialGradient(cx, cy, 0, cx, cy, R0 * 2.2); g.addColorStop(0, 'rgba(120,160,255,.55)'); g.addColorStop(1, 'rgba(120,160,255,0)');
-        x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R0 * 2.2, 0, 7); x.fill();
-        for (let i = 0; i < NB; i++){
-          const a = i * 2.39996, d = R0 * .9 * Math.sqrt(i / NB), bx = cx + Math.cos(a) * d, by = cy + Math.sin(a) * d, rb = R0 * .26, neutron = i % 2 === 0;   // (23 partículas: 12 nêutrons e 11 prótons)
-          const gb = x.createRadialGradient(bx - rb * .3, by - rb * .3, rb * .1, bx, by, rb);
-          gb.addColorStop(0, neutron ? '#ffe39a' : '#9fc0ff'); gb.addColorStop(1, neutron ? '#b47a10' : '#2a54d8');
-          x.fillStyle = gb; x.beginPath(); x.arc(bx, by, rb, 0, 7); x.fill();
+        const g = x.createRadialGradient(cx, cy, 0, cx, cy, R0 * 1.32); g.addColorStop(0, 'rgba(120,160,255,.55)'); g.addColorStop(1, 'rgba(120,160,255,0)');
+        x.fillStyle = g; x.beginPath(); x.arc(cx, cy, R0 * 1.32, 0, 7); x.fill();
+        /* em 3D: as 23 partículas (12 nêutrons, 11 prótons) numa esfera de 2 camadas (7 por dentro, 16 por fora, espiral de Fibonacci),
+           girando devagar; projetadas em perspectiva e desenhadas de trás para a frente — as de trás menores e mais escuras */
+        if (!A.nuc){
+          A.nuc = []; A.nucAng = 0; let id = 0;
+          [[7, .45], [16, 1]].forEach(([m, r]) => { for (let k = 0; k < m; k++){ const y = 1 - 2 * (k + .5) / m, rr = Math.sqrt(1 - y * y), a = k * 2.39996 + r * 2; A.nuc.push({ x: Math.cos(a) * rr * r, y: y * r, z: Math.sin(a) * rr * r, neutron: id++ % 2 === 0 }); } });
+        }
+        if (!roteiroCongelado()) A.nucAng += dt * .45;
+        {
+          const cY = Math.cos(A.nucAng), sY = Math.sin(A.nucAng), cX = Math.cos(.45), sX = Math.sin(.45), RN = R0 * .8 * .6, rb0 = R0 * .32 * .6, F = 3.4;   // (.6: núcleo 40% menor)
+          A.nuc.map(p => {
+            const x1 = p.x * cY + p.z * sY, z1 = -p.x * sY + p.z * cY, y1 = p.y * cX - z1 * sX, z2 = p.y * sX + z1 * cX, s = F / (F - z2);   // gira em Y, inclina em X, perspectiva
+            return { px: cx + x1 * RN * s, py: cy + y1 * RN * s, z: z2, s, n: p.neutron };
+          }).sort((a, b) => a.z - b.z).forEach(q => {
+            const rb = rb0 * q.s, prof = (q.z + 1) / 2;                             // prof: 0 = atrás … 1 = na frente
+            const gb = x.createRadialGradient(q.px - rb * .35, q.py - rb * .4, rb * .06, q.px, q.py, rb);
+            gb.addColorStop(0, q.n ? '#fff3c8' : '#dce7ff'); gb.addColorStop(.38, q.n ? '#f2b53a' : '#6f97ff'); gb.addColorStop(1, q.n ? '#6b4204' : '#16307f');
+            x.fillStyle = gb; x.beginPath(); x.arc(q.px, q.py, rb, 0, 7); x.fill();
+            x.fillStyle = `rgba(2,4,12,${(1 - prof) * .55})`; x.beginPath(); x.arc(q.px, q.py, rb, 0, 7); x.fill();   // profundidade: as de trás escurecem
+          });
         }
         /* as 3 camadas (aumentam: engrossam, acendem e crescem); a 2ª, no zoom, se abre em duas sublinhas (2s por dentro, 2p por fora) */
         const linha = (R, cor, larg) => { x.strokeStyle = cor; x.lineWidth = larg; x.beginPath(); x.arc(cx, cy, R, 0, 7); x.stroke(); };
@@ -5922,7 +5938,9 @@ const Atomo = (() => {
       }));
       const fim = 900 + PASSOS.length * CADA;
       agenda(fim, () => { const [n, j] = PASSOS[PASSOS.length - 1]; this.subnivelAumenta(n, j, false); });
-      if (aoTerminar) agenda(fim + 500, aoTerminar);
+      /* distribuição pronta: a linha brilha, "yes" e confetes; depois (aoTerminar) o 9.4B */
+      agenda(fim + 200, () => { this.brilhaLinha('dist'); sfx('yes'); Quiz.confetes(); });
+      if (aoTerminar) agenda(fim + 1700, aoTerminar);
     },
     zoomNucleo(){ camTween = false; taxaCam = 45; fatorCamAlvo = .26; },   // dash (não usado agora)
     zoomInicial(){ camTween = false; taxaCam = 3.2; fatorCamAlvo = 1; },   // volta suave
