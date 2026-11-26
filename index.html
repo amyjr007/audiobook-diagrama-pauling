@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.62';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.63';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -960,7 +960,7 @@ const CAPITULOS = [
 ];
 
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4', 'audio_distribuição_9.4A', 'audio_distribuição_9.4B'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4', 'audio_distribuição_9.4A', 'audio_distribuição_9.4B', 'audio_distribuição_9.5'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1583,6 +1583,20 @@ const EVENTOS = {
     { t: 11.52, acao: () => Atomo.pulsaDist(1) },
     { t: 13.12, acao: () => Atomo.pulsaDist(2) },
     { t: 14.85, acao: () => Atomo.pulsaDist(3) },
+    /* fim ("Facilitou, né?"): o 9.5 */
+    { t: 'fim', acao: () => tocaDepois(1200, 'audio_distribuição_9.5') },
+  ],
+  'audio_distribuição_9.5': [
+    /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/9.5.json) */
+    { t: .05,   acao: () => escondePlay(false) },
+    /* "segundo exemplo": a linha do sódio e o "₁₁Na" somem; o gráfico fica com todos os subníveis preenchidos, mas escurecidos */
+    { t: .64,   acao: () => Atomo.cenaPotassioInicio() },
+    { t: 2.48,  acao: () => Atomo.digita('topo', '19K', { cor: '#eef1ff', sub: [0, 1] }) },   // "aqui": o potássio no alto
+    { t: 3.2,   acao: () => Atomo.realcaSub('topo', 1000) },                  // "19 elétrons": o 19 aumenta por 1 s
+    { t: 17.3,  acao: () => pausaRoteiro(1500) },                             // pausa de 1,5 s depois de "…por esses degraus."
+    { t: 27.52, acao: () => Atomo.joaozinho() },                              // "Joãozinho": o chão e o bonequinho, traço a traço
+    /* fim ("Vamo lá?"): o play verde piscando com "Vamos" (o joguinho começa no clique) */
+    { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, () => { botaoOk(false); escondePlay(true); }, 'Vamos'); } },
   ],
 };
 function escondePlay(on){ $('#btnPlay').classList.toggle('oculto', on); }
@@ -3992,7 +4006,7 @@ const Atomo = (() => {
             grafico.eK.s.visible = false; grafico.eK.s.material.opacity = 0;                // "2e⁻" do áudio 8.3
             [grafico.contadores, grafico.textosCamada].forEach(M => Object.values(M).forEach(o => { o.s.visible = false; o.s.material.opacity = 0; }));
             Object.values(grafico.circulos).forEach(O => { O.l.visible = false; });
-            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
+            niveis.forEach(L => { L.d = L.a = L.b = L.p = L.op = 0; L.verde = 0; L.dim = 0; L.fechado = false; L.corSub.fill(0); L.rot.fill(0); L.hl.fill(0); L.rotulos.forEach(r => r.partes.forEach(P => P.h = 0)); aplica(L); });
             grafico.textosNivel.forEach(T => { if (T){ T.s.visible = false; T.s.material.opacity = 0; T.h = 0; } });   // "1º nível"…
             grafico.totais.forEach(T => { if (T){ T.s.visible = false; T.h = 0; } });      // totais "2e⁻"… embaixo dos níveis
             niveis.forEach(L => L.rotulos.forEach((r, j) => { if (r.partes[2].mudou) grafico.expoenteDegrau(L.n, j, ELET[j]); }));   // expoentes trocados voltam
@@ -4411,6 +4425,7 @@ const Atomo = (() => {
       energiaC = 0; contornoC = 1;                               // carbono "calmo" de novo
       { const e = face.querySelector('.escurecedor'); if (e) e.classList.remove('on'); }
       [this._a118, this._aNa].forEach(A => { if (A){ A.vivo = false; A.c.style.transition = 'none'; A.c.style.opacity = 0; } });   // desenhos 2D (átomo 118, sódio) somem
+      if (this._joao){ this._joao.svg.style.transition = 'none'; this._joao.svg.style.opacity = 0; }   // Joãozinho (áudio 9.5) some
       [he, hAtomo, cAtomo].forEach(g => g.scale.setScalar(1));
       dica('arraste para girar'); $('#dicaGirar').classList.remove('some');
     },
@@ -5666,6 +5681,53 @@ const Atomo = (() => {
       const [n, j] = PASSOS[i]; this.subnivelAumenta(n, j);
       agenda(ms, () => { sp.style.transform = ''; sp.style.margin = ''; sp.style.color = '#eef1ff'; sp.style.textShadow = ''; this.subnivelAumenta(n, j, false); });
     },
+    /* ----- áudio 9.5 ----- */
+    /* "segundo exemplo": a distribuição do sódio (embaixo) e o "₁₁Na" (no alto) somem; o gráfico volta a ter todos os subníveis
+       preenchidos (com os rótulos), mas escurecidos; os textos "1ª/2ª/3ª camada" saem */
+    cenaPotassioInicio(dur = 900){
+      if (!pronto || !grafico) return;
+      const G = grafico;
+      this.apagaLinha('dist'); this.apagaLinha('topo');
+      G.expoenteDegrau(3, 0, '2');                                                  // (o 3s¹ do sódio volta a 3s²)
+      G.niveis.forEach(L => {
+        const r0 = L.rot.slice(), c0 = L.corSub.slice(), d0 = L.dim || 0;
+        anima(dur, k => { L.rot = r0.map(r => r + (1 - r) * k); L.corSub = c0.map(c => c + (1 - c) * k); L.dim = d0 + (.72 - d0) * k; G.reaplica(L); });
+      });
+      G.textosNivel.forEach(T => { if (T && T.s.visible){ const o0 = T.s.material.opacity; anima(dur, k => { T.s.material.opacity = o0 * (1 - k); }, () => { T.s.visible = false; T.h = 0; }); } });
+    },
+    /* "Joãozinho": uma linha de chão embaixo do 1s (na base do gráfico) e um bonequinho de palitos (como o da forca),
+       desenhados traço a traço. Fica num SVG por cima da cena; o tamanho acompanha o espaço entre a base e o 1s */
+    joaozinho(on = true, ja = false){
+      if (!pronto || !grafico || !face) return;
+      let J = this._joao;
+      if (!on){ if (J){ J.svg.style.transition = 'opacity .5s ease'; J.svg.style.opacity = 0; } return; }
+      if (!J){
+        const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+        svg.setAttribute('class', 'joaozinho'); svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:2;pointer-events:none;overflow:visible';
+        face.appendChild(svg);
+        const el = (tag, at) => { const e = document.createElementNS(ns, tag); Object.entries(at).forEach(([k, v]) => e.setAttribute(k, v)); svg.appendChild(e); return e; };
+        const traco = { fill: 'none', stroke: '#ffe066', 'stroke-width': 2.2, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' };
+        J = this._joao = { svg, chao: el('line', { ...traco, stroke: '#eef1ff', 'stroke-width': 2.6 }), boneco: el('g', {}) };
+        const g = J.boneco, p = (tag, at) => { const e = document.createElementNS(ns, tag); Object.entries({ ...traco, ...at }).forEach(([k, v]) => e.setAttribute(k, v)); g.appendChild(e); return e; };
+        /* boneco de 1 unidade de altura (pés em y = 0, cabeça em cima); a escala vem do transform do grupo */
+        J.partes = [p('circle', { cx: 0, cy: -.84, r: .16 }), p('line', { x1: 0, y1: -.68, x2: 0, y2: -.32 }),
+          p('line', { x1: 0, y1: -.58, x2: -.2, y2: -.42 }), p('line', { x1: 0, y1: -.58, x2: .2, y2: -.42 }),
+          p('line', { x1: 0, y1: -.32, x2: -.16, y2: 0 }), p('line', { x1: 0, y1: -.32, x2: .16, y2: 0 })];
+        J.partes.forEach(e => e.setAttribute('vector-effect', 'non-scaling-stroke'));
+      }
+      /* posição: chão na base do gráfico, do eixo até a ponta direita do degrau 1s; o boneco em pé no chão, embaixo do 1s */
+      const B = grafico.telaEixo().base, d = grafico.telaDegrau(1, 0), alt = Math.max(18, Math.min(60, (B.y - d.y) * .8));
+      const yChao = B.y - 3, xB = (d.x0 + d.x1) / 2;
+      J.chao.setAttribute('x1', B.x); J.chao.setAttribute('x2', d.x1 + 6); J.chao.setAttribute('y1', yChao); J.chao.setAttribute('y2', yChao);
+      J.boneco.setAttribute('transform', `translate(${xB} ${yChao}) scale(${alt})`);
+      J.x = xB; J.y = yChao; J.alt = alt;
+      J.svg.style.transition = ''; J.svg.style.opacity = 1;
+      const tudo = [J.chao, ...J.partes];
+      if (ja){ tudo.forEach(e => { e.style.strokeDasharray = ''; e.style.strokeDashoffset = ''; }); return; }
+      /* traço a traço: primeiro o chão, depois cabeça, corpo, braços e pernas */
+      tudo.forEach(e => { const L = e.getTotalLength ? e.getTotalLength() * (e === J.chao ? 1 : alt) + 2 : 200; e.style.strokeDasharray = L; e.style.strokeDashoffset = L; e._L = L; });
+      tudo.forEach((e, i) => agenda(i === 0 ? 0 : 500 + (i - 1) * 220, () => anima(i === 0 ? 500 : 220, k => { e.style.strokeDashoffset = e._L * (1 - k); }, () => { e.style.strokeDashoffset = 0; }, k => k)));
+    },
     /* áudio 9.4A (depois da fala): "₁₁Na:" é digitado embaixo e, um de cada vez, cada subnível ocupado aumenta no gráfico
        e é digitado ao lado (1s² 2s² 2p⁶ 3s¹); o anterior volta ao normal. ja = tudo pronto, sem animar (ao retomar) */
     distribuiSodio(aoTerminar = null, ja = false){
@@ -6287,6 +6349,8 @@ const Retomar = (() => {
     "audio_distribuição_9.4A": () => { INICIO["audio_distribuição_9.4"](); Atomo.naZoomVolta(1); Atomo.avancaTudo(); Atomo.naViraGrafico(1); Atomo.avancaTudo(); Atomo.avancaTudo(); },
     /* como o 9.4A terminou: + "₁₁Na: 1s² 2s² 2p⁶ 3s¹" embaixo */
     "audio_distribuição_9.4B": () => { INICIO["audio_distribuição_9.4A"](); Atomo.distribuiSodio(null, true); },
+    /* como o 9.4B terminou: o gráfico do sódio e "₁₁Na: 1s² 2s² 2p⁶ 3s¹" embaixo */
+    "audio_distribuição_9.5":  () => INICIO["audio_distribuição_9.4B"](),
   };
   function salva(){
     try {
