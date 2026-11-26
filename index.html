@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.75';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.76';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1178,17 +1178,20 @@ const EVENTOS = {
     { t: 'fim', acao: () => { Atomo.voltaGirar(); escondePlay(true); mostraToque(true, 'audio_distribuição_5.2'); } },
   ],
   'audio_distribuição_5.2': [
-    { t: .05, acao: () => Atomo.viajaPara('C', 'Carbono', 'elem') },                    // câmera voa ao carbono (zoom no núcleo)
+    /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/5.2.json) */
+    { t: .05, acao: () => Atomo.viajaPara('C', 'Carbono', 'elem') },                    // "O carbono agora": câmera voa ao carbono (zoom no núcleo)
     { t: .1,  acao: () => Atomo.acendeEletrons(false) },                                  // (os prótons continuam acesos; os elétrons acendem no zoom out)
-    { t: 1.0, acao: () => { Atomo.frenteC(1000); Atomo.destaca('protons', true); } },     // prótons de frente (acesos)
-    { t: 3.0, acao: () => { Atomo.zoomLento(1, 2200); Atomo.acendeEletrons(true); } },   // zoom out: aparecem os elétrons, acesos
-    { t: 5.0, acao: () => pausaRoteiro(1500) },                                          // pausa o áudio por 1,5 s
-    /* 6 s → 26 s: câmera se afasta devagar, o contorno das camadas some e os elétrons aceleram com rastro neon intenso */
-    { t: 6.0,  acao: () => Atomo.energizaCarbono(20000) },
-    { t: 8.5,  acao: () => Atomo.digita('neutro', 'Átomo neutro:', { cor: '#eef1ff' }) },    // celular: embaixo · Chromebook: ao lado
-    { t: 11.3, acao: () => { Atomo.quebraLinha('neutro'); Atomo.digita('neutro', 'Nº atômico', { cor: '#6f9bff' }); } },   // 2ª linha (com um respiro entre as duas)
-    { t: 11.4, acao: () => Atomo.digita('neutro', '= Nº de elétrons', { cor: '#7ce7ff' }) },   // Nº = número
-    /* fim: tudo fica na tela; o play volta como "Ok" verde piscando → áudio 6 */
+    { t: 1.76, acao: () => { Atomo.frenteC(1000); Atomo.destaca('protons', true); } },    // "6 prótons": prótons de frente (acesos)
+    { t: 3.2,  acao: () => { Atomo.zoomLento(1, 2200); Atomo.acendeEletrons(true); } },  // "6 elétrons": zoom out, aparecem os elétrons, acesos
+    /* "Sacou?" → 21 s: câmera se afasta devagar, o contorno das camadas some e os elétrons aceleram com rastro neon intenso */
+    { t: 4.4,  acao: () => Atomo.energizaCarbono(17000) },
+    { t: 10.24, acao: () => Atomo.digita('neutro', 'Átomo neutro:', { cor: '#eef1ff' }) },   // "neutros" — celular: embaixo · Chromebook: ao lado
+    { t: 11.92, acao: () => { Atomo.quebraLinha('neutro'); Atomo.digita('neutro', 'Nº atômico', { cor: '#6f9bff' }); } },   // "número atômico" (2ª linha)
+    { t: 14.72, acao: () => Atomo.digita('neutro', '= Nº de elétrons', { cor: '#7ce7ff' }) },   // "número de elétrons"
+    { t: 18.8,  acao: () => pausaRoteiro(1500) },                                        // pausa de 1,5 s depois de "…Guarde bem essa informação."
+    /* "eletrosfera dos átomos": a câmera se aproxima da eletrosfera do carbono (posição do modo câmera) */
+    { t: 22.08, acao: () => Atomo.voaCamera([15.59, 1.48, 30.63], [15.60, 1.37, 20.63], 2500) },
+    /* fim: o play volta como "Ok" verde piscando → áudio 6 */
     { t: 'fim', acao: () => { escondePlay(false); botaoOk(true, 'audio_distribuição_6'); } },
   ],
   'audio_distribuição_6': [
