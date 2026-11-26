@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.81';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.82';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1278,7 +1278,7 @@ const EVENTOS = {
     { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, () => {
         mostraToque(false); Atomo.escurece(false); Atomo.apagaLinha('conceito');
         Atomo.bohrToque(true); Atomo.fraseNoSalto(true);
-        escondePlay(false); botaoOk(true, 'audio_distribuição_8');
+        escondePlay(true); Atomo.aposSalto(() => { escondePlay(false); botaoOk(true, 'audio_distribuição_8'); });   // o "Ok" só aparece depois do próximo salto
     }); } },
   ],
   'audio_distribuição_8': [
@@ -3465,6 +3465,7 @@ const Atomo = (() => {
               B.n = nNovo; B.r = RN(nNovo); B.ang = ang; B.hist = []; B.snap = null;
               B.saltos++;
               if (B.saltos === 3 && B.aoTresSaltos){ const cb = B.aoTresSaltos; B.aoTresSaltos = null; setTimeout(cb, 1200); }   // 3º salto: o roteiro segue (depois que o efeito termina)
+              if (B.aoSaltar){ const cb = B.aoSaltar; B.aoSaltar = null; setTimeout(cb, 900); }   // (uma vez) depois do próximo salto
               const pNovo = new THREE.Vector3(B.r * Math.cos(ang), B.r * Math.sin(ang), .3);
               barraNivel(nNovo / 7, true);
               destacaRotulo(nNovo);                                              // o "n = x" do nível tocado cresce 15% e acende
@@ -4758,7 +4759,7 @@ const Atomo = (() => {
     bohrEletron(aoTresSaltos = null, ja = false){
       if (!pronto) return;
       const B = bohr; bohrLimpa();
-      B.ativo = true; B.hist = []; B.aoTresSaltos = aoTresSaltos;
+      B.ativo = true; B.hist = []; B.aoTresSaltos = aoTresSaltos; B.aoSaltar = null;
       if (ja) B.op = 1; else anima(600, k => B.op = k);
       barraNivel(1 / 7, true);
       bohr.destaca(1);                                                         // o "n = 1" acende junto com o 1º elétron
@@ -4768,6 +4769,7 @@ const Atomo = (() => {
     /* tocar nos níveis (salto do elétron) liga / desliga — no áudio 8 o toque é das letras */
     bohrToque(on){ if (bohr) bohr.semToque = !on; if (!on) $('#dicaGirar').classList.add('some'); },
     fraseNoSalto(on){ fraseNoSalto = on; },
+    aposSalto(fn){ if (bohr) bohr.aoSaltar = fn; },                              // fn roda (uma vez) depois do próximo salto do elétron
     /* as etiquetas "n = 1…7" somem uma a uma (TV desligando), em "dur" ms no total */
     rotulosSomem(dur = 2000){
       if (!pronto) return;
