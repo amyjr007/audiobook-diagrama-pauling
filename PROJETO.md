@@ -1,7 +1,7 @@
 # Projeto: audiobook "Distribuição Eletrônica — O diagrama de Pauling"
 
 > Documento de contexto para um assistente (Claude) entender o projeto antes de ajudar.
-> Estado descrito: **versão 1.63** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
+> Estado descrito: **versão 1.64** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
 
 ## 1. O que é
 
@@ -32,7 +32,7 @@ Um **audiobook interativo** de Química, em português, para alunos do ensino m�
 - `pausaRoteiro(ms)`: pausa a narração e volta sozinha. `CORTES`: áudio que termina antes do fim do arquivo (hoje vazio).
 - Relógio do roteiro: `anima(ms, fn, fim, curva)` e `agenda(ms, fn)` — congelam com a narração pausada e aceleram com a velocidade da fala.
 - `INICIO['audio_X']`: monta a cena como o áudio anterior terminou (para **Retomar** ao recarregar). Todo áudio novo precisa de entrada aqui. Ajudante: `nivelPronto(n)`.
-- `CAPITULOS`: itens do Sumário (13 itens; o 6 é "Os postulados de Bohr" → 7.1; o 11 "O diagrama de energia" → 9; o 12 "O diagrama e a ordem crescente de energia" → 9.0, com o gráfico pronto e sem cartões; o 13 "A eletrosfera do ₁₁Na" → 9.2, com o gráfico em ordem de energia).
+- `CAPITULOS`: itens do Sumário (14 itens; o 6 é "Os postulados de Bohr" → 7.1; o 11 "O diagrama de energia" → 9; o 12 "O diagrama e a ordem crescente de energia" → 9.0, com o gráfico pronto e sem cartões; o 13 "A eletrosfera do ₁₁Na" → 9.2, com o gráfico em ordem de energia; o 14 "A eletrosfera do ₁₉K" → 9.5, idem).
 
 ## 4. O gráfico de energia (áudios 8.x e 9)
 
@@ -53,7 +53,7 @@ Toque longo na versão (canto inferior esquerdo) ou tecla **G**. Arrastar/pinça
 
 ## 7. Regras de trabalho combinadas
 
-1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.63 → `pauling-v163`), commit e push na `main`.
+1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.64 → `pauling-v164`), commit e push na `main`.
 2. Git nesta pasta (OneDrive): `-c windows.appendAtomically=false` no commit e no fetch; identidade com `-c user.name=… -c user.email=…`; usar o Bash (Git Bash).
 3. Áudio novo/regravado: MP3 em `audio/`, nome na lista do `sw.js`, em `SEQUENCIA`, `EVENTOS` e `INICIO`; commit do MP3.
 4. Termos do professor: "aumenta" = cresce e brilha; "pulsa" = cresce e volta; "onda" = um depois do outro; "card" = cartão; "degrau" = barra de um subnível.
