@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.74';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.75';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -2193,11 +2193,42 @@ function marcaAte(t){
 }
 const ehDoAprender = () => SEQUENCIA.includes(atual);
 
+/* O botão que espoca (o mesmo efeito do app da ligação molecular): quando o play está como "Ok", "Próximo", "Vamos"…,
+   o toque faz o botão inchar e estourar como um balão (some crescendo), soltando um anel e gotinhas da cor dele.
+   É da interface (não para na pausa). Devolve uma promessa que se cumpre quando o balão já estourou. */
+const Espoca = {
+  botao(b, corPadrao = '#5ee08a'){
+    const r = b && b.getBoundingClientRect(); if (!r || !r.width) return Promise.resolve();
+    const cs = getComputedStyle(b), cor = cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)' ? cs.backgroundColor : corPadrao;
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const camada = css => { const el = document.createElement('div'); el.style.cssText = `position:fixed;pointer-events:none;z-index:300;${css}`; document.body.appendChild(el); return el; };
+    /* o anel que se abre no lugar do balão */
+    const anel = camada(`left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;border-radius:${cs.borderRadius};border:3px solid ${cor};box-sizing:border-box`);
+    anel.animate([{ transform: 'scale(1)', opacity: .95 }, { transform: 'scale(1.55)', opacity: 0 }], { duration: 420, easing: 'cubic-bezier(.2,.7,.3,1)' }).finished.then(() => anel.remove());
+    /* as gotinhas: saem da borda do balão para fora */
+    for (let i = 0; i < 14; i++){
+      const a = i / 14 * Math.PI * 2 + Math.random() * .3, ex = Math.cos(a) * r.width / 2, ey = Math.sin(a) * r.height / 2;
+      const d = 18 + Math.random() * 26, tam = 4 + Math.random() * 5, c = i % 3 ? cor : '#FFFFFF';
+      const g = camada(`left:${cx + ex - tam / 2}px;top:${cy + ey - tam / 2}px;width:${tam}px;height:${tam}px;border-radius:50%;background:${c};box-shadow:0 0 6px ${c}`);
+      g.animate([{ transform: 'translate(0,0) scale(1)', opacity: 1 }, { transform: `translate(${Math.cos(a) * d}px,${Math.sin(a) * d}px) scale(.2)`, opacity: 0 }],
+        { duration: 380 + Math.random() * 180, easing: 'cubic-bezier(.15,.8,.3,1)' }).finished.then(() => g.remove());
+    }
+    try { if (navigator.vibrate) navigator.vibrate(18); } catch(e){}
+    /* o balão: incha e estoura */
+    return b.animate([{ transform: 'scale(1)', opacity: 1, filter: 'brightness(1)' }, { transform: 'scale(1.16)', opacity: 1, filter: 'brightness(1.25)', offset: .5 },
+      { transform: 'scale(1.4)', opacity: 0, filter: 'brightness(1.5)' }], { duration: 240, easing: 'ease-out', fill: 'forwards' }).finished.catch(() => {});
+  }
+};
 btnPlay.addEventListener('click', () => {
-  if (btnPlay.classList.contains('ok')){          // "Ok" / "1º conceito" → próximo áudio (ou ação)
-    const prox = proximoNoOk; botaoOk(false);
-    if (typeof prox === 'function') prox();
-    else if (prox){ carrega(prox); audio.play().catch(() => {}); }
+  if (btnPlay.classList.contains('ok')){          // "Ok" / "1º conceito" → próximo áudio (ou ação), depois que o botão espoca
+    if (btnPlay.dataset.espocando) return; btnPlay.dataset.espocando = '1';
+    const prox = proximoNoOk;
+    Espoca.botao(btnPlay).then(() => {
+      botaoOk(false); delete btnPlay.dataset.espocando;
+      requestAnimationFrame(() => btnPlay.getAnimations().forEach(a => { if (a.effect && a.effect.getKeyframes().some(k => k.filter)) a.cancel(); }));   // (o botão volta inteiro para a próxima vez)
+      if (typeof prox === 'function') prox();
+      else if (prox){ carrega(prox); audio.play().catch(() => {}); }
+    });
     return;
   }
   /* o play encerra a abertura: cartões e átomo de fundo somem em fade
