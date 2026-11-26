@@ -923,7 +923,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.68';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.69';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -960,8 +960,16 @@ const CAPITULOS = [
   /* 14: vai direto ao áudio 9.5 — o gráfico em ordem de energia (aos 0,64 s ele fica todo preenchido e escurecido) */
   { titulo: 'A eletrosfera do <sub>19</sub>K', pagina: 'pagina1', audio: 'audio_distribuição_9.5', inicio: 0,
     prepara: () => { cenaGraficoCartoes(); for (let n = 1; n <= 7; n++) nivelPronto(n); Atomo.cartoesSomem(0); Atomo.ordemEnergia(1); Atomo.avancaTudo(); Atomo.avancaTudo(); } },
+  /* 15 e 16: vão direto aos áudios 9.5C (ferro) e 9.5D (bromo) — o gráfico do joguinho (rótulos apagados) e o Joãozinho no chão */
+  { titulo: 'A eletrosfera do <sub>26</sub>Fe', pagina: 'pagina1', audio: 'audio_distribuição_9.5C', inicio: 0, prepara: () => cenaJoguinho() },
+  { titulo: 'A eletrosfera do <sub>35</sub>Br', pagina: 'pagina1', audio: 'audio_distribuição_9.5D', inicio: 0, prepara: () => cenaJoguinho() },
 ];
 
+/* cena do joguinho (Sumário 15 e 16): gráfico em ordem de energia, todos os subníveis com os rótulos 80% apagados e o Joãozinho no chão */
+function cenaJoguinho(){
+  cenaGraficoCartoes(); for (let n = 1; n <= 7; n++) nivelPronto(n); Atomo.cartoesSomem(0); Atomo.ordemEnergia(1); Atomo.avancaTudo(); Atomo.avancaTudo();
+  Atomo.cenaPotassioInicio(1); Atomo.avancaTudo(); Atomo.joaozinho(true, true);
+}
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
 const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4', 'audio_distribuição_9.4A', 'audio_distribuição_9.4B', 'audio_distribuição_9.5', 'audio_distribuição_9.5A', 'audio_distribuição_9.5B', 'audio_distribuição_9.5C', 'audio_distribuição_9.5D'];
 
