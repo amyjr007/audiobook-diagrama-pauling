@@ -927,7 +927,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.95';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.96';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -2490,7 +2490,7 @@ const Atomo = (() => {
   /* posição do gráfico (deslocamento, em unidades da cena), ajustável no modo edição arrastando fora dos textos */
   const POS_GRAFICO = { deitada: { x: 0, y: 0 }, retrato: { x: -1.58, y: -.30 } };   // celular: modo edição v0.70 (384×783)
   let deslocGrafico = { ...POS_GRAFICO.deitada };
-  let descePos = 0; const DESCE_RETRATO = -1.5;     // celular: da ordem de energia em diante (9.x) o gráfico desce um pouco (mais espaço em cima)
+  let descePos = 0; const DESCE_RETRATO = -2.3, ESQ_RETRATO = -.9;   // celular: da ordem de energia em diante (9.x, sem os textos das camadas) o gráfico desce e vai para a esquerda
   /* ajustes finos do gráfico no modo edição: cada letra K…Q (sozinha) e os degraus de cada nível (juntos).
      x, y = deslocamento (unidades da cena) · s = tamanho. Índice 0 = K … 6 = Q */
   const AJUSTE_LETRAS  = { deitada: [], retrato: [                                  // celular: modo edição v0.74 — todas com o tamanho e a coluna da K
@@ -2507,7 +2507,7 @@ const Atomo = (() => {
   function aplicaEscalaConj(){
     if (!ruth) return;
     ruth.conj.scale.setScalar(escalaCamadas * (1 + (escalaGrafico - 1) * fatorGrafico));
-    ruth.conj.position.set(deslocGrafico.x * fatorGrafico, (deslocGrafico.y + (orientacaoRetrato ? DESCE_RETRATO * descePos : 0)) * fatorGrafico, 0);   // (o átomo fica no lugar; o gráfico vai para a posição ajustada)
+    ruth.conj.position.set((deslocGrafico.x + (orientacaoRetrato ? ESQ_RETRATO * descePos : 0)) * fatorGrafico, (deslocGrafico.y + (orientacaoRetrato ? DESCE_RETRATO * descePos : 0)) * fatorGrafico, 0);   // (o átomo fica no lugar; o gráfico vai para a posição ajustada)
     ruth.conj.updateMatrixWorld(true);
   }
   /* áudio 5.2: elétrons do carbono ganham energia (0 → 1) e o contorno das camadas some (1 → 0) */
