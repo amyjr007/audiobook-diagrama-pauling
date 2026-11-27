@@ -929,7 +929,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.99';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '2.00';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1322,8 +1322,8 @@ const EVENTOS = {
     /* 15 s → 21,5 s: a seta vertical encolhe até a camada K e sobe de volta; cada linha por onde passa dá um saltinho e brilha;
        chega na última camada aos 21,5 s */
     { t: 15.0,  acao: () => Atomo.setaEncolheSobe(800, 5700) },
-    { t: 22.9,  acao: () => Atomo.realceNivel(1, true, false) },               // a letra K aumenta
-    { t: 23.5,  acao: () => { Atomo.realceNivel(1, false); Atomo.textoNivel(1); } },   // o K some em fade e "1ª camada" é digitado
+    { t: 22.9,  acao: () => { Atomo.realceNivel(1, true, false); Atomo.letraDireita(1, true); } },   // a letra K aumenta (e aparece um K do lado direito da linha)
+    { t: 23.5,  acao: () => { Atomo.realceNivel(1, false); Atomo.letraDireita(1, false); Atomo.textoNivel(1); } },   // o K some em fade e "1ª camada" é digitado
     { t: 25.04, acao: () => Atomo.realceNivel(2, true, false) },                                    // "élli": o L aumenta
     { t: 25.68, acao: () => { Atomo.realceNivel(2, false); Atomo.textoNivel(2); } },               // "segunda": o L some e "2ª camada" é digitado
     /* "assim por diante": pausa de 1,5 s; nela, M … Q somem uma a uma e as camadas são digitadas no lugar */
@@ -1439,23 +1439,31 @@ const EVENTOS = {
   'audio_distribuição_8.5A': [
     { t: .05,  acao: () => escondePlay(false) },
     /* rótulos do 2º nível — j = 0: 2s² · j = 1: 2p⁶ · peças k: 0 número da frente · 1 letra · 2 expoente */
-    { t: 4.0,  acao: () => Atomo.realcaPartes(2, [[0, 2]]) },                   // o "2" de cima do s
-    { t: 5.5,  acao: () => Atomo.realcaPartes(2, [[0, 1]]) },                   // o "2" diminui e o "s" aumenta
-    { t: 7.0,  acao: () => Atomo.realcaPartes(2, [[1, 2]]) },                   // o "6" de cima do p
-    { t: 8.5,  acao: () => Atomo.realcaPartes(2, [[1, 1]]) },                   // o "6" diminui e o "p" aumenta
-    { t: 9.9,  acao: () => Atomo.realcaPartes(2, [[0, 0], [1, 0]], 1000) },     // o p diminui; o "2" da frente do s e do p aumentam por 1 s
-    { t: 11.8, acao: () => Atomo.rotuloDestaque(2, 0, true) },                  // 2s² aumenta com brilho
-    { t: 13.0, acao: () => { Atomo.rotuloDestaque(2, 0, false); Atomo.rotuloDestaque(2, 1, true); } },   // …diminui e o 2p⁶ aumenta
-    { t: 14.0, acao: () => Atomo.rotuloDestaque(2, 1, false) },                 // (1 s depois volta ao normal)
-    { t: 16.5, acao: () => Atomo.rotuloDestaque(2, 1, true) },                  // 2p⁶ aumenta…
-    { t: 19.0, acao: () => Atomo.rotuloDestaque(2, 0, true) },                  // …e o 2s² também (os dois ficam aumentados)
-    { t: 20.0, acao: () => { Atomo.rotuloDestaque(2, 0, false); Atomo.rotuloDestaque(2, 1, false); } },
-    { t: 23.0, acao: () => { Atomo.rotuloDestaque(2, 0, true); Atomo.rotuloDestaque(2, 1, true); } },    // os dois subníveis por 1 s
-    { t: 24.0, acao: () => { Atomo.rotuloDestaque(2, 0, false); Atomo.rotuloDestaque(2, 1, false); } },
-    { t: 25.0, acao: () => { Atomo.cartaoDestaque('p'); Atomo.rotuloDestaque(2, 1, true); } },            // o cartão p e o 2p⁶
-    { t: 26.6, acao: () => { Atomo.rotuloDestaque(2, 1, false); Atomo.cartaoDestaque('s'); Atomo.rotuloDestaque(2, 0, true); } },   // …diminuem; o cartão s e o 2s² por 1 s
-    { t: 27.6, acao: () => { Atomo.cartaoDestaque(null); Atomo.rotuloDestaque(2, 0, false); } },
-    { t: 29.0, acao: () => { Atomo.cartaoDestaque('p'); Atomo.rotuloDestaque(2, 1, true); } },            // o 2p⁶ e o cartão p⁶
+    { t: 4.38,  acao: () => Atomo.realcaPartes(2, [[0, 2]]) },                  // "2 estão": o "2" de cima do s
+    { t: 5.76,  acao: () => Atomo.realcaPartes(2, [[0, 1]]) },                  // "subnível s": o "2" diminui e o "s" aumenta
+    { t: 7.12,  acao: () => Atomo.realcaPartes(2, [[1, 2]]) },                  // "6 estão": o "6" de cima do p
+    { t: 8.56,  acao: () => Atomo.realcaPartes(2, [[1, 1]]) },                  // "subnível p": o "6" diminui e o "p" aumenta
+    { t: 9.68,  acao: () => Atomo.realcaPartes(2, [[0, 0], [1, 0]], 1000) },    // "segunda camada": o "2" da frente do s e do p por 1 s
+    { t: 11.84, acao: () => Atomo.rotuloDestaque(2, 0, true) },                 // "dois éssi dois": 2s² aumenta
+    { t: 13.6,  acao: () => { Atomo.rotuloDestaque(2, 0, false); Atomo.rotuloDestaque(2, 1, true); } },   // "dois pê seis"
+    { t: 15.12, acao: () => Atomo.rotuloDestaque(2, 1, false) },
+    { t: 16.88, acao: () => Atomo.rotuloDestaque(2, 1, true) },                 // "o 2p tá um pouquinho acima…"
+    { t: 19.12, acao: () => Atomo.rotuloDestaque(2, 0, true) },                 // "…do 2s" (os dois ficam aumentados)
+    { t: 20.6,  acao: () => { Atomo.rotuloDestaque(2, 0, false); Atomo.rotuloDestaque(2, 1, false); } },
+    { t: 23.28, acao: () => Atomo.destacaTextoNivel(2, 1000) },                 // "na 2ª camada": o "2ª camada" aumenta por 1 s
+    { t: 25.12, acao: () => { Atomo.cartaoDestaque('p'); Atomo.rotuloDestaque(2, 1, true); } },            // "o subnível p…": cartão p e 2p⁶
+    { t: 26.8,  acao: () => { Atomo.rotuloDestaque(2, 1, false); Atomo.cartaoDestaque('s'); Atomo.rotuloDestaque(2, 0, true); } },   // "…que o s"
+    { t: 27.8,  acao: () => { Atomo.cartaoDestaque(null); Atomo.rotuloDestaque(2, 0, false); } },
+    /* "O s é o menos energético, depois o p, o d e… o f": a 4ª camada acende e os degraus dela aumentam um a um (com o cartão) */
+    { t: 34.76, acao: () => { Atomo.focoNivel([1, 2, 4], 400); Atomo.degrauSo(4, -1, true, 400, .35); } },
+    ...['s', 'p', 'd', 'f'].map((c, j) => ({ t: [34.96, 37.36, 38.08, 39.52][j], acao: () => {
+      if (j) Atomo.degrauSo(4, j - 1, true, 250, .35);
+      Atomo.degrauSo(4, j, true, 250, 1); Atomo.cartaoDestaque(c);
+    } })),
+    { t: 41.91, acao: () => { Atomo.degrauSo(4, -1, false, 400); Atomo.cartaoDestaque(null); Atomo.focoNivel([1, 2], 600); } },
+    /* "da camada e do tipo de subnível" */
+    { t: 49.12, acao: () => Atomo.destacaTextoNivel(2, 1000) },
+    { t: 50.24, acao: () => { Atomo.pulsaRotulo(2, 0, 900); Atomo.pulsaRotulo(2, 1, 900); } },
     /* fim: tudo volta ao normal; o play vira "Próximo" → áudio 8.6 */
     { t: 'fim', acao: () => { Atomo.cartaoDestaque(null); Atomo.rotuloDestaque(2, 1, false); escondePlay(false); botaoOk(true, 'audio_distribuição_8.6', 'Próximo'); } },
   ],
@@ -3856,6 +3864,22 @@ const Atomo = (() => {
             const o0 = s.material.opacity, a = on ? 1 : 0; s.visible = true;
             anima(dur, k => { s.material.opacity = o0 + (a - o0) * k; }, () => { if (!on) s.visible = false; });
           },
+          /* áudio 8.1: cópia da letra da camada (K…Q) do lado direito da linha (aparece e some em fade, com brilho) */
+          letrasDir: [],
+          letraDireita(n, on = true, dur = 250){
+            const it = letras.itens[n - 1]; if (!it) return;
+            let s = this.letrasDir[n - 1];
+            if (!s){
+              s = new THREE.Sprite(new THREE.SpriteMaterial({ map: it.s.material.map, transparent: true, opacity: 0, depthWrite: false, depthTest: false }));
+              s.renderOrder = 7; s.visible = false; conj.add(s); this.letrasDir[n - 1] = s;
+            }
+            const f = TAM_LETRA_G * ajusteLetra[n - 1].s, w = letras.BASE.x * f;
+            if (orientacaoRetrato) s.position.set(GX1 - w * .55, yN(n) + niveis[n - 1].b + letras.BASE.y * f * .75, .3);   // celular: em cima da ponta direita
+            else s.position.set(GX1 + w * .75, yN(n) + niveis[n - 1].b, .3);                                                     // tela deitada: depois da ponta direita
+            const o0 = s.material.opacity, a = on ? 1 : 0; s.visible = true;
+            anima(dur, k => { const h = on ? k : 1 - k, e = f * (1 + .35 * h); s.material.opacity = o0 + (a - o0) * k; s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); s.material.color.setScalar(1 + .8 * h); },
+              () => { if (!on) s.visible = false; });
+          },
           morfa,
           letraPara: (it, k, p0) => {
             if (it.dBohr){ it.dBohr = 0; it.s.material.color.setScalar(1); }        // (o destaque do salto não vai para o gráfico)
@@ -5017,6 +5041,8 @@ const Atomo = (() => {
         if (it && it.noGrafico && !(it.apaga > .5)){ const e = .6 * ajusteLetra[n - 1].s * (1 + .35 * h); it.s.scale.set(letras.BASE.x * e, letras.BASE.y * e, 1); it.s.material.color.setScalar(1 + (brilha ? .8 * h : 0)); }
       });
     },
+    /* áudio 8.1: a letra da camada também do lado direito da linha (on = false some em fade) */
+    letraDireita(n, on = true, dur = 250){ if (pronto && grafico) grafico.letraDireita(n, on, dur); },
     /* o texto "Nª camada" volta ao tamanho normal */
     soltaTextoNivel(n){ if (pronto && grafico){ const T = grafico.textosNivel[n - 1]; if (T && T.h > .001){ const h0 = T.h; anima(250, k => grafico.textoNivelH(n, h0 * (1 - k))); } } },
     /* áudio 8.1: os níveis 1 → 7 brilham em sequência (anel da camada + a etiqueta K…Q), e a barra "Energia" salta
@@ -5563,6 +5589,13 @@ const Atomo = (() => {
       if (!pronto || !grafico) return;
       const d0 = grafico.niveis[n - 1].hl[j], r0 = [0, 1, 2].map(q => grafico.parteH(n, j, q)), alvo = on ? 1 : 0;
       anima(dur, k => { grafico.hlDegrau(n, j, d0 + (alvo - d0) * k); [0, 1, 2].forEach(q => grafico.parteRotulo(n, j, q, r0[q] + (alvo - r0[q]) * k)); });
+    },
+    /* só o degrau j do nível n aumenta até "alvo" (sem o rótulo; j = -1: todos os degraus do nível) — áudio 8.5A, 4ª camada ainda vazia */
+    degrauSo(n, j, on = true, dur = 250, alvo = 1){
+      if (!pronto || !grafico) return;
+      const L = grafico.niveis[n - 1]; if (!L) return;
+      const js = j < 0 ? L.hl.map((_, i) => i) : [j], h0 = js.map(i => L.hl[i] || 0), a = on ? alvo : 0;
+      anima(dur, k => js.forEach((i, q) => grafico.hlDegrau(n, i, h0[q] + (a - h0[q]) * k)));
     },
     degrausNivel(n, on = true, dur = 250){
       if (!pronto || !grafico) return;
