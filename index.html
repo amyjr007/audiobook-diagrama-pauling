@@ -927,7 +927,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.94';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.95';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -6057,6 +6057,12 @@ const Atomo = (() => {
         }, k => k);
       }, k => k);
     },
+    /* ele estica o braço (do lado do rótulo: dir = +1 direita, −1 esquerda) para cima e toca no subnível; no toque, aoTocar */
+    _joaoToca(dir, aoTocar){
+      const P = this._joao.partes, braco = dir > 0 ? P[3] : P[2], x0 = dir > 0 ? .2 : -.2, y0 = -.42, x1 = dir * .46, y1 = -1.02;
+      const poe = k => { braco.setAttribute('x2', x0 + (x1 - x0) * k); braco.setAttribute('y2', y0 + (y1 - y0) * k); };
+      anima(240, k => poe(k), () => { poe(1); aoTocar && aoTocar(); agenda(350, () => anima(220, k => poe(1 - k), () => poe(0))); });
+    },
     /* pulos de alegria no lugar (braços para cima), cada um com a mesma física do pulo */
     _joaoComemora(vezes = 4){
       const J = this._joao, y0 = J.y, g = J.alt * 30, h = J.alt * .6, vy = Math.sqrt(2 * g * h), T = 2 * vy / g;
@@ -6099,7 +6105,7 @@ const Atomo = (() => {
       const AUF = ['1s', '2s', '2p', '3s', '3p', '4s', '3d', '4p', '5s', '4d', '5p', '6s', '4f', '5d', '6p', '7s', '5f', '6d', '7p'].map(t => [+t[0], 'spdf'.indexOf(t[1])]);
       const ELET = [2, 6, 10, 14], [nU, jU] = AUF[META - 1], expo = (n, j) => n === nU && j === jU ? ultimoExp : ELET[j];
       AUF.slice(0, META).forEach(([n, j]) => grafico.expoenteDegrau(n, j, expo(n, j)));   // (o último pode ter menos elétrons: 4s¹ no K, 3d⁶ no Fe)
-      J.ativo = true; J.passo = 0; J.ocupado = false; J.aguarda = false;
+      J.ativo = true; J.passo = 0; J.ocupado = false;
       const sup = (n, j) => { const d = grafico.telaDegrau(n, j); return { n, j, x0: d.x0, x1: d.x1, y: d.y - 2 }; };
       const toque = e => {
         if (!J.ativo || J.ocupado || roteiroCongelado()) return;
@@ -6118,30 +6124,32 @@ const Atomo = (() => {
           const [tn, tj] = AUF[alvo], h0 = grafico.niveis[tn - 1].hl[tj] || 0;
           anima(320, k => grafico.hlDegrau(tn, tj, Math.max(h0, Math.sin(Math.PI * k) * .8)), () => grafico.hlDegrau(tn, tj, h0), k => k);
         }
-        /* 2º toque: ele já está no degrau certo — tocar nele de novo acende o subnível ("right", a distribuição embaixo e "próximo") */
-        if (J.aguarda){
-          if (alvo !== J.passo) return;                                            // (antes de acender este, os outros não respondem)
-          const [n, j] = AUF[alvo]; J.aguarda = false; J.passo++;
-          this.acendeSubnivel(n, j); this.subnivelAumenta(n, j); agenda(700, () => this.subnivelAumenta(n, j, false));
-          sfx('right');
-          this.digita('dist', ' ' + n + 'spdf'[j] + expo(n, j), { cor: '#eef1ff', sup: [3, 4], ms: 90 });   // embaixo, a distribuição vai se formando
-          if (J.passo >= META){
-            J.ativo = false; J.ocupado = true; Quiz.confetes(); sfx('funfare'); this._joaoComemora(5); aoComemorar && aoComemorar();
-            agenda(500, () => { this.brilhaLinha('dist'); sfx('yes'); });            // a distribuição formada brilha
-            agenda(2400, () => { J.ocupado = false; });
-          } else { J.ocupado = true; agenda(450, () => sfx('próximo')); agenda(300, () => { J.ocupado = false; }); }
-          return;
-        }
         if (alvo < J.passo || alvo < 0) return;                                    // fora dos degraus, ou um que ele já passou
         const [n, j] = AUF[alvo], T = sup(n, j), S = J.sup;
         /* pousa na ponta do degrau do lado de onde vem (longe do rótulo, que fica no meio); anda antes até ficar embaixo/ao lado desse ponto */
         const xPouso = J.x > (T.x0 + T.x1) / 2 ? T.x1 - Math.min(6, (T.x1 - T.x0) * .12) : T.x0 + Math.min(6, (T.x1 - T.x0) * .12);
         const xBeira = Math.max(S.x0 + 3, Math.min(S.x1 - 3, xPouso));
+        /* chegou: o subnível acende ("right", a distribuição embaixo e "próximo"; no último, a comemoração) */
+        const acende = () => {
+          J.passo++;
+          this.acendeSubnivel(n, j); this.subnivelAumenta(n, j); agenda(700, () => this.subnivelAumenta(n, j, false));
+          sfx('right');
+          this.digita('dist', ' ' + n + 'spdf'[j] + expo(n, j), { cor: '#eef1ff', sup: [3, 4], ms: 90 });   // embaixo, a distribuição vai se formando
+          if (J.passo >= META){
+            J.ativo = false; Quiz.confetes(); sfx('funfare'); this._joaoComemora(5); aoComemorar && aoComemorar();
+            agenda(500, () => { this.brilhaLinha('dist'); sfx('yes'); });            // a distribuição formada brilha
+            agenda(2400, () => { J.ocupado = false; });
+          } else { agenda(450, () => sfx('próximo')); agenda(300, () => { J.ocupado = false; }); }
+        };
         J.ocupado = true;
         this._joaoAnda(xBeira, () => {
           if (alvo > J.passo){ this._joaoPula(xPouso, T.y, false, () => { J.ocupado = false; }); return; }   // alto demais: não alcança
-          /* 1º toque: ele pula para o degrau; o subnível só acende quando o aluno tocar nele de novo */
-          this._joaoPula(xPouso, T.y, true, () => { J.sup = T; J.aguarda = true; J.ocupado = false; });
+          /* pula para o degrau; depois anda até o lado do rótulo, estica o braço e TOCA no subnível — aí ele acende */
+          this._joaoPula(xPouso, T.y, true, () => {
+            J.sup = T;
+            const cx = (T.x0 + T.x1) / 2, lado = Math.sign(J.x - cx) || 1, xT = cx + lado * ((T.x1 - T.x0) * .3 + J.alt * .12);
+            this._joaoAnda(xT, () => this._joaoToca(-lado, acende));
+          });
         });
       };
       if (J.tira) J.tira();
