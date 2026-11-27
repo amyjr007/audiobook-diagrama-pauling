@@ -929,7 +929,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '2.00';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '2.01';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1043,10 +1043,21 @@ function proximoDepoisDaFesta(deAudio, proximo){
   if (atual !== deAudio) return;                                                // (o aluno já saiu desse áudio)
   tocaDepois(2200, proximo);
 }
-/* o aluno começou a arrastar: o áudio que estiver tocando é cortado (como se tivesse terminado ali) */
+/* o aluno começou a arrastar: o áudio que estiver tocando é cortado (como se tivesse terminado ali).
+   Os eventos que ainda não aconteceram rodam na hora (sem as pausas do roteiro), para a cena ficar como no fim do áudio */
+let pulandoEventos = false;
 function cortaNarracao(){
-  if (!atual || audio.paused || audio.ended) return;
-  cortado = true; pausaNarracao(); fimDoAudio();
+  if (!atual || audio.ended || cortado) return;
+  const naPausa = emPausaRoteiro;
+  if (!naPausa && !(audio.currentTime > 0)) return;                             // (ainda não começou)
+  if (naPausa){ pausaTimers.forEach(clearTimeout); pausaTimers = []; pausaPendentes.forEach(fn => fn && fn()); pausaPendentes = []; emPausaRoteiro = false; }
+  cortado = true; pausaNarracao();
+  pulandoEventos = true;
+  (EVENTOS[atual] || []).forEach((ev, i) => {
+    if (typeof ev.t === 'number' && !disparados.has(i)){ disparados.add(i); try { ev.acao(); } catch(e){ console.error(e); } }
+  });
+  pulandoEventos = false;
+  fimDoAudio();
 }
 /* apaga na hora o título de cima (para escrever outro) */
 function linhaTopoLimpa(){ Atomo.limpaTopo(); }
@@ -1393,7 +1404,7 @@ const EVENTOS = {
     { t: 27.8, acao: () => { Atomo.cartoesBrilham(); Atomo.cartoesAumentam(1000); } },   // os 4 cartões coloridos dos subníveis aumentam por 1 s
     /* 28 s: a mãozinha leva o s² até o 1º nível e o aluno já pode arrastar; sem ação, a mãozinha repete a cada 3 s.
        Ao encaixar: som de encaixe, aplausos com confetes e o áudio 8.4 começa na hora */
-    { t: 28.0, acao: () => Atomo.arrasteBloco('s', 1, 0, encaixou1s2, { som: false, semGuia: true, intervalo: 5000, paraNoToque: true }) },
+    { t: .05, acao: () => Atomo.arrasteBloco('s', 1, 0, encaixou1s2, { som: false, semGuia: true, intervalo: 5000, paraNoToque: true }) },
     /* fim: sem play — só passa encaixando o s² */
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(1)){ escondePlay(true); Atomo.guiaArraste(0); } } },   // depois do áudio: tutorial de arraste (a cada 5 s, até o aluno arrastar)
   ],
@@ -1474,7 +1485,8 @@ const EVENTOS = {
     { t: 5.8,  acao: () => Atomo.seguraTotal(3) },                              // o "18e⁻" aumenta (fica assim até zerar)
     /* 9 s: os 4 cartões coloridos aumentam por 1 s e o aluno já pode arrastar até os degraus do 3º nível
        (a cada encaixe o total embaixo do "3º nível" diminui: 18 → 16 → 10 → 0) */
-    { t: 9.0,  acao: () => { Atomo.cartoesAumentam(1000); Atomo.montaNivel(3, 18, () => { if (atual === 'audio_distribuição_8.6') tocaDepois(0, 'audio_distribuição_8.6A'); }); } },   // completo → comemoração + 8.6A
+    { t: .05,  acao: () => Atomo.montaNivel(3, 18, () => { if (atual === 'audio_distribuição_8.6') tocaDepois(0, 'audio_distribuição_8.6A'); }) },   // o aluno já pode arrastar desde o começo
+    { t: 9.0,  acao: () => Atomo.cartoesAumentam(1000) },   // completo → comemoração + 8.6A
     /* fim: sem play — só passa montando o nível */
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(3)) escondePlay(true); } },
   ],
@@ -1498,23 +1510,27 @@ const EVENTOS = {
      depois dela, o próximo áudio. O total embaixo do "Nº nível" diminui a cada encaixe */
   'audio_distribuição_8.7': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel([1, 2, 3, 4]); Atomo.seguraTextoNivel(4); } },   // o "4º nível" aumenta
-    { t: 2.7, acao: () => { Atomo.totalCresce(4); Atomo.montaNivel(4, 32, () => proximoDepoisDaFesta('audio_distribuição_8.7', 'audio_distribuição_8.8')); } },   // "32e⁻" e o arraste
+    { t: .06, acao: () => Atomo.montaNivel(4, 32, () => proximoDepoisDaFesta('audio_distribuição_8.7', 'audio_distribuição_8.8')) },   // o aluno já pode arrastar desde o começo
+    { t: 2.7, acao: () => Atomo.totalCresce(4) },   // "32e⁻" e o arraste
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(4)){ escondePlay(true); Atomo.guiaArraste(3000); } } },   // 3 s sem ação: a mãozinha mostra o arraste (a cada 5 s, até o 1º arrasto)
   ],
   'audio_distribuição_8.8': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel([1, 2, 3, 4, 5]); Atomo.seguraTextoNivel(5); } },
-    { t: 9.5, acao: () => { Atomo.totalCresce(5); Atomo.montaNivel(5, 32, () => proximoDepoisDaFesta('audio_distribuição_8.8', 'audio_distribuição_8.9')); } },
+    { t: .06, acao: () => Atomo.montaNivel(5, 32, () => proximoDepoisDaFesta('audio_distribuição_8.8', 'audio_distribuição_8.9')) },   // o aluno já pode arrastar desde o começo
+    { t: 9.5, acao: () => Atomo.totalCresce(5) },
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(5)) escondePlay(true); } },
   ],
   'audio_distribuição_8.9': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel([1, 2, 3, 4, 5, 6]); Atomo.seguraTextoNivel(6); } },
-    { t: 3.8, acao: () => { Atomo.totalCresce(6); Atomo.montaNivel(6, 18, () => proximoDepoisDaFesta('audio_distribuição_8.9', 'audio_distribuição_8.95')); } },
+    { t: .06, acao: () => Atomo.montaNivel(6, 18, () => proximoDepoisDaFesta('audio_distribuição_8.9', 'audio_distribuição_8.95')) },   // o aluno já pode arrastar desde o começo
+    { t: 3.8, acao: () => Atomo.totalCresce(6) },
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(6)) escondePlay(true); } },
   ],
   'audio_distribuição_8.95': [
     { t: .05, acao: () => { escondePlay(false); Atomo.focoNivel(0); } },
     { t: 1.0, acao: () => Atomo.seguraTextoNivel(7) },                         // o "7º nível" aumenta
-    { t: 2.5, acao: () => { Atomo.totalCresce(7); Atomo.montaNivel(7, 8, () => proximoDepoisDaFesta('audio_distribuição_8.95', 'audio_distribuição_9')); } },   // "8e⁻" e o arraste; completo → 9
+    { t: .06, acao: () => Atomo.montaNivel(7, 8, () => proximoDepoisDaFesta('audio_distribuição_8.95', 'audio_distribuição_9')) },   // o aluno já pode arrastar desde o começo
+    { t: 2.5, acao: () => Atomo.totalCresce(7) },   // "8e⁻" e o arraste; completo → 9
     { t: 'fim', acao: () => { if (!Atomo.nivelCompleto(7)) escondePlay(true); } },
   ],
   'audio_distribuição_9': [
@@ -2158,7 +2174,7 @@ document.querySelectorAll('[data-home]').forEach(b => b.addEventListener('click'
    extras = [[ms, função], ...] → coisas que acontecem durante a pausa. */
 let pausaTimers = [], pausaPendentes = [], emPausaRoteiro = false;
 function pausaRoteiro(ms, extras = []){
-  if (window.__restaurando) return;          // ao retomar depois de recarregar, as pausas que já passaram não acontecem de novo
+  if (window.__restaurando || pulandoEventos) return;   // ao retomar depois de recarregar (ou no corte pelo arrasto), as pausas não acontecem
   emPausaRoteiro = true;
   pausaNarracao();
   pausaPendentes = extras.map(([, fn]) => fn);
