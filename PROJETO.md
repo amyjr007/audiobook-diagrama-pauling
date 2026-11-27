@@ -1,7 +1,7 @@
 # Projeto: audiobook "Distribuição Eletrônica — O diagrama de Pauling"
 
 > Documento de contexto para um assistente (Claude) entender o projeto antes de ajudar.
-> Estado descrito: **versão 1.98** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
+> Estado descrito: **versão 1.99** (25/11/2026). Repositório: `amyjr007/audiobook-diagrama-pauling` (GitHub, branch `main`).
 
 ## 1. O que é
 
@@ -26,7 +26,7 @@ Um **audiobook interativo** de Química, em português, para alunos do ensino m�
 
 ## 3. Como o roteiro funciona
 
-- `SEQUENCIA`: ordem dos áudios do Aprender. Atual: `1, 2, 3, 4, 5, 5.1, 5.2, 6, 7, 7.1, 7.2, 7.3, 7.4, 7.4A, 8, 8.1, 8.2, 8.3, 8.3A, 8.4, 8.5, 8.5A, 8.6, 8.6A, 8.7, 8.8, 8.9, 8.95, 9, 9.0, 9.1, 9.2, 9.3, 9.4, 9.4A, 9.4B, 9.5, 9.5A, 9.5B, 9.5C, 9.5D, 9.6`.
+- `SEQUENCIA`: ordem dos áudios do Aprender. Atual: `1, 2, 3, 4, 5, 5.1, 5.2, 6, 7, 7.1, 7.2, 7.3, 7.4, 7.4A, 8, 8.1, 8.2, 8.3, 8.3A, 8.4, 8.5, 8.5A, 8.6, 8.6A, 8.7, 8.8, 8.9, 8.95, 9, 9.0, 9.1, 9.1A, 9.2, 9.3, 9.4, 9.4A, 9.4B, 9.5, 9.5A, 9.5B, 9.5C, 9.5D, 9.6`.
 - `EVENTOS['audio_distribuição_X'] = [{ t: segundos, acao }]`; `t: 'fim'` roda no fim do áudio. **É aqui que entram os tempos que o professor passa.**
 - Avanço entre áudios: `botaoOk(true, 'próximo', 'Ok'|'Próximo')` (play verde piscando; o toque faz o botão espocar como balão — `Espoca`, o mesmo do app da ligação molecular — e só depois segue), `mostraToque(true, 'próximo' ou função)` ("Toque na tela"), `tocaDepois(ms, nome)`, ou a atividade (ex.: completar uma camada).
 - `pausaRoteiro(ms)`: pausa a narração e volta sozinha. `CORTES`: áudio que termina antes do fim do arquivo (hoje vazio).
@@ -53,7 +53,7 @@ Toque longo na versão (canto inferior esquerdo) ou tecla **G**. Arrastar/pinça
 
 ## 7. Regras de trabalho combinadas
 
-1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.98 → `pauling-v198`), commit e push na `main`.
+1. **Toda mudança vai para o GitHub sem pedir**: subir `APP_VERSAO` (index.html) **e** `CACHE` (sw.js) juntos (1.99 → `pauling-v199`), commit e push na `main`.
 2. Git nesta pasta (OneDrive): `-c windows.appendAtomically=false` no commit e no fetch; identidade com `-c user.name=… -c user.email=…`; usar o Bash (Git Bash).
 3. Áudio novo/regravado: MP3 em `audio/`, nome na lista do `sw.js`, em `SEQUENCIA`, `EVENTOS` e `INICIO`; commit do MP3.
 4. Termos do professor: "aumenta" = cresce e brilha; "pulsa" = cresce e volta; "onda" = um depois do outro; "card" = cartão; "degrau" = barra de um subnível.
