@@ -927,7 +927,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.97';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.98';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -1310,17 +1310,18 @@ const EVENTOS = {
     /* tempos tirados da própria narração (ElevenLabs, ferramentas/tempos/8.1.json) */
     { t: .05,  acao: () => escondePlay(false) },
     { t: 1.28, acao: () => Atomo.saltaNivel(1) },                              // "cada camada representa uma energia": o elétron no nível 1 (a barra mostra a energia dele)
+    { t: 2.9,  acao: () => Atomo.energiaRealce(1500) },                         // a barra "Energia" (e o nome) aumenta e brilha por 1,5 s
     /* "essa energia aumenta…": o elétron salta do K para o L, M… até o Q */
     ...[2, 3, 4, 5, 6, 7].map((n, i) => ({ t: 4.36 + i * .6, acao: () => Atomo.saltaNivel(n) })),
     /* "gráfico de energia": "Gráfico de energia" no alto (no lugar de "Modelo de Bohr - 1913") e, 1 s depois, o átomo vira o gráfico */
     { t: 9.76, acao: () => { const L = linhaTopoLimpa(); Atomo.digita('topo', 'Gráfico de energia', { cor: '#eef1ff', ms: 45 }); } },
     { t: 10.76, acao: () => Atomo.viraGrafico(2700, false, null, true) },
     { t: 12.72, acao: () => pausaRoteiro(1500) },                             // pausa de 1,5 s depois de "tipo esse aqui…" (a transformação termina nela)
-    { t: 15.36, acao: () => Atomo.realceNivel(1, true, false) },               // "aqui embaixo": K e o nível 1 aumentam (brilho só na linha)
-    /* "quanto mais afastada…": L, M… Q aumentam em sequência, com brilho (o anterior diminui) */
-    ...[2, 3, 4, 5, 6, 7].map((n, i) => ({ t: 18.72 + i * .7, acao: () => { Atomo.realceNivel(n - 1, false); Atomo.realceNivel(n, true, true); } })),
-    { t: 22.63, acao: () => { Atomo.realceNivel(7, false); Atomo.realceNivel(1, true, false); } },   // "O K": o Q volta; o K aumenta
-    { t: 23.52, acao: () => { Atomo.realceNivel(1, false); Atomo.textoNivel(1); } },               // "primeira camada": o K some e "1ª camada" é digitado no lugar
+    /* 15 s → 21,5 s: a seta vertical encolhe até a camada K e sobe de volta; cada linha por onde passa dá um saltinho e brilha;
+       chega na última camada aos 21,5 s */
+    { t: 15.0,  acao: () => Atomo.setaEncolheSobe(800, 5700) },
+    { t: 22.9,  acao: () => Atomo.realceNivel(1, true, false) },               // a letra K aumenta
+    { t: 23.5,  acao: () => { Atomo.realceNivel(1, false); Atomo.textoNivel(1); } },   // o K some em fade e "1ª camada" é digitado
     { t: 25.04, acao: () => Atomo.realceNivel(2, true, false) },                                    // "élli": o L aumenta
     { t: 25.68, acao: () => { Atomo.realceNivel(2, false); Atomo.textoNivel(2); } },               // "segunda": o L some e "2ª camada" é digitado
     /* "assim por diante": pausa de 1,5 s; nela, M … Q somem uma a uma e as camadas são digitadas no lugar */
@@ -3848,6 +3849,19 @@ const Atomo = (() => {
             if (k >= 1){ it.noGrafico = true; it.s0g = 0; }
           },
           /* áudio 8.2 (1 s → 5 s): a seta some e sobe de novo; cada linha salta quando a ponta passa por ela */
+          /* áudio 8.1: a seta vertical encolhe até a camada K (dEnc ms) e sobe de volta até a última camada (dSobe ms);
+             cada linha por onde a ponta passa dá um saltinho e brilha na cor dela (ênfase); no fim a seta completa a subida */
+          setaEncolheSobe(dEnc = 800, dSobe = 5700){
+            if (vert.material === matEixo){ vert.material = ponta.material = matEixo.clone(); }
+            const fr = y => (y - YBASE) / (yTopo - YBASE), fK = fr(yN(1)), fQ = fr(yN(7)), pulou = new Set();
+            const enfase = L => { saltinho(L); anima(600, k => { L.p = Math.sin(Math.PI * k); aplica(L); }, () => { L.p = 0; aplica(L); }, k => k); };
+            anima(dEnc, k => setaAte(1 + (fK - 1) * k), () => {
+              anima(dSobe, k => {
+                const f = fK + (fQ - fK) * k, topo = YBASE + (yTopo - YBASE) * f; setaAte(f);
+                niveis.forEach(L => { if (!pulou.has(L.n) && topo >= yN(L.n) - .01){ pulou.add(L.n); enfase(L); } });
+              }, () => anima(400, k => setaAte(fQ + (1 - fQ) * k), () => setaAte(1)), k => k);
+            });
+          },
           setaSobe: dur => {
             const pulou = new Set();
             if (vert.material === matEixo){ vert.material = ponta.material = matEixo.clone(); }   // (o eixo horizontal fica como está)
@@ -5441,6 +5455,9 @@ const Atomo = (() => {
     reorganizaNiveis(dur = 1600){ if (pronto && grafico) grafico.niveis.forEach(L => { if (L.fechado && L.a < 1) grafico.flutua(L.n, dur); }); },
     /* ----- áudio 8.2 ----- */
     setaSobe(dur = 4000){ if (pronto && grafico) grafico.setaSobe(dur); },           // seta some e sobe; linhas saltam
+    setaEncolheSobe(dEnc = 800, dSobe = 5700){ if (pronto && grafico) grafico.setaEncolheSobe(dEnc, dSobe); },   // 8.1: a seta encolhe até o K e sobe com ênfase em cada linha
+    /* a barra "Energia" (e o nome) aumenta e brilha por ms */
+    energiaRealce(ms = 1500){ const e = $('#energia'); if (!e) return; const R = { transform: 'translateX(-50%) scale(1.12)', filter: 'brightness(1.6) drop-shadow(0 0 10px #7ce7ff)' }; e.animate([{ transform: 'translateX(-50%) scale(1)', filter: 'none' }, { ...R, offset: .2 }, { ...R, offset: .8 }, { transform: 'translateX(-50%) scale(1)', filter: 'none' }], { duration: ms, easing: 'ease-in-out' }); },
     /* etiquetas "n = 1…7" em sequência ao lado das linhas do gráfico (a anterior some quando a próxima aparece) */
     /* todas as linhas do gráfico brilham juntas (acende e apaga em "dur" ms) */
     /* nível n completo: o nível e os subníveis pulsam em verde (2 vezes), com aplausos, "yes" e confetes */
