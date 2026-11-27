@@ -927,7 +927,7 @@ body.editando #palco canvas{cursor:default}
    CONFIGURAÇÃO DO AUDIOBOOK  — edite aqui
    Os áudios ficam em audio/ (nome sem ".mp3").
    ===================================================================== */
-const APP_VERSAO = '1.96';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
+const APP_VERSAO = '1.97';   // aparece no canto inferior esquerdo (suba junto com CACHE do sw.js)
 const AUDIO_CAPA = 'audio_distribuição_0';
 
 /* Itens do Sumário (seção Aprender) */
@@ -978,7 +978,7 @@ function cenaJoguinho(){
   Atomo.cenaPotassioInicio(1); Atomo.avancaTudo(); Atomo.joaozinho(true, true);
 }
 /* Ordem dos áudios do Aprender: cada toque no play (depois que um termina) toca o próximo */
-const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4', 'audio_distribuição_9.4A', 'audio_distribuição_9.4B', 'audio_distribuição_9.5', 'audio_distribuição_9.5A', 'audio_distribuição_9.5B', 'audio_distribuição_9.5C', 'audio_distribuição_9.5D', 'audio_distribuição_9.6'];
+const SEQUENCIA = ['audio_distribuição_1', 'audio_distribuição_2', 'audio_distribuição_3', 'audio_distribuição_4', 'audio_distribuição_5', 'audio_distribuição_5.1', 'audio_distribuição_5.2', 'audio_distribuição_6', 'audio_distribuição_7', 'audio_distribuição_7.1', 'audio_distribuição_7.2', 'audio_distribuição_7.3', 'audio_distribuição_7.4', 'audio_distribuição_7.4A', 'audio_distribuição_8', 'audio_distribuição_8.1', 'audio_distribuição_8.2', 'audio_distribuição_8.3', 'audio_distribuição_8.3A', 'audio_distribuição_8.4', 'audio_distribuição_8.5', 'audio_distribuição_8.5A', 'audio_distribuição_8.6', 'audio_distribuição_8.6A', 'audio_distribuição_8.7', 'audio_distribuição_8.8', 'audio_distribuição_8.9', 'audio_distribuição_8.95', 'audio_distribuição_9', 'audio_distribuição_9.0', 'audio_distribuição_9.1', 'audio_distribuição_9.2', 'audio_distribuição_9.3', 'audio_distribuição_9.4', 'audio_distribuição_9.4A', 'audio_distribuição_9.4B', 'audio_distribuição_9.5', 'audio_distribuição_9.5A', 'audio_distribuição_9.5B', 'audio_distribuição_9.5C', 'audio_distribuição_9.5D', 'audio_distribuição_9.6'];
 
 /* posições de câmera (coordenadas do relatório do modo câmera): [posição, ponto para onde olha] */
 const CAM_CONSTRUCAO = [[13.64, -2.36, 24.93], [23.23, -1.25, 22.32]];   // áudio 6: onde o átomo é construído
@@ -1277,13 +1277,19 @@ const EVENTOS = {
     { t: 6.84, acao: () => Atomo.bohrAuto(-1, () => { if (atual === 'audio_distribuição_7.4' && !audio.ended && audio.currentTime < 14.4) Atomo.bohrToque(true); }) },
     /* 14,4 s ("salto quântico"): a tela escurece e "Salto quântico" é escrito; o elétron não salta enquanto isso */
     { t: 14.4, acao: () => { Atomo.bohrToque(false); Atomo.escurece(true); Atomo.digita('conceito', '“Salto quântico”', { cor: '#eef1ff', ms: 70 }); } },
-    /* fim: "Toque na tela" → a tela clareia, o aluno volta a saltar o elétron (cada salto: "salto quântico" em relâmpago)
-       e o play vira "Ok" verde → áudio 8 */
+    /* fim: "Toque na tela" → a tela clareia e toca o 7.4A ("Toca de novo aí pra ver o efeito") */
     { t: 'fim', acao: () => { escondePlay(true); mostraToque(true, () => {
         mostraToque(false); Atomo.escurece(false); Atomo.apagaLinha('conceito');
-        Atomo.bohrToque(true); Atomo.fraseNoSalto(true);
-        escondePlay(true); Atomo.aposSalto(() => { escondePlay(false); botaoOk(true, 'audio_distribuição_8'); });   // o "Ok" só aparece depois do próximo salto
+        carrega('audio_distribuição_7.4A'); audio.play().catch(() => {});
     }); } },
+  ],
+  'audio_distribuição_7.4A': [
+    /* o aluno volta a saltar o elétron (cada salto: "salto quântico" em relâmpago); o "Ok" (→ áudio 8) só aparece depois do próximo salto */
+    { t: .05, acao: () => {
+        Atomo.bohrToque(true); Atomo.fraseNoSalto(true);
+        Atomo.aposSalto(() => { escondePlay(false); botaoOk(true, 'audio_distribuição_8'); });
+    } },
+    { t: 'fim', acao: () => { if (!btnPlay.classList.contains('ok')) escondePlay(true); } },   // (sem o play até o salto)
   ],
   'audio_distribuição_8': [
     { t: .05,  acao: () => { Atomo.bohrToque(false); Atomo.fraseNoSalto(false); } },   // daqui em diante o toque é das letras (não salta o elétron)
@@ -2244,7 +2250,7 @@ btnPlay.addEventListener('click', () => {
     if (btnPlay.dataset.espocando) return; btnPlay.dataset.espocando = '1';
     const prox = proximoNoOk;
     Espoca.botao(btnPlay).then(() => {
-      btnPlay.classList.add('espera'); setTimeout(() => btnPlay.classList.remove('espera'), 1500);   // depois de espocar, o play só volta 1,5 s depois
+      btnPlay.classList.add('espera'); setTimeout(() => { btnPlay.classList.remove('espera'); btnPlay.animate([{ opacity: 0, transform: 'scale(.85)' }, { opacity: 1, transform: 'scale(1)' }], { duration: 500, easing: 'ease-out' }); }, 1500);   // depois de espocar, o play só volta 1,5 s depois, em fade in
       botaoOk(false); delete btnPlay.dataset.espocando;
       requestAnimationFrame(() => btnPlay.getAnimations().forEach(a => { if (a.effect && a.effect.getKeyframes().some(k => k.filter)) a.cancel(); }));   // (o botão volta inteiro para a próxima vez)
       if (typeof prox === 'function') prox();
@@ -3454,6 +3460,14 @@ const Atomo = (() => {
             bohr.efeitos.push(dt => { t += dt; const k = Math.min(1, t / .25); aplicaDestaque(C, d0 + (alvo - d0) * easeBack(k)); return k < 1; });
           });
         };
+        /* o mesmo destaque nas letras K…Q (quando elas já tomaram o lugar dos "n = x", antes do gráfico): a do nível atual 25% maior e mais clara */
+        const destacaLetra = n => {
+          letras.itens.forEach((it, i) => {
+            if (!it || it.estado !== 'encaixada' || it.noGrafico) return;
+            const alvo = i === n - 1 ? 1 : 0, d0 = it.dBohr || 0; if (Math.abs(alvo - d0) < .001) return;
+            anima(250, k => { it.dBohr = d0 + (alvo - d0) * k; tamLetra(it, 1 + .25 * it.dBohr); it.s.material.color.setScalar(1 + .9 * it.dBohr); });
+          });
+        };
         bohr.destaca = destacaRotulo;
         const SOME = .12, VOLTA = .14;                                            // s: some → reaparece
         bohrSalta = (nNovo, ang) => {
@@ -3477,6 +3491,7 @@ const Atomo = (() => {
               const pNovo = new THREE.Vector3(B.r * Math.cos(ang), B.r * Math.sin(ang), .3);
               barraNivel(nNovo / 7, true);
               destacaRotulo(nNovo);                                              // o "n = x" do nível tocado cresce 15% e acende
+              destacaLetra(nNovo);                                               // (ou a letra K…Q, quando ela já está no lugar)
               if (nNovo < nAntes) emite(pNovo, corGrad((nAntes - 1) / 6), nAntes - nNovo);   // desceu: libera o excesso
               else absorve(pNovo, corGrad((nNovo - 1) / 6));                                 // subiu: absorveu energia
             }
@@ -3719,11 +3734,11 @@ const Atomo = (() => {
           return { n: i + 1, m, tiras, rotulos, glow, cor: C.cor, d: 0, a: 0, b: 0, p: 0, op: 0, corSub: Array(m).fill(0), rot: Array(m).fill(0), hl: Array(m).fill(0) };   // hl[j]: destaque do degrau j (cresce e brilha)
         });
         const aplica = L => {
-          const y0 = yN(L.n), h = H0 * (1 - .55 * L.d), W = GX1 - GX0, Wc = W / 4;   // separado em degraus (d → 1), o traço fica mais fino (45%)
+          const y0 = yN(L.n), h = H0 * (.5 - .05 * L.d), W = GX1 - GX0, Wc = W / 4;   // linha do nível: faixas com metade da espessura; separado em degraus (d → 1): 45%
           const A = ajusteNivel[L.n - 1];                                                  // ajuste do modo edição (degraus deste nível)
           const esc = 1 - .8 * (L.dim || 0);                                              // escurecido (foco em outro nível)
           L.tiras.forEach((t, j) => {
-            const xa = (GX0 + GX1) / 2, wa = W, ya = y0 + (j - (L.m - 1) / 2) * H0;          // empilhada (linha grossa)
+            const xa = (GX0 + GX1) / 2, wa = W, ya = y0 + (j - (L.m - 1) / 2) * H0 * .5;     // empilhada (a linha do nível; faixas finas)
             const xb = GX0 + (j + .5) * Wc, wb = Wc - GAP;                                   // degrau: coluna do subnível…
             const yb = y0 + j * DEG_IN + (yAufbau(L.n, j) - y0 - j * DEG_IN) * L.a;           // …dentro do nível → altura de energia
             const yG = ya + (yb - ya) * L.d + L.b, tb = L.tab || 0;                       // tab (áudio 9.6): as camadas viram linhas de uma tabela, a 1ª em cima
@@ -3826,6 +3841,7 @@ const Atomo = (() => {
           },
           morfa,
           letraPara: (it, k, p0) => {
+            if (it.dBohr){ it.dBohr = 0; it.s.material.color.setScalar(1); }        // (o destaque do salto não vai para o gráfico)
             const AL = ajusteLetra[it.i]; it.s.position.lerpVectors(p0, new THREE.Vector3(XLETRA + AL.x, yN(it.i + 1) + AL.y, .25), k);
             if (!it.s0g || k <= 0) it.s0g = it.s.scale.x / letras.BASE.x;                 // tamanho de partida → cresce até o do modo edição (sem salto)
             const f = it.s0g + (TAM_LETRA_G * AL.s - it.s0g) * Math.min(1, k); it.s.scale.set(letras.BASE.x * f, letras.BASE.y * f, 1);
@@ -6738,6 +6754,7 @@ const Retomar = (() => {
     },
     /* como o 7.3 terminou: átomo de Bohr montado (1 próton, 7 camadas, barra) e o elétron que o aluno pode mover */
     'audio_distribuição_7.4': () => bohrNaTela(),
+    'audio_distribuição_7.4A': () => bohrNaTela(),
     'audio_distribuição_8':   () => bohrNaTela(),
     /* como o 8 terminou: etiquetas "n = …" fora e as 7 letras encaixadas */
     'audio_distribuição_8.1': () => { bohrNaTela(); Atomo.bohrToque(false); Atomo.letrasProntas(7); },
